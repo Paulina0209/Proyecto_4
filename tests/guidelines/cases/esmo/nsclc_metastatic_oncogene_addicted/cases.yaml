@@ -1,0 +1,169 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_metastatic_oncogene_addicted
+status: synthetic_validation_cases
+cases:
+- id: OA-001
+  rule_file: eligibility.yaml
+  facts:
+    cancer_type: NSCLC
+    disease_setting: metastatic
+    molecular_pathway_status: oncogene_addicted
+  expected_rule_id: ESMO-NSCLC-OA-ELIG-001
+  expected_rule_status: applicable
+  expected_action: enter_module
+- id: OA-002
+  rule_file: routing.yaml
+  facts:
+    actionable_driver_names:
+    - EGFR
+  expected_rule_id: ESMO-NSCLC-OA-ROUTE-001
+  expected_rule_status: applicable
+  expected_action: route_to_driver_specific_pathway
+- id: OA-003
+  rule_file: routing.yaml
+  facts:
+    actionable_driver_names:
+    - ALK
+  expected_rule_id: ESMO-NSCLC-OA-ROUTE-002
+  expected_rule_status: applicable
+  expected_action: route_to_driver_specific_pathway
+- id: OA-004
+  rule_file: routing.yaml
+  facts:
+    actionable_driver_names:
+    - ROS1
+  expected_rule_id: ESMO-NSCLC-OA-ROUTE-003
+  expected_rule_status: applicable
+  expected_action: route_to_driver_specific_pathway
+- id: OA-005
+  rule_file: routing.yaml
+  facts:
+    actionable_driver_names:
+    - BRAF_V600E
+  expected_rule_id: ESMO-NSCLC-OA-ROUTE-004
+  expected_rule_status: applicable
+  expected_action: route_to_driver_specific_pathway
+- id: OA-006
+  rule_file: routing.yaml
+  facts:
+    actionable_driver_names:
+    - MET_exon14
+  expected_rule_id: ESMO-NSCLC-OA-ROUTE-005
+  expected_rule_status: applicable
+  expected_action: route_to_driver_specific_pathway
+- id: OA-007
+  rule_file: routing.yaml
+  facts:
+    actionable_driver_names:
+    - RET
+  expected_rule_id: ESMO-NSCLC-OA-ROUTE-006
+  expected_rule_status: applicable
+  expected_action: route_to_driver_specific_pathway
+- id: OA-008
+  rule_file: routing.yaml
+  facts:
+    actionable_driver_names:
+    - NTRK
+  expected_rule_id: ESMO-NSCLC-OA-ROUTE-007
+  expected_rule_status: applicable
+  expected_action: route_to_driver_specific_pathway
+- id: OA-009
+  rule_file: routing.yaml
+  facts:
+    actionable_driver_names:
+    - HER2
+  expected_rule_id: ESMO-NSCLC-OA-ROUTE-008
+  expected_rule_status: applicable
+  expected_action: route_to_driver_specific_pathway
+- id: OA-010
+  rule_file: routing.yaml
+  facts:
+    actionable_driver_names:
+    - KRAS_G12C
+  expected_rule_id: ESMO-NSCLC-OA-ROUTE-009
+  expected_rule_status: applicable
+  expected_action: route_to_driver_specific_pathway
+- id: OA-011
+  rule_file: routing.yaml
+  facts:
+    treatment_line: 1
+    driver_targeted_therapy_available: 'yes'
+    prior_driver_targeted_therapy: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-NSCLC-OA-ROUTE-010
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: OA-012
+  rule_file: routing.yaml
+  facts:
+    pdl1_tps: 90
+    molecular_pathway_status: oncogene_addicted
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-NSCLC-OA-ROUTE-011
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: OA-013
+  rule_file: sequencing.yaml
+  facts:
+    actionable_driver_names:
+    - ALK
+    prior_lorlatinib: 'yes'
+    progression_on_lorlatinib: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-NSCLC-OA-SEQ-001
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: OA-014
+  rule_file: sequencing.yaml
+  facts:
+    prior_driver_targeted_therapy: 'yes'
+    progression_on_driver_targeted_therapy: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-NSCLC-OA-SEQ-002
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: OA-015
+  rule_file: sequencing.yaml
+  facts:
+    prior_driver_targeted_therapy: 'no'
+    driver_targeted_therapy_available: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-NSCLC-OA-SEQ-003
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: OA-016
+  rule_file: exclusions.yaml
+  facts:
+    molecular_pathway_status: non_oncogene_addicted
+  expected_rule_id: ESMO-NSCLC-OA-EXC-001
+  expected_rule_status: applicable
+  expected_action: route_to_module
+- id: OA-017
+  rule_file: exclusions.yaml
+  facts:
+    molecular_testing_complete: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-NSCLC-OA-EXC-002
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: OA-018
+  rule_file: exclusions.yaml
+  facts:
+    disease_setting: early
+  expected_rule_id: ESMO-NSCLC-OA-EXC-003
+  expected_rule_status: applicable
+  expected_action: exclude_from_module
+- id: OA-019
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: superseded_for_date
+  expected_rule_id: ESMO-NSCLC-OA-EXC-004
+  expected_rule_status: applicable
+  expected_action: require_historical_guideline_version

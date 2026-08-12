@@ -1,0 +1,151 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_breast_metastatic_tnbc
+status: synthetic_validation_cases
+cases:
+- id: MB-001
+  rule_file: eligibility.yaml
+  facts:
+    cancer_type: breast
+    breast_subtype: triple_negative
+    disease_setting: metastatic
+  expected_rule_id: ESMO-BREAST-M-TNBC-ELIG-001
+  expected_rule_status: applicable
+  expected_action: enter_module
+- id: MB-002
+  rule_file: first_line.yaml
+  facts:
+    treatment_line: 1
+    pdl1_cps: 10
+    disease_free_interval_months: 6
+    prescribed_regimen_id: pembro_paclitaxel
+    immune_checkpoint_inhibitor_contraindication: 'no'
+  expected_rule_id: ESMO-BREAST-M-TNBC-FL-001
+  expected_rule_status: applicable
+  expected_action: support_regimen
+- id: MB-003
+  rule_file: first_line.yaml
+  facts:
+    treatment_line: 1
+    pdl1_cps: 30
+    disease_free_interval_months: 12
+    prescribed_regimen_id: pembro_nab_paclitaxel
+    immune_checkpoint_inhibitor_contraindication: 'no'
+  expected_rule_id: ESMO-BREAST-M-TNBC-FL-002
+  expected_rule_status: applicable
+  expected_action: support_regimen
+- id: MB-004
+  rule_file: first_line.yaml
+  facts:
+    treatment_line: 1
+    pdl1_cps: 50
+    disease_free_interval_months: 24
+    prescribed_regimen_id: pembro_carboplatin_gemcitabine
+    immune_checkpoint_inhibitor_contraindication: 'no'
+  expected_rule_id: ESMO-BREAST-M-TNBC-FL-003
+  expected_rule_status: applicable
+  expected_action: support_regimen
+- id: MB-005
+  rule_file: first_line.yaml
+  facts:
+    treatment_line: 1
+    pdl1_cps: null
+    disease_free_interval_months: 8
+    prescribed_regimen_id: pembro_paclitaxel
+    immune_checkpoint_inhibitor_contraindication: 'no'
+  expected_rule_id: ESMO-BREAST-M-TNBC-FL-001
+  expected_rule_status: not_evaluable
+- id: MB-006
+  rule_file: subsequent_line.yaml
+  facts:
+    treatment_line: 2
+    prior_pembrolizumab: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-BREAST-M-TNBC-SL-001
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: MB-007
+  rule_file: subsequent_line.yaml
+  facts:
+    treatment_line: 2
+    prior_pembrolizumab: 'yes'
+    disease_progression: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-BREAST-M-TNBC-SL-002
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: MB-008
+  rule_file: continuation.yaml
+  facts:
+    disease_progression: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-BREAST-M-TNBC-CONT-001
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: MB-009
+  rule_file: continuation.yaml
+  facts:
+    immune_related_adverse_event: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-BREAST-M-TNBC-CONT-002
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: MB-010
+  rule_file: exclusions.yaml
+  facts:
+    treatment_line: 1
+    pdl1_cps: 9
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-BREAST-M-TNBC-EXC-001
+  expected_rule_status: applicable
+  expected_action: flag_potential_deviation
+- id: MB-011
+  rule_file: exclusions.yaml
+  facts:
+    treatment_line: 1
+    disease_free_interval_months: 5
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-BREAST-M-TNBC-EXC-002
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: MB-012
+  rule_file: exclusions.yaml
+  facts:
+    treatment_line: 1
+    pdl1_cps: 20
+    disease_free_interval_months: 12
+    prescribed_regimen_id: other
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-BREAST-M-TNBC-EXC-003
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: MB-013
+  rule_file: exclusions.yaml
+  facts:
+    immune_checkpoint_inhibitor_contraindication: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-BREAST-M-TNBC-EXC-004
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: MB-014
+  rule_file: exclusions.yaml
+  facts:
+    breast_subtype: other
+  expected_rule_id: ESMO-BREAST-M-TNBC-EXC-005
+  expected_rule_status: applicable
+  expected_action: exclude_from_module
+- id: MB-015
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: not_yet_published
+  expected_rule_id: ESMO-BREAST-M-TNBC-EXC-006
+  expected_rule_status: applicable
+  expected_action: require_historical_guideline_version

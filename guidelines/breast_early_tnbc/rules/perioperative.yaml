@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_breast_early_tnbc_perioperative
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-BREAST-E-TNBC-PERI-001
+  name: Continue perioperative pembrolizumab after neoadjuvant start and surgery
+  conditions:
+    all:
+    - field: pembrolizumab_started_neoadjuvant
+      operator: equals
+      value: 'yes'
+    - field: surgery_completed
+      operator: equals
+      value: 'yes'
+    - field: adjuvant_pembrolizumab_planned
+      operator: equals
+      value: 'yes'
+  conclusion:
+    action: support_perioperative_sequence
+    next_phase: adjuvant
+    audit_effect: supports_prescription
+  evidence: &id001
+    organization: ESMO
+    statement_scope: regimen_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+    interpretation_note: Positive ESMO recommendation for high-risk early TNBC and perioperative pembrolizumab.
+  source:
+    title: 'Early breast cancer: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2024
+    doi: 10.1016/j.annonc.2023.11.016
+    section: Triple-negative breast cancer recommendations
+- id: ESMO-BREAST-E-TNBC-PERI-002
+  name: pCR does not cancel planned adjuvant pembrolizumab
+  conditions:
+    all:
+    - field: pembrolizumab_started_neoadjuvant
+      operator: equals
+      value: 'yes'
+    - field: surgery_completed
+      operator: equals
+      value: 'yes'
+    - field: pathologic_complete_response
+      operator: equals
+      value: 'yes'
+    - field: adjuvant_pembrolizumab_planned
+      operator: equals
+      value: 'yes'
+  conclusion:
+    action: support_adjuvant_continuation_regardless_of_pcr
+    audit_effect: supports_prescription
+  evidence: *id001
+  source:
+    title: 'Early breast cancer: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2024
+    doi: 10.1016/j.annonc.2023.11.016
+    section: Pembrolizumab continuation regardless of pCR

@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_metastatic_oncogene_addicted
+regimens:
+- id: pembrolizumab_containing_regimen
+  includes:
+  - pembrolizumab
+  role: audit trigger
+- id: platinum_pemetrexed
+  includes:
+  - platinum
+  - pemetrexed
+  role: contextual post-ALK option; not a pembrolizumab recommendation
+note: The thesis scope is pembrolizumab audit. This module does not attempt to reproduce every targeted regimen
+  from the CPG.

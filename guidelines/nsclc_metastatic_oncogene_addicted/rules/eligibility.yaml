@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_metastatic_oncogene_addicted_eligibility
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-NSCLC-OA-ELIG-001
+  name: Oncogene-addicted metastatic NSCLC enters module
+  conditions:
+    all:
+    - field: cancer_type
+      operator: equals
+      value: NSCLC
+    - field: disease_setting
+      operator: in
+      value:
+      - metastatic
+      - advanced
+    - field: molecular_pathway_status
+      operator: equals
+      value: oncogene_addicted
+  conclusion:
+    action: enter_module
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: module_scope
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    title: 'Oncogene-addicted metastatic non-small-cell lung cancer: ESMO Clinical Practice Guideline for diagnosis,
+      treatment and follow-up'
+    organization: ESMO
+    publication_year: 2023
+    doi: 10.1016/j.annonc.2022.12.009
+    section: Biomarker-driven diagnosis and treatment algorithms

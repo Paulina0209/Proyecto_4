@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_breast_metastatic_tnbc
+pathway_id: esmo_breast_metastatic_tnbc_pathway
+start_node: scope
+nodes:
+  scope:
+    question: Metastatic/unresectable recurrent TNBC?
+    'yes': line
+    'no': outside_scope
+  line:
+    question: First line?
+    'yes': cps
+    'no': subsequent_review
+  cps:
+    question: PD-L1 CPS ≥10?
+    'yes': dfi
+    'no': pembro_boundary
+  dfi:
+    question: DFI ≥6 months?
+    'yes': backbone
+    'no': clinical_review
+  backbone:
+    question: Pembro + allowed chemotherapy backbone?
+    'yes': supported
+    'no': clinical_review
+  supported:
+    type: terminal
+    result: concordant
+  outside_scope:
+    type: terminal
+    result: outside_scope
+  subsequent_review:
+    type: terminal
+    result: requires_clinical_review
+  pembro_boundary:
+    type: terminal
+    result: potential_deviation
+  clinical_review:
+    type: terminal
+    result: requires_clinical_review

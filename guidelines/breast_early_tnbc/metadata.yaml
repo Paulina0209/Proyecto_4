@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_breast_early_tnbc
+module_version: '1.0'
+name: ESMO early triple-negative breast cancer — pembrolizumab
+organization: ESMO
+source:
+  title: 'Early breast cancer: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+  publication_year: 2024
+  doi: 10.1016/j.annonc.2023.11.016
+  source_version_locked: true
+  version_policy: Locked 2024 CPG; later updates must not be mixed silently.
+clinical_scope:
+  drug_of_interest: pembrolizumab
+  cancer: breast
+  subtype: triple_negative
+  setting: early_stage
+temporal_applicability:
+  fact_required: guideline_temporal_applicability
+  note: Use a date-appropriate guideline version for retrospective prescribing decisions.
+development_status: draft_computable_clinical_validation_pending
+licensing_status: internal_research_only_permission_review_pending
+validation:
+  technical_validation_status: synthetic_cases_included
+  clinical_validation_status: pending

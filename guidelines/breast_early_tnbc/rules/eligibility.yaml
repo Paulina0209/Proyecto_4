@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_breast_early_tnbc_eligibility
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-BREAST-E-TNBC-ELIG-001
+  name: Early TNBC within module scope
+  conditions:
+    all:
+    - field: cancer_type
+      operator: equals
+      value: breast
+    - field: breast_subtype
+      operator: equals
+      value: triple_negative
+    - field: disease_setting
+      operator: in
+      value:
+      - early
+      - locally_advanced
+    - field: metastatic_disease
+      operator: equals
+      value: 'no'
+  conclusion:
+    action: enter_module
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: module_scope
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    title: 'Early breast cancer: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2024
+    doi: 10.1016/j.annonc.2023.11.016
+    section: Scope

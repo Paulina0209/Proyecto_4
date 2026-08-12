@@ -1,0 +1,247 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_metastatic_oncogene_addicted_routing
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-NSCLC-OA-ROUTE-001
+  name: Route EGFR-positive disease to driver-specific pathway
+  conditions:
+    field: actionable_driver_names
+    operator: contains
+    value: EGFR
+  conclusion:
+    action: route_to_driver_specific_pathway
+    driver: EGFR
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: driver_routing
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    interpretation_note: Summary routing rule; no universal ESMO evidence grade is assigned.
+  source: &id001
+    title: 'Oncogene-addicted metastatic non-small-cell lung cancer: ESMO Clinical Practice Guideline for diagnosis,
+      treatment and follow-up'
+    organization: ESMO
+    publication_year: 2023
+    doi: 10.1016/j.annonc.2022.12.009
+    section: Biomarker-driven diagnosis and treatment algorithms
+- id: ESMO-NSCLC-OA-ROUTE-002
+  name: Route ALK-positive disease to driver-specific pathway
+  conditions:
+    field: actionable_driver_names
+    operator: contains
+    value: ALK
+  conclusion:
+    action: route_to_driver_specific_pathway
+    driver: ALK
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: driver_routing
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    interpretation_note: Summary routing rule; no universal ESMO evidence grade is assigned.
+  source: *id001
+- id: ESMO-NSCLC-OA-ROUTE-003
+  name: Route ROS1-positive disease to driver-specific pathway
+  conditions:
+    field: actionable_driver_names
+    operator: contains
+    value: ROS1
+  conclusion:
+    action: route_to_driver_specific_pathway
+    driver: ROS1
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: driver_routing
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    interpretation_note: Summary routing rule; no universal ESMO evidence grade is assigned.
+  source: *id001
+- id: ESMO-NSCLC-OA-ROUTE-004
+  name: Route BRAF_V600E-positive disease to driver-specific pathway
+  conditions:
+    field: actionable_driver_names
+    operator: contains
+    value: BRAF_V600E
+  conclusion:
+    action: route_to_driver_specific_pathway
+    driver: BRAF_V600E
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: driver_routing
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    interpretation_note: Summary routing rule; no universal ESMO evidence grade is assigned.
+  source: *id001
+- id: ESMO-NSCLC-OA-ROUTE-005
+  name: Route MET_exon14-positive disease to driver-specific pathway
+  conditions:
+    field: actionable_driver_names
+    operator: contains
+    value: MET_exon14
+  conclusion:
+    action: route_to_driver_specific_pathway
+    driver: MET_exon14
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: driver_routing
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    interpretation_note: Summary routing rule; no universal ESMO evidence grade is assigned.
+  source: *id001
+- id: ESMO-NSCLC-OA-ROUTE-006
+  name: Route RET-positive disease to driver-specific pathway
+  conditions:
+    field: actionable_driver_names
+    operator: contains
+    value: RET
+  conclusion:
+    action: route_to_driver_specific_pathway
+    driver: RET
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: driver_routing
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    interpretation_note: Summary routing rule; no universal ESMO evidence grade is assigned.
+  source: *id001
+- id: ESMO-NSCLC-OA-ROUTE-007
+  name: Route NTRK-positive disease to driver-specific pathway
+  conditions:
+    field: actionable_driver_names
+    operator: contains
+    value: NTRK
+  conclusion:
+    action: route_to_driver_specific_pathway
+    driver: NTRK
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: driver_routing
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    interpretation_note: Summary routing rule; no universal ESMO evidence grade is assigned.
+  source: *id001
+- id: ESMO-NSCLC-OA-ROUTE-008
+  name: Route HER2-positive disease to driver-specific pathway
+  conditions:
+    field: actionable_driver_names
+    operator: contains
+    value: HER2
+  conclusion:
+    action: route_to_driver_specific_pathway
+    driver: HER2
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: driver_routing
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    interpretation_note: Summary routing rule; no universal ESMO evidence grade is assigned.
+  source: *id001
+- id: ESMO-NSCLC-OA-ROUTE-009
+  name: Route KRAS_G12C-positive disease to driver-specific pathway
+  conditions:
+    field: actionable_driver_names
+    operator: contains
+    value: KRAS_G12C
+  conclusion:
+    action: route_to_driver_specific_pathway
+    driver: KRAS_G12C
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: driver_routing
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    interpretation_note: Summary routing rule; no universal ESMO evidence grade is assigned.
+  source: *id001
+- id: ESMO-NSCLC-OA-ROUTE-010
+  name: First-line pembrolizumab before an available driver-targeted strategy requires review
+  conditions:
+    all:
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: driver_targeted_therapy_available
+      operator: equals
+      value: 'yes'
+    - field: prior_driver_targeted_therapy
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: driver_specific_first_line_strategy_not_addressed
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: cross_driver_synthesis
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    interpretation_note: Conservative routing safeguard; not an explicit universal anti-pembrolizumab grade.
+  source: *id001
+- id: ESMO-NSCLC-OA-ROUTE-011
+  name: High PD-L1 does not bypass oncogenic-driver routing
+  conditions:
+    all:
+    - field: pdl1_tps
+      operator: greater_than_or_equal
+      value: 50
+    - field: molecular_pathway_status
+      operator: equals
+      value: oncogene_addicted
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: driver_status_precedes_non_oncogene_pdl1_algorithm
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: routing_safeguard
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: *id001

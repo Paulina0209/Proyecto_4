@@ -1,0 +1,99 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_breast_early_tnbc_neoadjuvant
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-BREAST-E-TNBC-NEO-001
+  name: Neoadjuvant chemotherapy plus pembrolizumab for high-risk stage II-III TNBC
+  conditions:
+    all:
+    - field: clinical_stage
+      operator: in
+      value:
+      - II
+      - III
+    - &id001
+      any:
+      - all:
+        - field: clinical_t_category
+          operator: in
+          value:
+          - cT2
+          - cT3
+          - cT4
+        - field: clinical_n_status
+          operator: equals
+          value: N0
+      - field: clinical_n_status
+        operator: in
+        value:
+        - N1
+        - N2
+        - N3
+    - field: treatment_phase
+      operator: equals
+      value: neoadjuvant
+    - field: neoadjuvant_chemotherapy_given
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+    - field: immune_checkpoint_inhibitor_toxicity_risk
+      operator: equals
+      value: not_excessive
+  conclusion:
+    action: support_pembrolizumab
+    phase: neoadjuvant
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: regimen_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+    interpretation_note: Positive ESMO recommendation for high-risk early TNBC and perioperative pembrolizumab.
+  source: &id002
+    title: 'Early breast cancer: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2024
+    doi: 10.1016/j.annonc.2023.11.016
+    section: Triple-negative breast cancer recommendations
+- id: ESMO-BREAST-E-TNBC-NEO-002
+  name: Neoadjuvant pembrolizumab without chemotherapy requires review
+  conditions:
+    all:
+    - field: clinical_stage
+      operator: in
+      value:
+      - II
+      - III
+    - *id001
+    - field: treatment_phase
+      operator: equals
+      value: neoadjuvant
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+    - field: neoadjuvant_chemotherapy_given
+      operator: equals
+      value: 'no'
+  conclusion:
+    action: flag_for_expert_review
+    reason: pembrolizumab_without_recommended_neoadjuvant_chemotherapy
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: boundary_from_positive_recommendation
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    interpretation_note: Derived from the positive chemotherapy+pembrolizumab recommendation; not an explicit D-grade
+      statement.
+  source: *id002

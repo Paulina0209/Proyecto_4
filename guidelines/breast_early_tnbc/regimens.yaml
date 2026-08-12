@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_breast_early_tnbc
+regimens:
+- id: pembro_neoadjuvant_keynote522_sequence
+  phase: neoadjuvant
+  includes:
+  - pembrolizumab
+  - taxane
+  - carboplatin
+  - anthracycline
+  - cyclophosphamide
+  sequence_note: KEYNOTE-522-type neoadjuvant backbone; normalize sequential drug phases before matching.
+- id: pembro_adjuvant_monotherapy
+  phase: adjuvant
+  includes:
+  - pembrolizumab
+  planned_q3w_cycles: 9

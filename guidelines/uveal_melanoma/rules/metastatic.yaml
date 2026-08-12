@@ -1,0 +1,167 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_uveal_melanoma_metastatic
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-UVEAL-MET-001
+  name: 'HLA-A*02:01-negative metastatic disease: pembrolizumab maps to anti-PD-1 class option'
+  conditions:
+    all:
+    - field: disease_setting
+      operator: equals
+      value: metastatic
+    - field: hla_a0201_status
+      operator: equals
+      value: negative
+    - field: prescribed_regimen_id
+      operator: equals
+      value: pembrolizumab_monotherapy
+    - field: immune_checkpoint_inhibitor_contraindication
+      operator: equals
+      value: 'no'
+  conclusion:
+    action: support_class_level_option
+    class: anti_PD1
+    mapped_drug: pembrolizumab
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: class_level
+    native:
+      evidence_level: V
+      recommendation_grade: B
+      mcbs: null
+    explicit_grade_reported: true
+    interpretation_note: The ESMO–EURACAN statement is for anti-PD-1-based immunotherapy; pembrolizumab is mapped
+      as a class member, not a uniquely preferred drug.
+  source: &id001
+    title: 'Uveal melanoma: ESMO–EURACAN Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2026
+    doi: 10.1016/j.esmoop.2026.106888
+    section: Management of metastatic uveal melanoma
+- id: ESMO-UVEAL-MET-002
+  name: After progression on tebentafusp, pembrolizumab maps to anti-PD-1 class option
+  conditions:
+    all:
+    - field: disease_setting
+      operator: equals
+      value: metastatic
+    - field: hla_a0201_status
+      operator: equals
+      value: positive
+    - field: prior_tebentafusp
+      operator: equals
+      value: 'yes'
+    - field: progression_on_tebentafusp
+      operator: equals
+      value: 'yes'
+    - field: prescribed_regimen_id
+      operator: equals
+      value: pembrolizumab_monotherapy
+    - field: immune_checkpoint_inhibitor_contraindication
+      operator: equals
+      value: 'no'
+  conclusion:
+    action: support_class_level_option
+    class: anti_PD1
+    mapped_drug: pembrolizumab
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: class_level
+    native:
+      evidence_level: V
+      recommendation_grade: B
+      mcbs: null
+    explicit_grade_reported: true
+    interpretation_note: After tebentafusp progression, anti-PD-1-based immunotherapies are among preferred options.
+  source: *id001
+- id: ESMO-UVEAL-MET-003
+  name: 'HLA-A*02:01-positive first line: pembrolizumab before tebentafusp is potential deviation'
+  conditions:
+    all:
+    - field: disease_setting
+      operator: equals
+      value: metastatic
+    - field: hla_a0201_status
+      operator: equals
+      value: positive
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: prior_tebentafusp
+      operator: equals
+      value: 'no'
+    - field: liver_directed_debulking_indicated
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_potential_deviation
+    reason: tebentafusp_is_standard_first_line_for_hla_a0201_positive_disease
+    audit_effect: potential_deviation
+  evidence:
+    organization: ESMO
+    statement_scope: alternative_standard_of_care_boundary
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '2.0'
+        score: 3
+    explicit_grade_reported: true
+    interpretation_note: This evidence block belongs to the tebentafusp standard defining the boundary, not to an
+      anti-pembrolizumab recommendation.
+  source: *id001
+- id: ESMO-UVEAL-MET-004
+  name: Liver-directed debulking context requires multidisciplinary review
+  conditions:
+    all:
+    - field: disease_setting
+      operator: equals
+      value: metastatic
+    - field: liver_directed_debulking_indicated
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: liver_directed_strategy_may_precede_systemic_therapy
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: multidisciplinary_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: *id001
+- id: ESMO-UVEAL-MET-005
+  name: Lenvatinib-pembrolizumab is not encoded as standard in locked source
+  conditions:
+    all:
+    - field: disease_setting
+      operator: equals
+      value: metastatic
+    - field: prescribed_regimen_id
+      operator: equals
+      value: lenvatinib_pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: combination_not_encoded_as_standard_esmo_route
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: investigational_context
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: *id001

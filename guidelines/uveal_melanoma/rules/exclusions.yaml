@@ -1,0 +1,107 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_uveal_melanoma_exclusions
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-UVEAL-EXC-001
+  name: Cutaneous melanoma routes to separate module
+  conditions:
+    field: cancer_type
+    operator: equals
+    value: cutaneous_melanoma
+  conclusion:
+    action: route_to_module
+    target_module: cutaneous_melanoma
+    audit_effect: outside_scope
+  evidence:
+    organization: ESMO
+    statement_scope: module_scope
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    title: 'Uveal melanoma: ESMO–EURACAN Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2026
+    doi: 10.1016/j.esmoop.2026.106888
+    section: Scope
+- id: ESMO-UVEAL-EXC-002
+  name: 'HLA-A*02:01 not tested: metastatic pembrolizumab is not fully evaluable'
+  conditions:
+    all:
+    - field: disease_setting
+      operator: equals
+      value: metastatic
+    - field: hla_a0201_status
+      operator: equals
+      value: not_tested
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: request_missing_information
+    required_information: HLA-A*02:01
+    audit_effect: not_evaluable
+  evidence:
+    organization: ESMO
+    statement_scope: diagnostic_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: &id001
+    title: 'Uveal melanoma: ESMO–EURACAN Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2026
+    doi: 10.1016/j.esmoop.2026.106888
+    section: Management of metastatic uveal melanoma
+- id: ESMO-UVEAL-EXC-003
+  name: ICI contraindication requires review
+  conditions:
+    all:
+    - field: immune_checkpoint_inhibitor_contraindication
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: ici_contraindication
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: safety_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: *id001
+- id: ESMO-UVEAL-EXC-004
+  name: 2026 guideline cannot automatically judge 2024–2025 prescriptions
+  conditions:
+    field: guideline_temporal_applicability
+    operator: equals
+    value: not_yet_published
+  conclusion:
+    action: require_historical_guideline_version
+    reason: source_published_after_thesis_data_period
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: temporal_methodology
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    title: 'Uveal melanoma: ESMO–EURACAN Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2026
+    doi: 10.1016/j.esmoop.2026.106888
+    section: Version control

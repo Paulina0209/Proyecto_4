@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_breast_metastatic_tnbc_subsequent_line
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-BREAST-M-TNBC-SL-001
+  name: Later-line pembrolizumab without prior exposure requires review
+  conditions:
+    all:
+    - field: treatment_line
+      operator: greater_than_or_equal
+      value: 2
+    - field: prior_pembrolizumab
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: locked_2021_recommendation_is_first_line
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: boundary_from_positive_recommendation
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: &id001
+    title: 'ESMO Clinical Practice Guideline for the diagnosis, staging and treatment of patients with metastatic breast cancer'
+    organization: ESMO
+    publication_year: 2021
+    doi: 10.1016/j.annonc.2021.09.019
+    section: TNBC first-line treatment
+- id: ESMO-BREAST-M-TNBC-SL-002
+  name: Pembrolizumab re-use after progression requires review
+  conditions:
+    all:
+    - field: treatment_line
+      operator: greater_than_or_equal
+      value: 2
+    - field: prior_pembrolizumab
+      operator: equals
+      value: 'yes'
+    - field: disease_progression
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: rechallenge_not_established_by_locked_cpg
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: ungraded_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: *id001

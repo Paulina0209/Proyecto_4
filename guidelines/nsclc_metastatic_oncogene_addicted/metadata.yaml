@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_metastatic_oncogene_addicted
+module_version: '1.0'
+name: ESMO oncogene-addicted metastatic NSCLC — pembrolizumab routing
+organization: ESMO
+source:
+  title: 'Oncogene-addicted metastatic non-small-cell lung cancer: ESMO Clinical Practice Guideline for diagnosis,
+    treatment and follow-up'
+  publication_year: 2023
+  published_online: '2023-01-24'
+  doi: 10.1016/j.annonc.2022.12.009
+  source_version_locked: true
+  version_policy: Locked 2023 CPG. Later ESMO living updates are not mixed into this module.
+clinical_scope:
+  drug_of_interest: pembrolizumab
+  cancer: NSCLC
+  setting: metastatic
+  molecular_pathway: oncogene_addicted
+  role: Route driver-positive disease away from the non-oncogene pembrolizumab algorithm and flag sequencing for
+    expert review.
+development_status: draft_computable_clinical_validation_pending
+licensing_status: internal_research_only_permission_review_pending
+validation:
+  technical_validation_status: synthetic_cases_included
+  clinical_validation_status: pending

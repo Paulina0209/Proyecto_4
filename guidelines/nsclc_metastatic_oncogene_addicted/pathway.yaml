@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_metastatic_oncogene_addicted
+pathway_id: esmo_nsclc_metastatic_oncogene_addicted_pathway
+start_node: scope
+nodes:
+  scope:
+    question: Advanced/metastatic NSCLC?
+    'yes': molecular
+    'no': outside_scope
+  molecular:
+    question: Oncogene-addicted?
+    'yes': driver
+    'no': route_non_oncogene
+  driver:
+    question: Identify actionable driver
+    options:
+    - EGFR
+    - ALK
+    - ROS1
+    - BRAF_V600E
+    - MET_exon14
+    - RET
+    - NTRK
+    - HER2
+    - KRAS_G12C
+    next: driver_specific
+  driver_specific:
+    question: Driver-targeted strategy addressed?
+    'yes': post_target
+    'no': clinical_review
+  post_target:
+    question: Pembrolizumab prescribed after targeted therapy?
+    'yes': clinical_review
+    'no': continue_driver_pathway
+  route_non_oncogene:
+    type: terminal
+    result: outside_scope
+  continue_driver_pathway:
+    type: terminal
+    result: driver_specific_management
+  clinical_review:
+    type: terminal
+    result: requires_clinical_review
+  outside_scope:
+    type: terminal
+    result: outside_scope

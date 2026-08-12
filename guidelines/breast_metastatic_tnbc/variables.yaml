@@ -1,0 +1,99 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_breast_metastatic_tnbc
+variables:
+  cancer_type:
+    type: categorical
+    allowed_values:
+    - breast
+    - other
+    - unknown
+  breast_subtype:
+    type: categorical
+    allowed_values:
+    - triple_negative
+    - other
+    - unknown
+  er_status:
+    type: categorical
+    allowed_values:
+    - negative
+    - positive
+    - unknown
+  pr_status:
+    type: categorical
+    allowed_values:
+    - negative
+    - positive
+    - unknown
+  her2_status:
+    type: categorical
+    allowed_values:
+    - negative
+    - positive
+    - equivocal
+    - unknown
+  disease_setting:
+    type: categorical
+    allowed_values:
+    - metastatic
+    - unresectable_recurrent
+    - early
+    - unknown
+  treatment_line:
+    type: integer
+    minimum: 1
+  pdl1_cps:
+    type: number
+    minimum: 0
+  disease_free_interval_months:
+    type: number
+    minimum: 0
+  prior_systemic_therapy_for_advanced_disease:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  prescribed_antineoplastic_drugs:
+    type: list
+    item_type: string
+  prescribed_regimen_id:
+    type: categorical
+    allowed_values:
+    - pembro_paclitaxel
+    - pembro_nab_paclitaxel
+    - pembro_carboplatin_gemcitabine
+    - other
+    - unknown
+  prior_pembrolizumab:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  disease_progression:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  immune_checkpoint_inhibitor_contraindication:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  immune_related_adverse_event:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  guideline_temporal_applicability:
+    type: categorical
+    allowed_values:
+    - applicable
+    - not_yet_published
+    - uncertain
+    - unknown

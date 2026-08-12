@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_breast_metastatic_tnbc_continuation
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-BREAST-M-TNBC-CONT-001
+  name: Progression during pembrolizumab requires reassessment
+  conditions:
+    all:
+    - field: disease_progression
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: progression_during_pembrolizumab
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: clinical_review_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    title: 'ESMO Clinical Practice Guideline for the diagnosis, staging and treatment of patients with metastatic breast cancer'
+    organization: ESMO
+    publication_year: 2021
+    doi: 10.1016/j.annonc.2021.09.019
+    section: Response assessment and subsequent therapy
+- id: ESMO-BREAST-M-TNBC-CONT-002
+  name: Immune-related adverse event requires reassessment
+  conditions:
+    all:
+    - field: immune_related_adverse_event
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: immune_related_toxicity
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: safety_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    title: 'ESMO Clinical Practice Guideline for the diagnosis, staging and treatment of patients with metastatic breast cancer'
+    organization: ESMO
+    publication_year: 2021
+    doi: 10.1016/j.annonc.2021.09.019
+    section: Treatment safety

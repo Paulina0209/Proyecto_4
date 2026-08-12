@@ -1,0 +1,102 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_metastatic_oncogene_addicted
+variables:
+  cancer_type:
+    type: categorical
+    allowed_values:
+    - NSCLC
+    - other
+    - unknown
+  disease_setting:
+    type: categorical
+    allowed_values:
+    - metastatic
+    - advanced
+    - early
+    - unknown
+  molecular_pathway_status:
+    type: categorical
+    allowed_values:
+    - oncogene_addicted
+    - non_oncogene_addicted
+    - incomplete
+    - unknown
+  actionable_driver_names:
+    type: list
+    item_type: string
+    allowed_items:
+    - EGFR
+    - ALK
+    - ROS1
+    - BRAF_V600E
+    - MET_exon14
+    - RET
+    - NTRK
+    - HER2
+    - KRAS_G12C
+  molecular_testing_complete:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  treatment_line:
+    type: integer
+    minimum: 1
+  driver_targeted_therapy_available:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  prior_driver_targeted_therapy:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  progression_on_driver_targeted_therapy:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  prior_lorlatinib:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  progression_on_lorlatinib:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  prescribed_antineoplastic_drugs:
+    type: list
+    item_type: string
+  pdl1_tps:
+    type: number
+    minimum: 0
+    maximum: 100
+  histology:
+    type: categorical
+    allowed_values:
+    - non_squamous
+    - squamous
+    - other
+    - unknown
+  ecog_ps:
+    type: integer
+    minimum: 0
+    maximum: 4
+  guideline_temporal_applicability:
+    type: categorical
+    allowed_values:
+    - applicable
+    - not_yet_published
+    - superseded_for_date
+    - uncertain
+    - unknown

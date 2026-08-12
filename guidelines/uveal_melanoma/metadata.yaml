@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_uveal_melanoma
+module_version: '1.0'
+name: ESMO–EURACAN uveal melanoma — pembrolizumab audit
+organization: ESMO–EURACAN
+source:
+  title: 'Uveal melanoma: ESMO–EURACAN Clinical Practice Guideline for diagnosis, treatment and follow-up'
+  publication_year: 2026
+  doi: 10.1016/j.esmoop.2026.106888
+  source_version_locked: true
+clinical_scope:
+  drug_of_interest: pembrolizumab
+  cancer: uveal_melanoma
+  settings:
+  - localized
+  - metastatic
+temporal_applicability:
+  critical_limitation: The source is a 2026 guideline while the thesis dataset is 2024–2025. Do not use it automatically
+    as the historical gold comparator.
+  fact_required: guideline_temporal_applicability
+licensing_status: CC_BY_NC_ND_4_0_internal_noncommercial_no_derivative_public_distribution
+development_status: draft_computable_reference_module_not_historical_gold_standard
+validation:
+  technical_validation_status: synthetic_cases_included
+  clinical_validation_status: pending

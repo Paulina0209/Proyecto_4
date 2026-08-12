@@ -1,0 +1,132 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_breast_early_tnbc_exclusions
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-BREAST-E-TNBC-EXC-001
+  name: Stage I node-negative pembrolizumab is outside modeled high-risk indication
+  conditions:
+    all:
+    - field: clinical_stage
+      operator: equals
+      value: I
+    - field: clinical_n_status
+      operator: equals
+      value: N0
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: outside_stage_II_III_high_risk_scope
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: boundary_from_positive_recommendation
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: &id001
+    title: 'Early breast cancer: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2024
+    doi: 10.1016/j.annonc.2023.11.016
+    section: Triple-negative breast cancer recommendations
+- id: ESMO-BREAST-E-TNBC-EXC-002
+  name: Metastatic disease routes to metastatic TNBC module
+  conditions:
+    field: metastatic_disease
+    operator: equals
+    value: 'yes'
+  conclusion:
+    action: route_to_module
+    target_module: breast_metastatic_tnbc
+    audit_effect: outside_scope
+  evidence:
+    organization: ESMO
+    statement_scope: module_scope
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    title: 'Early breast cancer: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2024
+    doi: 10.1016/j.annonc.2023.11.016
+    section: Scope
+- id: ESMO-BREAST-E-TNBC-EXC-003
+  name: Non-TNBC disease outside module
+  conditions:
+    field: breast_subtype
+    operator: equals
+    value: other
+  conclusion:
+    action: exclude_from_module
+    reason: not_triple_negative
+    audit_effect: outside_scope
+  evidence:
+    organization: ESMO
+    statement_scope: module_scope
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    title: 'Early breast cancer: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2024
+    doi: 10.1016/j.annonc.2023.11.016
+    section: Subtype algorithms
+- id: ESMO-BREAST-E-TNBC-EXC-004
+  name: Excessive ICI toxicity risk requires review
+  conditions:
+    all:
+    - field: immune_checkpoint_inhibitor_toxicity_risk
+      operator: equals
+      value: excessive
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: excessive_ici_toxicity_risk
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: regimen_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+  source: *id001
+- id: ESMO-BREAST-E-TNBC-EXC-005
+  name: Date-inapplicable guideline requires historical version
+  conditions:
+    field: guideline_temporal_applicability
+    operator: equals
+    value: not_yet_published
+  conclusion:
+    action: require_historical_guideline_version
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: temporal_methodology
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    title: 'Early breast cancer: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2024
+    doi: 10.1016/j.annonc.2023.11.016
+    section: Version control

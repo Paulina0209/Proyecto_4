@@ -1,0 +1,95 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_breast_metastatic_tnbc_first_line
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-BREAST-M-TNBC-FL-001
+  name: Pembrolizumab plus paclitaxel first line
+  conditions:
+    all:
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: pdl1_cps
+      operator: greater_than_or_equal
+      value: 10
+    - field: disease_free_interval_months
+      operator: greater_than_or_equal
+      value: 6
+    - field: prescribed_regimen_id
+      operator: equals
+      value: pembro_paclitaxel
+    - field: immune_checkpoint_inhibitor_contraindication
+      operator: equals
+      value: 'no'
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_paclitaxel
+    audit_effect: supports_prescription
+  evidence: &id001
+    organization: ESMO
+    statement_scope: regimen_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: 3
+    explicit_grade_reported: true
+    interpretation_note: First-line pembrolizumab plus specified chemotherapy for CPS ≥10 and DFI ≥6 months.
+  source: &id002
+    title: 'ESMO Clinical Practice Guideline for the diagnosis, staging and treatment of patients with metastatic breast cancer'
+    organization: ESMO
+    publication_year: 2021
+    doi: 10.1016/j.annonc.2021.09.019
+    section: TNBC first-line treatment
+- id: ESMO-BREAST-M-TNBC-FL-002
+  name: Pembrolizumab plus nab-paclitaxel first line
+  conditions:
+    all:
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: pdl1_cps
+      operator: greater_than_or_equal
+      value: 10
+    - field: disease_free_interval_months
+      operator: greater_than_or_equal
+      value: 6
+    - field: prescribed_regimen_id
+      operator: equals
+      value: pembro_nab_paclitaxel
+    - field: immune_checkpoint_inhibitor_contraindication
+      operator: equals
+      value: 'no'
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_nab_paclitaxel
+    audit_effect: supports_prescription
+  evidence: *id001
+  source: *id002
+- id: ESMO-BREAST-M-TNBC-FL-003
+  name: Pembrolizumab plus carboplatin-gemcitabine first line
+  conditions:
+    all:
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: pdl1_cps
+      operator: greater_than_or_equal
+      value: 10
+    - field: disease_free_interval_months
+      operator: greater_than_or_equal
+      value: 6
+    - field: prescribed_regimen_id
+      operator: equals
+      value: pembro_carboplatin_gemcitabine
+    - field: immune_checkpoint_inhibitor_contraindication
+      operator: equals
+      value: 'no'
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_carboplatin_gemcitabine
+    audit_effect: supports_prescription
+  evidence: *id001
+  source: *id002

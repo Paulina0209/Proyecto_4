@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_uveal_melanoma
+pathway_id: esmo_uveal_melanoma_pathway
+start_node: temporal
+nodes:
+  temporal:
+    question: Is the 2026 CPG temporally applicable?
+    'yes': scope
+    'no': historical_version_required
+  scope:
+    question: Uveal melanoma?
+    'yes': setting
+    'no': outside_scope
+  setting:
+    question: Localized or metastatic?
+    localized: localized_review
+    metastatic: hla
+  localized_review:
+    question: Pembrolizumab prescribed?
+    'yes': clinical_review
+    'no': localized_management
+  hla:
+    question: HLA-A*02:01?
+    positive: hla_positive
+    negative: hla_negative
+    not_tested: not_evaluable
+  hla_positive:
+    question: First line before tebentafusp?
+    'yes': tebentafusp_standard
+    'no': post_tebentafusp
+  hla_negative:
+    question: Anti-PD-1 prescribed?
+    'yes': anti_pd1_class_option
+    'no': other_options
+  post_tebentafusp:
+    question: Progressed after tebentafusp?
+    'yes': anti_pd1_class_option
+    'no': clinical_review
+  historical_version_required:
+    type: terminal
+    result: requires_clinical_review
+  outside_scope:
+    type: terminal
+    result: outside_scope
+  clinical_review:
+    type: terminal
+    result: requires_clinical_review
+  not_evaluable:
+    type: terminal
+    result: not_evaluable
+  tebentafusp_standard:
+    type: terminal
+    result: tebentafusp_first_line_standard
+  anti_pd1_class_option:
+    type: terminal
+    result: anti_PD1_option
+  localized_management:
+    type: terminal
+    result: localized_ophthalmic_management
+  other_options:
+    type: terminal
+    result: clinical_review

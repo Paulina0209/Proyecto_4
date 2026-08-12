@@ -1,0 +1,148 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_breast_early_tnbc
+variables:
+  cancer_type:
+    type: categorical
+    allowed_values:
+    - breast
+    - other
+    - unknown
+  breast_subtype:
+    type: categorical
+    allowed_values:
+    - triple_negative
+    - other
+    - unknown
+  er_status:
+    type: categorical
+    allowed_values:
+    - negative
+    - positive
+    - unknown
+  pr_status:
+    type: categorical
+    allowed_values:
+    - negative
+    - positive
+    - unknown
+  her2_status:
+    type: categorical
+    allowed_values:
+    - negative
+    - positive
+    - equivocal
+    - unknown
+  disease_setting:
+    type: categorical
+    allowed_values:
+    - early
+    - locally_advanced
+    - metastatic
+    - recurrent
+    - unknown
+  clinical_stage:
+    type: categorical
+    allowed_values:
+    - I
+    - II
+    - III
+    - IV
+    - unknown
+  clinical_t_category:
+    type: categorical
+    allowed_values:
+    - cT1a
+    - cT1b
+    - cT1c
+    - cT2
+    - cT3
+    - cT4
+    - unknown
+  clinical_n_status:
+    type: categorical
+    allowed_values:
+    - N0
+    - N1
+    - N2
+    - N3
+    - unknown
+  metastatic_disease:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  treatment_phase:
+    type: categorical
+    allowed_values:
+    - neoadjuvant
+    - surgery
+    - adjuvant
+    - unknown
+  prescribed_antineoplastic_drugs:
+    type: list
+    item_type: string
+  prescribed_regimen_id:
+    type: string
+  neoadjuvant_chemotherapy_given:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  pembrolizumab_started_neoadjuvant:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  surgery_completed:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  pathologic_complete_response:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  adjuvant_pembrolizumab_planned:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  adjuvant_pembrolizumab_cycles_completed:
+    type: integer
+    minimum: 0
+  immune_checkpoint_inhibitor_toxicity_risk:
+    type: categorical
+    allowed_values:
+    - excessive
+    - not_excessive
+    - unknown
+  immune_related_adverse_event:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  treatment_discontinuation_reason:
+    type: categorical
+    allowed_values:
+    - completed
+    - toxicity
+    - progression
+    - pcr_only
+    - other
+    - unknown
+  guideline_temporal_applicability:
+    type: categorical
+    allowed_values:
+    - applicable
+    - not_yet_published
+    - uncertain
+    - unknown

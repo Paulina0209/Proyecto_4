@@ -1,5 +1,28 @@
-﻿# yaml-language-server: $schema=none
+# yaml-language-server: $schema=none
 
 rule_set_id: esmo_uveal_melanoma_eligibility
-status: scaffold
-rules: []
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-UVEAL-ELIG-001
+  name: Uveal melanoma enters module
+  conditions:
+    field: cancer_type
+    operator: equals
+    value: uveal_melanoma
+  conclusion:
+    action: enter_module
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: module_scope
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    title: 'Uveal melanoma: ESMO–EURACAN Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2026
+    doi: 10.1016/j.esmoop.2026.106888
+    section: Scope

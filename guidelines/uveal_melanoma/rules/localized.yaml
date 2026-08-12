@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_uveal_melanoma_localized
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-UVEAL-LOC-001
+  name: Pembrolizumab in localized uveal melanoma requires expert review
+  conditions:
+    all:
+    - field: disease_setting
+      operator: equals
+      value: localized
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: no_positive_standard_pembrolizumab_pathway_encoded_for_localized_disease
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: absence_of_positive_pembrolizumab_recommendation
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    interpretation_note: No positive pembrolizumab recommendation is encoded for localized uveal melanoma from this
+      CPG.
+  source:
+    title: 'Uveal melanoma: ESMO–EURACAN Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2026
+    doi: 10.1016/j.esmoop.2026.106888
+    section: Management of localized uveal melanoma

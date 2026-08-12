@@ -1,0 +1,97 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_metastatic_oncogene_addicted_exclusions
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-NSCLC-OA-EXC-001
+  name: Non-oncogene disease routes to separate module
+  conditions:
+    field: molecular_pathway_status
+    operator: equals
+    value: non_oncogene_addicted
+  conclusion:
+    action: route_to_module
+    target_module: nsclc_metastatic_non_oncogene
+    audit_effect: outside_scope
+  evidence:
+    organization: ESMO
+    statement_scope: module_scope
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: &id001
+    title: 'Oncogene-addicted metastatic non-small-cell lung cancer: ESMO Clinical Practice Guideline for diagnosis,
+      treatment and follow-up'
+    organization: ESMO
+    publication_year: 2023
+    doi: 10.1016/j.annonc.2022.12.009
+    section: Biomarker-driven diagnosis and treatment algorithms
+- id: ESMO-NSCLC-OA-EXC-002
+  name: Incomplete molecular testing with pembrolizumab requires review
+  conditions:
+    all:
+    - field: molecular_testing_complete
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: molecular_characterization_incomplete
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: diagnostic_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: *id001
+- id: ESMO-NSCLC-OA-EXC-003
+  name: Early-stage disease outside metastatic module
+  conditions:
+    field: disease_setting
+    operator: equals
+    value: early
+  conclusion:
+    action: exclude_from_module
+    audit_effect: outside_scope
+  evidence:
+    organization: ESMO
+    statement_scope: module_scope
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: *id001
+- id: ESMO-NSCLC-OA-EXC-004
+  name: Date-inappropriate version requires historical/living version review
+  conditions:
+    field: guideline_temporal_applicability
+    operator: in
+    value:
+    - not_yet_published
+    - superseded_for_date
+  conclusion:
+    action: require_historical_guideline_version
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: temporal_methodology
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    title: 'Oncogene-addicted metastatic non-small-cell lung cancer: ESMO Clinical Practice Guideline for diagnosis,
+      treatment and follow-up'
+    organization: ESMO
+    publication_year: 2023
+    doi: 10.1016/j.annonc.2022.12.009
+    section: Version control

@@ -1,0 +1,175 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_breast_early_tnbc
+status: synthetic_validation_cases
+cases:
+- id: EB-001
+  rule_file: eligibility.yaml
+  facts:
+    cancer_type: breast
+    breast_subtype: triple_negative
+    disease_setting: early
+    metastatic_disease: 'no'
+  expected_rule_id: ESMO-BREAST-E-TNBC-ELIG-001
+  expected_rule_status: applicable
+  expected_action: enter_module
+- id: EB-002
+  rule_file: neoadjuvant.yaml
+  facts:
+    clinical_stage: II
+    clinical_t_category: cT2
+    clinical_n_status: N0
+    treatment_phase: neoadjuvant
+    neoadjuvant_chemotherapy_given: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    immune_checkpoint_inhibitor_toxicity_risk: not_excessive
+  expected_rule_id: ESMO-BREAST-E-TNBC-NEO-001
+  expected_rule_status: applicable
+  expected_action: support_pembrolizumab
+- id: EB-003
+  rule_file: neoadjuvant.yaml
+  facts:
+    clinical_stage: III
+    clinical_t_category: cT1c
+    clinical_n_status: N1
+    treatment_phase: neoadjuvant
+    neoadjuvant_chemotherapy_given: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    immune_checkpoint_inhibitor_toxicity_risk: not_excessive
+  expected_rule_id: ESMO-BREAST-E-TNBC-NEO-001
+  expected_rule_status: applicable
+  expected_action: support_pembrolizumab
+- id: EB-004
+  rule_file: neoadjuvant.yaml
+  facts:
+    clinical_stage: II
+    clinical_t_category: cT2
+    clinical_n_status: N0
+    treatment_phase: neoadjuvant
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    neoadjuvant_chemotherapy_given: 'no'
+  expected_rule_id: ESMO-BREAST-E-TNBC-NEO-002
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: EB-005
+  rule_file: perioperative.yaml
+  facts:
+    pembrolizumab_started_neoadjuvant: 'yes'
+    surgery_completed: 'yes'
+    adjuvant_pembrolizumab_planned: 'yes'
+  expected_rule_id: ESMO-BREAST-E-TNBC-PERI-001
+  expected_rule_status: applicable
+  expected_action: support_perioperative_sequence
+- id: EB-006
+  rule_file: perioperative.yaml
+  facts:
+    pembrolizumab_started_neoadjuvant: 'yes'
+    surgery_completed: 'yes'
+    pathologic_complete_response: 'yes'
+    adjuvant_pembrolizumab_planned: 'yes'
+  expected_rule_id: ESMO-BREAST-E-TNBC-PERI-002
+  expected_rule_status: applicable
+  expected_action: support_adjuvant_continuation_regardless_of_pcr
+- id: EB-007
+  rule_file: adjuvant.yaml
+  facts:
+    pembrolizumab_started_neoadjuvant: 'yes'
+    surgery_completed: 'yes'
+    treatment_phase: adjuvant
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-BREAST-E-TNBC-ADJ-001
+  expected_rule_status: applicable
+  expected_action: support_pembrolizumab
+- id: EB-008
+  rule_file: adjuvant.yaml
+  facts:
+    pembrolizumab_started_neoadjuvant: 'no'
+    treatment_phase: adjuvant
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-BREAST-E-TNBC-ADJ-002
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: EB-009
+  rule_file: continuation.yaml
+  facts:
+    treatment_phase: adjuvant
+    adjuvant_pembrolizumab_cycles_completed: 9
+  expected_rule_id: ESMO-BREAST-E-TNBC-CONT-001
+  expected_rule_status: applicable
+  expected_action: course_completion_review
+- id: EB-010
+  rule_file: continuation.yaml
+  facts:
+    pathologic_complete_response: 'yes'
+    treatment_discontinuation_reason: pcr_only
+    pembrolizumab_started_neoadjuvant: 'yes'
+  expected_rule_id: ESMO-BREAST-E-TNBC-CONT-002
+  expected_rule_status: applicable
+  expected_action: flag_potential_deviation
+- id: EB-011
+  rule_file: continuation.yaml
+  facts:
+    immune_related_adverse_event: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-BREAST-E-TNBC-CONT-003
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: EB-012
+  rule_file: exclusions.yaml
+  facts:
+    clinical_stage: I
+    clinical_n_status: N0
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-BREAST-E-TNBC-EXC-001
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: EB-013
+  rule_file: exclusions.yaml
+  facts:
+    metastatic_disease: 'yes'
+  expected_rule_id: ESMO-BREAST-E-TNBC-EXC-002
+  expected_rule_status: applicable
+  expected_action: route_to_module
+- id: EB-014
+  rule_file: exclusions.yaml
+  facts:
+    breast_subtype: other
+  expected_rule_id: ESMO-BREAST-E-TNBC-EXC-003
+  expected_rule_status: applicable
+  expected_action: exclude_from_module
+- id: EB-015
+  rule_file: exclusions.yaml
+  facts:
+    immune_checkpoint_inhibitor_toxicity_risk: excessive
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-BREAST-E-TNBC-EXC-004
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: EB-016
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: not_yet_published
+  expected_rule_id: ESMO-BREAST-E-TNBC-EXC-005
+  expected_rule_status: applicable
+  expected_action: require_historical_guideline_version
+- id: EB-017
+  rule_file: neoadjuvant.yaml
+  facts:
+    clinical_stage: II
+    clinical_t_category: cT2
+    clinical_n_status: N0
+    treatment_phase: neoadjuvant
+    neoadjuvant_chemotherapy_given: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    immune_checkpoint_inhibitor_toxicity_risk: null
+  expected_rule_id: ESMO-BREAST-E-TNBC-NEO-001
+  expected_rule_status: not_evaluable

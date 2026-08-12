@@ -1,0 +1,73 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_breast_early_tnbc_adjuvant
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-BREAST-E-TNBC-ADJ-001
+  name: Adjuvant pembrolizumab after neoadjuvant pembrolizumab and surgery
+  conditions:
+    all:
+    - field: pembrolizumab_started_neoadjuvant
+      operator: equals
+      value: 'yes'
+    - field: surgery_completed
+      operator: equals
+      value: 'yes'
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: support_pembrolizumab
+    phase: adjuvant
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: regimen_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+    interpretation_note: Positive ESMO recommendation for high-risk early TNBC and perioperative pembrolizumab.
+  source:
+    title: 'Early breast cancer: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2024
+    doi: 10.1016/j.annonc.2023.11.016
+    section: 'Pembrolizumab: nine q3w adjuvant cycles'
+- id: ESMO-BREAST-E-TNBC-ADJ-002
+  name: Adjuvant-only pembrolizumab initiation requires review
+  conditions:
+    all:
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+    - field: pembrolizumab_started_neoadjuvant
+      operator: equals
+      value: 'no'
+  conclusion:
+    action: flag_for_expert_review
+    reason: adjuvant_only_pembrolizumab_not_modeled_perioperative_route
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: boundary_from_positive_recommendation
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    title: 'Early breast cancer: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2024
+    doi: 10.1016/j.annonc.2023.11.016
+    section: Triple-negative breast cancer recommendations

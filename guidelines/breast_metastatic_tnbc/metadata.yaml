@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_breast_metastatic_tnbc
+module_version: '1.0'
+name: ESMO metastatic TNBC — pembrolizumab
+organization: ESMO
+source:
+  title: 'ESMO Clinical Practice Guideline for the diagnosis, staging and treatment of patients with metastatic breast cancer'
+  publication_year: 2021
+  doi: 10.1016/j.annonc.2021.09.019
+  source_version_locked: true
+  version_policy: Locked 2021 CPG; do not silently mix the 2026 replacement guideline.
+clinical_scope:
+  drug_of_interest: pembrolizumab
+  cancer: breast
+  subtype: triple_negative
+  setting: metastatic_or_unresectable_recurrent
+development_status: draft_computable_clinical_validation_pending
+licensing_status: internal_research_only_permission_review_pending
+validation:
+  technical_validation_status: synthetic_cases_included
+  clinical_validation_status: pending

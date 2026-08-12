@@ -1,0 +1,96 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_uveal_melanoma
+variables:
+  cancer_type:
+    type: categorical
+    allowed_values:
+    - uveal_melanoma
+    - cutaneous_melanoma
+    - mucosal_melanoma
+    - other
+    - unknown
+  uveal_site:
+    type: categorical
+    allowed_values:
+    - choroid
+    - ciliary_body
+    - iris
+    - mixed
+    - unknown
+  disease_setting:
+    type: categorical
+    allowed_values:
+    - localized
+    - metastatic
+    - recurrent
+    - unknown
+  hla_a0201_status:
+    type: categorical
+    allowed_values:
+    - positive
+    - negative
+    - not_tested
+    - unknown
+  treatment_line:
+    type: integer
+    minimum: 1
+  prior_tebentafusp:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  progression_on_tebentafusp:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  liver_dominant_disease:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  liver_directed_debulking_indicated:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  prescribed_antineoplastic_drugs:
+    type: list
+    item_type: string
+  prescribed_regimen_id:
+    type: categorical
+    allowed_values:
+    - pembrolizumab_monotherapy
+    - lenvatinib_pembrolizumab
+    - other
+    - unknown
+  immune_checkpoint_inhibitor_contraindication:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  disease_progression:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  immune_related_adverse_event:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  guideline_temporal_applicability:
+    type: categorical
+    allowed_values:
+    - applicable
+    - not_yet_published
+    - uncertain
+    - unknown

@@ -1,0 +1,96 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_breast_early_tnbc_continuation
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-BREAST-E-TNBC-CONT-001
+  name: Nine q3w adjuvant cycles represent planned adjuvant phase
+  conditions:
+    all:
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: adjuvant_pembrolizumab_cycles_completed
+      operator: greater_than_or_equal
+      value: 9
+  conclusion:
+    action: course_completion_review
+    planned_adjuvant_cycles: 9
+    audit_effect: advisory
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+  source:
+    title: 'Early breast cancer: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2024
+    doi: 10.1016/j.annonc.2023.11.016
+    section: Pembrolizumab dosing and duration
+- id: ESMO-BREAST-E-TNBC-CONT-002
+  name: Stopping solely because of pCR is a potential deviation
+  conditions:
+    all:
+    - field: pathologic_complete_response
+      operator: equals
+      value: 'yes'
+    - field: treatment_discontinuation_reason
+      operator: equals
+      value: pcr_only
+    - field: pembrolizumab_started_neoadjuvant
+      operator: equals
+      value: 'yes'
+  conclusion:
+    action: flag_potential_deviation
+    reason: pcr_alone_should_not_cancel_planned_adjuvant_pembrolizumab
+    audit_effect: potential_deviation
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+  source:
+    title: 'Early breast cancer: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2024
+    doi: 10.1016/j.annonc.2023.11.016
+    section: Continue pembrolizumab regardless of pCR
+- id: ESMO-BREAST-E-TNBC-CONT-003
+  name: Immune-related toxicity requires review
+  conditions:
+    all:
+    - field: immune_related_adverse_event
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: immune_related_toxicity
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: safety_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    title: 'Early breast cancer: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+    organization: ESMO
+    publication_year: 2024
+    doi: 10.1016/j.annonc.2023.11.016
+    section: Safety and monitoring

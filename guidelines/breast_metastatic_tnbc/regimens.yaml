@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_breast_metastatic_tnbc
+regimens:
+- id: pembro_paclitaxel
+  includes:
+  - pembrolizumab
+  - paclitaxel
+- id: pembro_nab_paclitaxel
+  includes:
+  - pembrolizumab
+  - nab-paclitaxel
+- id: pembro_carboplatin_gemcitabine
+  includes:
+  - pembrolizumab
+  - carboplatin
+  - gemcitabine

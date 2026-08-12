@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_breast_early_tnbc
+pathway_id: esmo_breast_early_tnbc_pathway
+start_node: scope
+nodes:
+  scope:
+    question: Early TNBC?
+    'yes': temporal
+    'no': outside_scope
+  temporal:
+    question: Guideline version applicable?
+    'yes': risk
+    'no': historical_version_required
+  risk:
+    question: Stage II-III and cT2-4 N0 or any N-positive?
+    'yes': neoadjuvant
+    'no': clinical_review
+  neoadjuvant:
+    question: Chemotherapy + pembrolizumab?
+    'yes': surgery
+    'no': clinical_review
+  surgery:
+    question: Surgery completed?
+    'yes': adjuvant
+    'no': clinical_review
+  adjuvant:
+    question: Continue pembrolizumab regardless of pCR?
+    'yes': concordant
+    'no': clinical_review
+  concordant:
+    type: terminal
+    result: concordant
+  outside_scope:
+    type: terminal
+    result: outside_scope
+  historical_version_required:
+    type: terminal
+    result: requires_clinical_review
+  clinical_review:
+    type: terminal
+    result: requires_clinical_review

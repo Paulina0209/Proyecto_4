@@ -1,0 +1,159 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_breast_metastatic_tnbc_exclusions
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-BREAST-M-TNBC-EXC-001
+  name: CPS below 10 does not meet locked pembrolizumab indication
+  conditions:
+    all:
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: pdl1_cps
+      operator: less_than
+      value: 10
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_potential_deviation
+    reason: pdl1_cps_below_10
+    audit_effect: potential_deviation
+  evidence:
+    organization: ESMO
+    statement_scope: boundary_from_positive_recommendation
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    interpretation_note: Threshold is derived from the positive CPS≥10 recommendation; no I,D grade is fabricated.
+  source: &id001
+    title: 'ESMO Clinical Practice Guideline for the diagnosis, staging and treatment of patients with metastatic breast cancer'
+    organization: ESMO
+    publication_year: 2021
+    doi: 10.1016/j.annonc.2021.09.019
+    section: TNBC first-line treatment
+- id: ESMO-BREAST-M-TNBC-EXC-002
+  name: DFI below 6 months requires review
+  conditions:
+    all:
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: disease_free_interval_months
+      operator: less_than
+      value: 6
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: dfi_below_locked_guideline_threshold
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: boundary_from_positive_recommendation
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: *id001
+- id: ESMO-BREAST-M-TNBC-EXC-003
+  name: Unrecognized pembrolizumab chemotherapy backbone requires review
+  conditions:
+    all:
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: pdl1_cps
+      operator: greater_than_or_equal
+      value: 10
+    - field: disease_free_interval_months
+      operator: greater_than_or_equal
+      value: 6
+    - field: prescribed_regimen_id
+      operator: equals
+      value: other
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: backbone_not_in_locked_esmo_recommendation
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: boundary_from_positive_recommendation
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: *id001
+- id: ESMO-BREAST-M-TNBC-EXC-004
+  name: ICI contraindication requires review
+  conditions:
+    all:
+    - field: immune_checkpoint_inhibitor_contraindication
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: ici_contraindication
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: safety_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: *id001
+- id: ESMO-BREAST-M-TNBC-EXC-005
+  name: Non-TNBC disease outside module
+  conditions:
+    field: breast_subtype
+    operator: equals
+    value: other
+  conclusion:
+    action: exclude_from_module
+    audit_effect: outside_scope
+  evidence:
+    organization: ESMO
+    statement_scope: module_scope
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: *id001
+- id: ESMO-BREAST-M-TNBC-EXC-006
+  name: Date-inapplicable guideline requires historical version
+  conditions:
+    field: guideline_temporal_applicability
+    operator: equals
+    value: not_yet_published
+  conclusion:
+    action: require_historical_guideline_version
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: temporal_methodology
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    title: 'ESMO Clinical Practice Guideline for the diagnosis, staging and treatment of patients with metastatic breast cancer'
+    organization: ESMO
+    publication_year: 2021
+    doi: 10.1016/j.annonc.2021.09.019
+    section: Version control

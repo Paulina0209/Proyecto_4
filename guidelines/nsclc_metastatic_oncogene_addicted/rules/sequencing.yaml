@@ -1,0 +1,99 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_metastatic_oncogene_addicted_sequencing
+status: draft_computable_clinical_validation_pending
+rules:
+- id: ESMO-NSCLC-OA-SEQ-001
+  name: 'ALK after lorlatinib progression: pembrolizumab requires review'
+  conditions:
+    all:
+    - field: actionable_driver_names
+      operator: contains
+      value: ALK
+    - field: prior_lorlatinib
+      operator: equals
+      value: 'yes'
+    - field: progression_on_lorlatinib
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: added_value_of_ici_uncertain_after_lorlatinib_in_locked_cpg
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: driver_specific_context
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    interpretation_note: The CPG describes uncertainty of added ICI value; no grade is fabricated.
+  source:
+    title: 'Oncogene-addicted metastatic non-small-cell lung cancer: ESMO Clinical Practice Guideline for diagnosis,
+      treatment and follow-up'
+    organization: ESMO
+    publication_year: 2023
+    doi: 10.1016/j.annonc.2022.12.009
+    section: ALK-rearranged NSCLC after lorlatinib
+- id: ESMO-NSCLC-OA-SEQ-002
+  name: Pembrolizumab after progression on driver-targeted therapy requires driver-specific review
+  conditions:
+    all:
+    - field: prior_driver_targeted_therapy
+      operator: equals
+      value: 'yes'
+    - field: progression_on_driver_targeted_therapy
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: post_targeted_sequence_is_driver_specific
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: cross_driver_synthesis
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: &id001
+    title: 'Oncogene-addicted metastatic non-small-cell lung cancer: ESMO Clinical Practice Guideline for diagnosis,
+      treatment and follow-up'
+    organization: ESMO
+    publication_year: 2023
+    doi: 10.1016/j.annonc.2022.12.009
+    section: Biomarker-driven diagnosis and treatment algorithms
+- id: ESMO-NSCLC-OA-SEQ-003
+  name: Pembrolizumab without prior available targeted therapy requires review
+  conditions:
+    all:
+    - field: prior_driver_targeted_therapy
+      operator: equals
+      value: 'no'
+    - field: driver_targeted_therapy_available
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    reason: targeted_strategy_not_documented
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: cross_driver_synthesis
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source: *id001

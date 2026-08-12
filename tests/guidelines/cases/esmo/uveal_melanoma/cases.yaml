@@ -1,0 +1,134 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_uveal_melanoma
+status: synthetic_validation_cases
+cases:
+- id: UV-001
+  rule_file: eligibility.yaml
+  facts:
+    cancer_type: uveal_melanoma
+  expected_rule_id: ESMO-UVEAL-ELIG-001
+  expected_rule_status: applicable
+  expected_action: enter_module
+- id: UV-002
+  rule_file: localized.yaml
+  facts:
+    disease_setting: localized
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-UVEAL-LOC-001
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: UV-003
+  rule_file: metastatic.yaml
+  facts:
+    disease_setting: metastatic
+    hla_a0201_status: negative
+    prescribed_regimen_id: pembrolizumab_monotherapy
+    immune_checkpoint_inhibitor_contraindication: 'no'
+  expected_rule_id: ESMO-UVEAL-MET-001
+  expected_rule_status: applicable
+  expected_action: support_class_level_option
+- id: UV-004
+  rule_file: metastatic.yaml
+  facts:
+    disease_setting: metastatic
+    hla_a0201_status: positive
+    prior_tebentafusp: 'yes'
+    progression_on_tebentafusp: 'yes'
+    prescribed_regimen_id: pembrolizumab_monotherapy
+    immune_checkpoint_inhibitor_contraindication: 'no'
+  expected_rule_id: ESMO-UVEAL-MET-002
+  expected_rule_status: applicable
+  expected_action: support_class_level_option
+- id: UV-005
+  rule_file: metastatic.yaml
+  facts:
+    disease_setting: metastatic
+    hla_a0201_status: positive
+    treatment_line: 1
+    prior_tebentafusp: 'no'
+    liver_directed_debulking_indicated: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-UVEAL-MET-003
+  expected_rule_status: applicable
+  expected_action: flag_potential_deviation
+- id: UV-006
+  rule_file: metastatic.yaml
+  facts:
+    disease_setting: metastatic
+    liver_directed_debulking_indicated: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-UVEAL-MET-004
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: UV-007
+  rule_file: metastatic.yaml
+  facts:
+    disease_setting: metastatic
+    prescribed_regimen_id: lenvatinib_pembrolizumab
+  expected_rule_id: ESMO-UVEAL-MET-005
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: UV-008
+  rule_file: continuation.yaml
+  facts:
+    disease_progression: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-UVEAL-CONT-001
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: UV-009
+  rule_file: continuation.yaml
+  facts:
+    immune_related_adverse_event: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-UVEAL-CONT-002
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: UV-010
+  rule_file: exclusions.yaml
+  facts:
+    cancer_type: cutaneous_melanoma
+  expected_rule_id: ESMO-UVEAL-EXC-001
+  expected_rule_status: applicable
+  expected_action: route_to_module
+- id: UV-011
+  rule_file: exclusions.yaml
+  facts:
+    disease_setting: metastatic
+    hla_a0201_status: not_tested
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-UVEAL-EXC-002
+  expected_rule_status: applicable
+  expected_action: request_missing_information
+- id: UV-012
+  rule_file: exclusions.yaml
+  facts:
+    immune_checkpoint_inhibitor_contraindication: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected_rule_id: ESMO-UVEAL-EXC-003
+  expected_rule_status: applicable
+  expected_action: flag_for_expert_review
+- id: UV-013
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: not_yet_published
+  expected_rule_id: ESMO-UVEAL-EXC-004
+  expected_rule_status: applicable
+  expected_action: require_historical_guideline_version
+- id: UV-014
+  rule_file: metastatic.yaml
+  facts:
+    disease_setting: metastatic
+    hla_a0201_status: null
+    prescribed_regimen_id: pembrolizumab_monotherapy
+    immune_checkpoint_inhibitor_contraindication: 'no'
+  expected_rule_id: ESMO-UVEAL-MET-001
+  expected_rule_status: not_evaluable
