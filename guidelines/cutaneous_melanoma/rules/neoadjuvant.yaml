@@ -1,0 +1,106 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_cutaneous_melanoma_neoadjuvant
+status: draft_computable
+rules:
+- id: ESMO-MEL-CUT-NEO-001
+  name: Neoadjuvant plus adjuvant pembrolizumab for resectable stage III with detectable nodal metastasis
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: neoadjuvant
+    - field: disease_setting
+      operator: equals
+      value: resectable_stage_III
+    - field: stage_group
+      operator: in
+      value:
+      - IIIA
+      - IIIB
+      - IIIC
+      - IIID
+    - field: resectability_status
+      operator: equals
+      value: resectable
+    - field: clinically_or_radiologically_detectable_ln_metastasis
+      operator: equals
+      value: 'yes'
+    - field: pathologically_proven_ln_metastasis
+      operator: equals
+      value: 'yes'
+    - field: adjuvant_pembrolizumab_planned
+      operator: equals
+      value: 'yes'
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+  conclusion:
+    action: support_sequence
+    sequence_regimen_id: pembro_neoadjuvant_adjuvant_s1801
+    recommendation_type: recommended_option
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: II
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+    regulatory_status_as_reported_by_source: not EMA or FDA approved as neoadjuvant therapy
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Neoadjuvant and neoadjuvant plus adjuvant systemic therapy in resectable stage III melanoma
+    source_locator: pp. 16 and 18
+    figure: Figure 2
+  interpretation_note: This is a planned neoadjuvant-plus-adjuvant sequence, not neoadjuvant pembrolizumab alone.
+- id: ESMO-MEL-CUT-NEO-002
+  name: Neoadjuvant plus adjuvant pembrolizumab for resectable in-transit metastases
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: neoadjuvant
+    - field: disease_setting
+      operator: equals
+      value: in_transit_metastases
+    - field: in_transit_metastases
+      operator: equals
+      value: 'yes'
+    - field: resectability_status
+      operator: equals
+      value: resectable
+    - field: adjuvant_pembrolizumab_planned
+      operator: equals
+      value: 'yes'
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+  conclusion:
+    action: support_sequence
+    sequence_regimen_id: pembro_neoadjuvant_adjuvant_s1801
+    recommendation_type: may_be_evaluated
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: II
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+    regulatory_status_as_reported_by_source: not EMA or FDA approved as neoadjuvant therapy
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Treatment of in-transit metastases
+    source_locator: pp. 15 and 17
+    figure: Figure 3

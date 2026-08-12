@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_m_continuation
+status: draft_computable
+
+rules:
+
+  - id: ESMO-NSCLC-M-CONT-001
+    name: Revisión de discontinuación después de dos años de ICI
+    rule_origin: clinical_guideline
+    conditions:
+      all:
+        - {field: prescribed_antineoplastic_drugs, operator: contains, value: pembrolizumab}
+        - {field: months_on_ici, operator: greater_than_or_equal, value: 24}
+    conclusion:
+      action: review_possible_discontinuation
+      recommendation_type: may_discontinue_after_two_years
+      audit_effect: advisory
+    evidence:
+      organization: ESMO
+      statement_scope: class_level
+      native:
+        evidence_level: "I"
+        recommendation_grade: "A"
+        mcbs: null
+      explicit_grade_reported: true
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: Duration of immune checkpoint inhibitor treatment
+    interpretation_note: >
+      Esta regla no marca como desviación continuar ni suspender. Genera una
+      recomendación de revisión porque la decisión depende del contexto clínico.
+
+  - id: ESMO-NSCLC-M-CONT-002
+    name: Ajustar duración según eficacia y tolerabilidad
+    rule_origin: clinical_guideline
+    conditions:
+      all:
+        - {field: prescribed_antineoplastic_drugs, operator: contains, value: pembrolizumab}
+    conclusion:
+      action: review_duration_against_efficacy_and_tolerability
+      recommendation_type: contextual_management
+      audit_effect: advisory
+    evidence:
+      organization: ESMO
+      statement_scope: class_level
+      native:
+        evidence_level: "IV"
+        recommendation_grade: "A"
+        mcbs: null
+      explicit_grade_reported: true
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: Duration of immune checkpoint inhibitor treatment

@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_cutaneous_melanoma
+status: draft_computable
+regimens:
+- id: pembro_adjuvant_stage_iib_iic
+  name: Pembrolizumab adjuvant for completely resected stage IIB-IIC melanoma
+  components:
+  - pembrolizumab
+  treatment_phase: adjuvant
+  planned_duration_months: 12
+  protocol_context:
+    dose: 200 mg every 3 weeks
+    planned_cycles: 17
+    note: Trial schedule described in KEYNOTE-716; local dosing validation remains required.
+  source_locator: pp. 12 and 17
+- id: pembro_adjuvant_resected_stage_iii
+  name: Pembrolizumab adjuvant for completely resected stage III melanoma
+  components:
+  - pembrolizumab
+  treatment_phase: adjuvant
+  start_window_weeks_after_resection: 12
+  planned_duration: The recommendation summary does not state a drug-specific cycle count.
+  source_locator: pp. 14 and 17-18
+- id: pembro_neoadjuvant_adjuvant_s1801
+  name: Neoadjuvant plus adjuvant pembrolizumab sequence
+  components:
+  - pembrolizumab
+  treatment_phase: perioperative
+  protocol_context:
+    neoadjuvant_doses: 3
+    surgery: after neoadjuvant phase
+    adjuvant_doses: 15
+    dose: 200 mg every 3 weeks
+    total_doses: 18
+  regulatory_status_as_reported_by_source: not EMA or FDA approved as neoadjuvant therapy
+  source_locator: pp. 16 and 18
+- id: anti_pd1_adjuvant_resected_stage_iv_ned
+  name: Adjuvant anti-PD-1 after complete treatment of resectable stage IV melanoma
+  components_or_class_members:
+  - pembrolizumab
+  - nivolumab
+  statement_scope: class_level
+  treatment_phase: adjuvant
+  source_locator: pp. 18 and 22
+- id: pembro_monotherapy_advanced
+  name: Pembrolizumab monotherapy for unresectable stage III or stage IV melanoma
+  components:
+  - pembrolizumab
+  treatment_phase: advanced
+  braf_requirement: none_for_pembrolizumab_selection
+  pdl1_requirement: none_for_pembrolizumab_selection
+  duration: not specified as a universal fixed duration in the recommendation summary
+  source_locator: pp. 18 and 22-23
+- id: pembro_lenvatinib_after_pd1_progression
+  name: Pembrolizumab plus lenvatinib after anti-PD-1 progression
+  components:
+  - pembrolizumab
+  - lenvatinib
+  status: not_standard_not_approved_as_reported_by_source
+  source_locator: pp. 21 and 24

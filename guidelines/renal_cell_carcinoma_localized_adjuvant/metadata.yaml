@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_renal_cell_carcinoma_localized_adjuvant
+module_version: 1.0-draft
+name: ESMO renal cell carcinoma - localized/adjuvant pembrolizumab
+organization: ESMO
+development_status: draft_computable
+clinical_validation_status: pending
+technical_validation_status: initial_automated_tests_included
+source:
+  title: 'Renal cell carcinoma: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+  authors: Powles et al.
+  doi: 10.1016/j.annonc.2024.05.537
+  available_online: '2024-05-22'
+  last_update: 2024-05
+  journal_issue: Annals of Oncology, Volume 35, Issue 8, 2024
+  guideline_id: esmo_renal_cell_carcinoma_2024
+  evidence_system:
+    levels_of_evidence_and_grades: ESMO
+    mcbs_version: '1.1'
+clinical_scope:
+  drug_of_interest: pembrolizumab
+  disease: renal cell carcinoma
+  included_settings:
+  - operable clear-cell RCC after complete resection with KEYNOTE-564 intermediate-high risk
+  - operable clear-cell RCC after complete resection with KEYNOTE-564 high risk
+  - oligometastatic clear-cell RCC rendered M1 NED after complete metastasectomy or local treatment
+  excluded_settings:
+  - active advanced or metastatic RCC
+  - non-clear-cell RCC as a positive adjuvant pembrolizumab pathway
+  - localized disease without complete resection
+  - low-risk disease outside KEYNOTE-564 criteria
+temporal_applicability:
+  version_effective_from: '2024-05-22'
+  policy: Records before this date require the guideline version applicable on the prescription date.
+licensing:
+  source_notice: All rights reserved, including text and data mining and AI-related uses.
+  module_use: private_internal_research_only_pending_permission
+  public_distribution: not_authorized
+limitations:
+- This is a computable draft and not a substitute for specialist judgement.
+- The M1 NED pathway is kept in this module because the treatment intent is adjuvant after complete local control.
+- Absence of a positive recommendation is not automatically classified as a deviation.
+- The rule engine evaluates rule files independently; a production orchestrator must enforce module eligibility
+  and pathway order.

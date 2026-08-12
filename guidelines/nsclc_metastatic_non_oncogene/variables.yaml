@@ -1,0 +1,109 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_metastatic_non_oncogene
+
+variables:
+
+  cancer_type:
+    type: categorical
+    allowed_values: [NSCLC, SCLC, carcinoid, other, unknown]
+
+  histology:
+    type: categorical
+    allowed_values: [squamous, non_squamous, not_otherwise_specified, unknown]
+
+  disease_setting:
+    type: categorical
+    allowed_values: [early, locally_advanced, advanced, metastatic, recurrent, unknown]
+
+  molecular_pathway_status:
+    description: >
+      Clasificación validada de la ruta molecular. Evita asumir que cualquier
+      alteración registrada implica automáticamente el mismo manejo.
+    type: categorical
+    allowed_values:
+      - non_oncogene_addicted
+      - oncogene_addicted
+      - incomplete
+      - unknown
+
+  actionable_driver_names:
+    type: list
+    item_type: string
+
+  pdl1_tps:
+    type: number
+    unit: percent
+    minimum: 0
+    maximum: 100
+    missing_value: null
+
+  ecog_ps:
+    type: integer
+    minimum: 0
+    maximum: 5
+    missing_value: null
+
+  smoking_status:
+    type: categorical
+    allowed_values: [current_smoker, former_smoker, never_smoker, unknown]
+
+  treatment_line:
+    type: integer
+    minimum: 1
+    missing_value: null
+
+  treatment_phase:
+    type: categorical
+    allowed_values: [induction, maintenance, subsequent, unknown]
+
+  cycle_number:
+    type: integer
+    minimum: 1
+    missing_value: null
+
+  rapid_tumor_reduction_needed:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  immunotherapy_contraindication:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  major_comorbidity_precluding_ici:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  prior_first_line_ici:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  prior_ici:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  prior_ici_substantial_benefit:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  prior_ici_discontinuation_reason:
+    type: categorical
+    allowed_values:
+      - progression
+      - severe_toxicity
+      - completed_planned_treatment
+      - other_non_progression_reason
+      - unknown
+
+  months_on_ici:
+    type: number
+    minimum: 0
+    missing_value: null
+
+  prescribed_antineoplastic_drugs:
+    type: list
+    item_type: string
+
+  prescription_date:
+    type: date
+    missing_value: null

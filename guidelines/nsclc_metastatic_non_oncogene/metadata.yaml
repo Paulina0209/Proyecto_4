@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_metastatic_non_oncogene
+module_version: "1.1"
+
+name: >
+  Cáncer de pulmón de células no pequeñas metastásico
+  sin oncogén conductor accionable
+
+organization: ESMO
+
+source:
+  title: >
+    Non-oncogene-addicted metastatic non-small-cell lung cancer:
+    ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up
+  publication_year: 2023
+  last_guideline_update: "2022-12"
+  doi: "10.1016/j.annonc.2022.12.013"
+
+clinical_scope:
+  cancer_type: NSCLC
+  disease_setting:
+    - advanced
+    - metastatic
+    - recurrent
+  molecular_pathway_status: non_oncogene_addicted
+  drug_of_interest: pembrolizumab
+
+excluded_scope:
+  - early_stage_nsclc
+  - locally_advanced_non_metastatic_nsclc
+  - small_cell_lung_cancer
+  - lung_carcinoid
+  - oncogene_addicted_nsclc
+
+development_status: draft_computable
+
+validation:
+  technical_validation_status: partial
+  clinical_validation_status: pending
+  validated_by: null
+  validation_date: null
+
+evidence_model:
+  native_fields_required: true
+  normalization_crosswalk: src/cdss/standards/evidence_crosswalk.yaml
+  alert_priority_policy: src/cdss/standards/alert_priority.yaml
+  priority_policy_status: provisional
+
+usage:
+  purpose: academic_internal_research
+  commercial_use: false
+  publication_permission: pending

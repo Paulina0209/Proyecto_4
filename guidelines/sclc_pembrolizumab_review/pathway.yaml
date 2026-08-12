@@ -1,0 +1,6 @@
+﻿# yaml-language-server: $schema=none
+
+module_id: esmo_sclc_pembrolizumab_review
+status: scaffold
+start_node: null
+nodes: {}

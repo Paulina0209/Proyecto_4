@@ -1,0 +1,70 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_metastatic_non_oncogene
+pathway_id: esmo_nsclc_m_non_oncogene_pathway
+status: draft_computable
+start_node: confirm_diagnosis
+
+nodes:
+
+  confirm_diagnosis:
+    type: decision
+    field: cancer_type
+    branches:
+      NSCLC: confirm_disease_setting
+      unknown: insufficient_information
+      default: outside_scope
+
+  confirm_disease_setting:
+    type: decision
+    field: disease_setting
+    branches:
+      advanced: evaluate_molecular_pathway
+      metastatic: evaluate_molecular_pathway
+      recurrent: evaluate_molecular_pathway
+      unknown: insufficient_information
+      default: outside_scope
+
+  evaluate_molecular_pathway:
+    type: decision
+    field: molecular_pathway_status
+    branches:
+      non_oncogene_addicted: evaluate_treatment_line
+      oncogene_addicted: route_to_oncogene_addicted_module
+      incomplete: insufficient_information
+      unknown: insufficient_information
+
+  evaluate_treatment_line:
+    type: decision
+    field: treatment_line
+    branches:
+      "1": evaluate_first_line
+      "2": evaluate_subsequent_line
+      "3": evaluate_subsequent_line
+      default: insufficient_information
+
+  evaluate_first_line:
+    type: rule_group
+    rule_files:
+      - rules/first_line.yaml
+      - rules/exclusions.yaml
+      - rules/continuation.yaml
+
+  evaluate_subsequent_line:
+    type: rule_group
+    rule_files:
+      - rules/subsequent_line.yaml
+      - rules/exclusions.yaml
+      - rules/continuation.yaml
+
+  route_to_oncogene_addicted_module:
+    type: terminal
+    result: outside_current_module
+
+  insufficient_information:
+    type: terminal
+    result: not_evaluable
+
+  outside_scope:
+    type: terminal
+    result: outside_scope

@@ -1,0 +1,186 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_m_first_line
+status: draft_computable
+
+rules:
+
+  - id: ESMO-NSCLC-M-FL-001
+    name: Pembrolizumab en monoterapia, primera línea, PD-L1 alto
+    rule_origin: clinical_guideline
+    conditions:
+      all:
+        - {field: treatment_line, operator: equals, value: 1}
+        - {field: ecog_ps, operator: in, value: [0, 1]}
+        - {field: pdl1_tps, operator: greater_than_or_equal, value: 50}
+        - {field: smoking_status, operator: not_equals, value: never_smoker}
+        - {field: immunotherapy_contraindication, operator: equals, value: "no"}
+    conclusion:
+      action: support_regimen
+      regimen_id: pembro_monotherapy
+      recommendation_type: standard_option
+      audit_effect: supports_prescription
+    evidence:
+      organization: ESMO
+      statement_scope: drug_specific
+      native:
+        evidence_level: "I"
+        recommendation_grade: "A"
+        mcbs:
+          version: "1.1"
+          score: 5
+      explicit_grade_reported: true
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: First-line treatment, PS 0-1
+      source_locator: recommendation text and treatment algorithm
+
+  - id: ESMO-NSCLC-M-FL-002
+    name: Combinación con pembrolizumab en histología no escamosa
+    rule_origin: clinical_guideline
+    conditions:
+      all:
+        - {field: treatment_line, operator: equals, value: 1}
+        - {field: histology, operator: equals, value: non_squamous}
+        - {field: ecog_ps, operator: in, value: [0, 1]}
+        - {field: immunotherapy_contraindication, operator: equals, value: "no"}
+    conclusion:
+      action: support_sequence
+      induction_regimen_id: pembro_pemetrexed_platinum_induction
+      maintenance_regimen_id: pembro_pemetrexed_maintenance
+      recommendation_type: standard_option
+      audit_effect: supports_prescription
+    evidence:
+      organization: ESMO
+      statement_scope: regimen_specific
+      native:
+        evidence_level: "I"
+        recommendation_grade: "A"
+        mcbs:
+          version: "1.1"
+          score: 4
+      explicit_grade_reported: true
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: First-line non-squamous NSCLC
+      source_locator: treatment algorithm
+
+  - id: ESMO-NSCLC-M-FL-003
+    name: Combinación con pembrolizumab en histología escamosa
+    rule_origin: clinical_guideline
+    conditions:
+      all:
+        - {field: treatment_line, operator: equals, value: 1}
+        - {field: histology, operator: equals, value: squamous}
+        - {field: ecog_ps, operator: in, value: [0, 1]}
+        - {field: immunotherapy_contraindication, operator: equals, value: "no"}
+    conclusion:
+      action: support_sequence
+      induction_regimen_id: pembro_carboplatin_taxane_induction
+      maintenance_regimen_id: pembro_maintenance
+      recommendation_type: standard_option
+      audit_effect: supports_prescription
+    evidence:
+      organization: ESMO
+      statement_scope: regimen_specific
+      native:
+        evidence_level: "I"
+        recommendation_grade: "A"
+        mcbs:
+          version: "1.1"
+          score: 4
+      explicit_grade_reported: true
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: First-line squamous NSCLC
+      source_locator: treatment algorithm
+
+  - id: ESMO-NSCLC-M-FL-004
+    name: Inmunoterapia en monoterapia para ECOG 2 y PD-L1 alto
+    rule_origin: clinical_guideline
+    conditions:
+      all:
+        - {field: treatment_line, operator: equals, value: 1}
+        - {field: ecog_ps, operator: equals, value: 2}
+        - {field: pdl1_tps, operator: greater_than_or_equal, value: 50}
+        - {field: smoking_status, operator: not_equals, value: never_smoker}
+        - {field: immunotherapy_contraindication, operator: equals, value: "no"}
+    conclusion:
+      action: support_regimen
+      regimen_id: pembro_monotherapy
+      recommendation_type: may_be_considered
+      audit_effect: supports_prescription
+    evidence:
+      organization: ESMO
+      statement_scope: class_level
+      native:
+        evidence_level: "III"
+        recommendation_grade: "B"
+        mcbs: null
+      explicit_grade_reported: true
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: First-line treatment, PS 2
+      source_locator: recommendation text
+    interpretation_note: >
+      La recomendación se expresa para ICI en monoterapia; pembrolizumab
+      se representa como una opción de la clase cuando cumple el umbral
+      de PD-L1 correspondiente.
+
+  - id: ESMO-NSCLC-M-FL-005A
+    name: Preferencia contextual por combinación en no escamoso con necesidad de respuesta rápida
+    rule_origin: clinical_guideline
+    conditions:
+      all:
+        - {field: treatment_line, operator: equals, value: 1}
+        - {field: histology, operator: equals, value: non_squamous}
+        - {field: ecog_ps, operator: in, value: [0, 1]}
+        - {field: pdl1_tps, operator: greater_than_or_equal, value: 50}
+        - {field: rapid_tumor_reduction_needed, operator: equals, value: "yes"}
+        - {field: immunotherapy_contraindication, operator: equals, value: "no"}
+    conclusion:
+      action: prefer_regimen_over_monotherapy
+      preferred_regimen_id: pembro_pemetrexed_platinum_induction
+      comparator_regimen_id: pembro_monotherapy
+      recommendation_type: contextual_preference
+      audit_effect: contextual_preference
+    evidence:
+      organization: ESMO
+      statement_scope: class_level
+      native:
+        evidence_level: "IV"
+        recommendation_grade: "B"
+        mcbs: null
+      explicit_grade_reported: true
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: First-line treatment, need for rapid tumour reduction
+
+  - id: ESMO-NSCLC-M-FL-005B
+    name: Preferencia contextual por combinación en escamoso con necesidad de respuesta rápida
+    rule_origin: clinical_guideline
+    conditions:
+      all:
+        - {field: treatment_line, operator: equals, value: 1}
+        - {field: histology, operator: equals, value: squamous}
+        - {field: ecog_ps, operator: in, value: [0, 1]}
+        - {field: pdl1_tps, operator: greater_than_or_equal, value: 50}
+        - {field: rapid_tumor_reduction_needed, operator: equals, value: "yes"}
+        - {field: immunotherapy_contraindication, operator: equals, value: "no"}
+    conclusion:
+      action: prefer_regimen_over_monotherapy
+      preferred_regimen_id: pembro_carboplatin_taxane_induction
+      comparator_regimen_id: pembro_monotherapy
+      recommendation_type: contextual_preference
+      audit_effect: contextual_preference
+    evidence:
+      organization: ESMO
+      statement_scope: class_level
+      native:
+        evidence_level: "IV"
+        recommendation_grade: "B"
+        mcbs: null
+      explicit_grade_reported: true
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: First-line treatment, need for rapid tumour reduction

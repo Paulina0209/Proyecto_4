@@ -1,0 +1,330 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_rcc_advanced_metastatic_first_line
+status: draft_computable
+rules:
+- id: ESMO-RCC-ADV-FL-001
+  name: First-line pembrolizumab plus lenvatinib for advanced clear-cell RCC
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: disease_setting
+      operator: in
+      value:
+      - advanced_unresectable
+      - metastatic_active
+      - recurrent_metastatic
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: rcc_histology
+      operator: equals
+      value: clear_cell
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+    - field: prescribed_antineoplastic_drugs
+      operator: contains_all
+      value:
+      - pembrolizumab
+      - lenvatinib
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_lenvatinib_first_line_ccrcc
+    recommendation_type: recommended
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: 4
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: First-line systemic treatment of advanced and metastatic RCC
+    source_locator: PDF pp. 7-11 (journal pp. 698-702)
+  interpretation_note: Recommended irrespective of IMDC risk group; no preference is established among recommended
+    PD-1/VEGFR-TKI combinations.
+- id: ESMO-RCC-ADV-FL-002
+  name: First-line pembrolizumab plus axitinib for advanced clear-cell RCC
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: disease_setting
+      operator: in
+      value:
+      - advanced_unresectable
+      - metastatic_active
+      - recurrent_metastatic
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: rcc_histology
+      operator: equals
+      value: clear_cell
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+    - field: prescribed_antineoplastic_drugs
+      operator: contains_all
+      value:
+      - pembrolizumab
+      - axitinib
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_axitinib_first_line_ccrcc
+    recommendation_type: recommended
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: 4
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: First-line systemic treatment of advanced and metastatic RCC
+    source_locator: PDF pp. 7-11 (journal pp. 698-702)
+  interpretation_note: Recommended irrespective of IMDC risk group; no preference is established among recommended
+    PD-1/VEGFR-TKI combinations.
+- id: ESMO-RCC-ADV-FL-003
+  name: First-line pembrolizumab monotherapy as an alternative for advanced papillary RCC
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: disease_setting
+      operator: in
+      value:
+      - advanced_unresectable
+      - metastatic_active
+      - recurrent_metastatic
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: rcc_histology
+      operator: equals
+      value: papillary
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+    - field: prescribed_antineoplastic_drugs
+      operator: contains_all
+      value:
+      - pembrolizumab
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_monotherapy_prcc
+    recommendation_type: alternative_single_agent_option
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: III
+      recommendation_grade: B
+      mcbs: null
+    explicit_grade_reported: true
+    regulatory_status_as_reported_by_source: not EMA or FDA approved
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: First-line systemic treatment of advanced and metastatic RCC
+    source_locator: PDF pp. 7-11 (journal pp. 698-702)
+- id: ESMO-RCC-ADV-FL-004
+  name: First-line pembrolizumab plus lenvatinib as an alternative for advanced papillary RCC
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: disease_setting
+      operator: in
+      value:
+      - advanced_unresectable
+      - metastatic_active
+      - recurrent_metastatic
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: rcc_histology
+      operator: equals
+      value: papillary
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+    - field: prescribed_antineoplastic_drugs
+      operator: contains_all
+      value:
+      - pembrolizumab
+      - lenvatinib
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_lenvatinib_prcc
+    recommendation_type: may_be_considered_as_alternative
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: III
+      recommendation_grade: B
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: First-line systemic treatment of advanced and metastatic RCC
+    source_locator: PDF pp. 7-11 (journal pp. 698-702)
+  interpretation_note: The guide states that response rates are impressive but superiority over single-agent therapy
+    has not been proven.
+- id: ESMO-RCC-ADV-FL-005
+  name: Pembrolizumab plus lenvatinib may be used for advanced chromophobe RCC
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: disease_setting
+      operator: in
+      value:
+      - advanced_unresectable
+      - metastatic_active
+      - recurrent_metastatic
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: rcc_histology
+      operator: equals
+      value: chromophobe
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+    - field: prescribed_antineoplastic_drugs
+      operator: contains_all
+      value:
+      - pembrolizumab
+      - lenvatinib
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_lenvatinib_chromophobe
+    recommendation_type: may_be_used
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: III
+      recommendation_grade: C
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: First-line systemic treatment of advanced and metastatic RCC
+    source_locator: PDF pp. 7-11 (journal pp. 698-702)
+- id: ESMO-RCC-ADV-FL-006
+  name: Pembrolizumab plus axitinib preferred option for advanced predominant sarcomatoid RCC
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: disease_setting
+      operator: in
+      value:
+      - advanced_unresectable
+      - metastatic_active
+      - recurrent_metastatic
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: rcc_histology
+      operator: equals
+      value: sarcomatoid_predominant
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+    - field: prescribed_antineoplastic_drugs
+      operator: contains_all
+      value:
+      - pembrolizumab
+      - axitinib
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_axitinib_sarcomatoid
+    recommendation_type: preferred_ici_based_option
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: III
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: First-line systemic treatment of advanced and metastatic RCC
+    source_locator: PDF pp. 7-11 (journal pp. 698-702)
+- id: ESMO-RCC-ADV-FL-007
+  name: Pembrolizumab plus lenvatinib preferred option for advanced predominant sarcomatoid RCC
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: disease_setting
+      operator: in
+      value:
+      - advanced_unresectable
+      - metastatic_active
+      - recurrent_metastatic
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: rcc_histology
+      operator: equals
+      value: sarcomatoid_predominant
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+    - field: prescribed_antineoplastic_drugs
+      operator: contains_all
+      value:
+      - pembrolizumab
+      - lenvatinib
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_lenvatinib_sarcomatoid
+    recommendation_type: preferred_ici_based_option
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: III
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: First-line systemic treatment of advanced and metastatic RCC
+    source_locator: PDF pp. 7-11 (journal pp. 698-702)

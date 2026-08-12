@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_cutaneous_melanoma
+module_version: 1.0-draft
+name: ESMO cutaneous melanoma - pembrolizumab
+organization: ESMO
+development_status: draft_computable
+clinical_validation_status: pending
+technical_validation_status: initial_automated_tests_included
+source:
+  title: 'Cutaneous melanoma: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+  authors: Amaral et al.
+  doi: 10.1016/j.annonc.2024.11.006
+  available_online: '2024-11-14'
+  last_update: 2024-11
+  journal_issue: Annals of Oncology, Volume 36, Issue 1, 2025
+  guideline_id: esmo_cutaneous_melanoma_2024
+  evidence_system:
+    levels_of_evidence_and_grades: ESMO
+    mcbs_version: '1.1'
+clinical_scope:
+  drug_of_interest: pembrolizumab
+  disease: invasive cutaneous melanoma
+  included_settings:
+  - resected stage IIB-IIC
+  - resected stage III
+  - selected resected stage IV with no evidence of disease
+  - resectable stage III with clinically or radiologically detectable nodal disease
+  - resectable in-transit metastases
+  - unresectable stage III
+  - metastatic stage IV
+  excluded_settings:
+  - uveal melanoma
+  - mucosal melanoma
+  - non-melanoma skin cancer
+  - melanoma in situ as a pembrolizumab treatment pathway
+temporal_applicability:
+  version_effective_from: '2024-11-14'
+  policy: Records before this date require the guideline version applicable on the prescription date.
+licensing:
+  source_notice: All rights reserved, including text and data mining and AI-related uses.
+  module_use: private_internal_research_only_pending_permission
+  public_distribution: not_authorized
+limitations:
+- This is a computable draft and not a substitute for specialist judgement.
+- Class-level anti-PD-1 recommendations are explicitly separated from drug-specific pembrolizumab recommendations.
+- Regulatory status is preserved as reported by the source at the time of writing and is not treated as current
+  legal advice.
+- The rule engine evaluates rule files independently; a production orchestrator must enforce module eligibility
+  and pathway order.

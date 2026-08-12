@@ -1,0 +1,180 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_cutaneous_melanoma_continuation
+status: draft_computable
+rules:
+- id: ESMO-MEL-CUT-CONT-001
+  name: Review planned completion at 12 months for stage IIB-IIC adjuvant pembrolizumab
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: stage_group
+      operator: in
+      value:
+      - IIB
+      - IIC
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: months_on_adjuvant_pembrolizumab
+      operator: greater_than_or_equal
+      value: 12
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: review_planned_completion
+    planned_duration_months: 12
+    audit_effect: advisory
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Adjuvant systemic therapy in stage IIB-IIC melanoma
+    source_locator: p. 17
+- id: ESMO-MEL-CUT-CONT-002
+  name: Surgery checkpoint after three neoadjuvant pembrolizumab doses in the SWOG S1801 sequence
+  rule_origin: trial_protocol_context
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: neoadjuvant
+    - field: neoadjuvant_pembrolizumab_cycles_completed
+      operator: greater_than_or_equal
+      value: 3
+    - field: surgery_completed
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: review_surgical_timing
+    protocol_context: SWOG S1801 used three preoperative doses
+    audit_effect: advisory
+  evidence:
+    organization: ESMO
+    statement_scope: protocol_context
+    native:
+      evidence_level: II
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+    regulatory_status_as_reported_by_source: not EMA or FDA approved as neoadjuvant therapy
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: SWOG S1801 trial description and neoadjuvant recommendation
+    source_locator: pp. 16 and 18
+- id: ESMO-MEL-CUT-CONT-003
+  name: Review planned completion after fifteen postoperative doses in the SWOG S1801 sequence
+  rule_origin: trial_protocol_context
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: prior_neoadjuvant_pembrolizumab
+      operator: equals
+      value: 'yes'
+    - field: adjuvant_pembrolizumab_cycles_completed
+      operator: greater_than_or_equal
+      value: 15
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: review_planned_completion
+    protocol_context: SWOG S1801 used fifteen postoperative doses
+    audit_effect: advisory
+  evidence:
+    organization: ESMO
+    statement_scope: protocol_context
+    native:
+      evidence_level: II
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+    regulatory_status_as_reported_by_source: not EMA or FDA approved as neoadjuvant therapy
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: SWOG S1801 trial description and neoadjuvant recommendation
+    source_locator: pp. 16 and 18
+- id: ESMO-MEL-CUT-CONT-004
+  name: Progression or recurrence during pembrolizumab requires treatment reassessment
+  rule_origin: clinical_context
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - any:
+      - field: disease_progression
+        operator: equals
+        value: 'yes'
+      - field: disease_recurrence
+        operator: equals
+        value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: disease_event_during_treatment
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: clinical_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Advanced disease sequencing and subsequent-line treatment
+    source_locator: pp. 21-24
+- id: ESMO-MEL-CUT-CONT-005
+  name: Pembrolizumab interruption for toxicity requires specialist review
+  rule_origin: clinical_context
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_discontinuation_reason
+      operator: equals
+      value: toxicity
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: toxicity_management_boundary
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: clinical_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Adjuvant and advanced treatment safety discussion
+    source_locator: pp. 12-24

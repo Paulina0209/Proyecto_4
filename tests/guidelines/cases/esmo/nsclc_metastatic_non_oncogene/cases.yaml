@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_metastatic_non_oncogene
+
+cases:
+
+  - id: pembro_mono_first_line_supported
+    facts:
+      cancer_type: NSCLC
+      disease_setting: metastatic
+      molecular_pathway_status: non_oncogene_addicted
+      treatment_line: 1
+      histology: non_squamous
+      ecog_ps: 1
+      pdl1_tps: 70
+      smoking_status: former_smoker
+      immunotherapy_contraindication: "no"
+      prescribed_antineoplastic_drugs: [pembrolizumab]
+    expected_applicable:
+      - ESMO-NSCLC-M-FL-001
+
+  - id: pembro_mono_first_line_low_pdl1
+    facts:
+      cancer_type: NSCLC
+      disease_setting: metastatic
+      molecular_pathway_status: non_oncogene_addicted
+      treatment_line: 1
+      histology: non_squamous
+      ecog_ps: 1
+      pdl1_tps: 20
+      smoking_status: former_smoker
+      immunotherapy_contraindication: "no"
+      prescribed_antineoplastic_drugs: [pembrolizumab]
+    expected_applicable:
+      - ESMO-NSCLC-M-EXC-001
+
+  - id: pembro_second_line_supported
+    facts:
+      cancer_type: NSCLC
+      disease_setting: metastatic
+      molecular_pathway_status: non_oncogene_addicted
+      treatment_line: 2
+      ecog_ps: 1
+      pdl1_tps: 10
+      smoking_status: former_smoker
+      immunotherapy_contraindication: "no"
+      major_comorbidity_precluding_ici: "no"
+      prior_first_line_ici: "no"
+      prescribed_antineoplastic_drugs: [pembrolizumab]
+    expected_applicable:
+      - ESMO-NSCLC-M-SL-001

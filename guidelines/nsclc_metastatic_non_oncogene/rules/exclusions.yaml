@@ -1,0 +1,130 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_m_exclusions
+status: draft_computable
+
+rules:
+
+  - id: ESMO-NSCLC-M-EXC-001
+    name: Pembrolizumab en monoterapia no recomendado con PD-L1 menor de 50 en primera línea
+    rule_origin: clinical_guideline
+    conditions:
+      all:
+        - {field: treatment_line, operator: equals, value: 1}
+        - {field: pdl1_tps, operator: less_than, value: 50}
+        - {field: prescribed_antineoplastic_drugs, operator: exact_set, value: [pembrolizumab]}
+    conclusion:
+      action: flag_potential_deviation
+      recommendation_type: not_recommended
+      audit_effect: opposes_prescription
+    evidence:
+      organization: ESMO
+      statement_scope: drug_specific
+      native:
+        evidence_level: "I"
+        recommendation_grade: "D"
+        mcbs: null
+      explicit_grade_reported: true
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: First-line ICI monotherapy exclusions
+
+  - id: ESMO-NSCLC-M-EXC-002
+    name: Pembrolizumab en monoterapia no recomendado en personas que nunca fumaron
+    rule_origin: clinical_guideline
+    conditions:
+      all:
+        - {field: treatment_line, operator: equals, value: 1}
+        - {field: smoking_status, operator: equals, value: never_smoker}
+        - {field: prescribed_antineoplastic_drugs, operator: exact_set, value: [pembrolizumab]}
+    conclusion:
+      action: flag_potential_deviation
+      recommendation_type: not_recommended
+      audit_effect: opposes_prescription
+    evidence:
+      organization: ESMO
+      statement_scope: drug_class
+      native:
+        evidence_level: "I"
+        recommendation_grade: "D"
+        mcbs: null
+      explicit_grade_reported: true
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: First-line ICI monotherapy exclusions
+
+  - id: ESMO-NSCLC-M-EXC-003
+    name: Combinación quimioterapia-ICI no recomendada automáticamente en ECOG 2
+    rule_origin: clinical_guideline
+    conditions:
+      all:
+        - {field: treatment_line, operator: equals, value: 1}
+        - {field: ecog_ps, operator: equals, value: 2}
+        - {field: prescribed_antineoplastic_drugs, operator: contains, value: pembrolizumab}
+        - field: prescribed_antineoplastic_drugs
+          operator: contains_any
+          value: [carboplatin, cisplatin, pemetrexed, paclitaxel, nab_paclitaxel]
+    conclusion:
+      action: flag_for_expert_review
+      recommendation_type: not_formally_recommended
+      audit_effect: requires_clinical_review
+    evidence:
+      organization: ESMO
+      statement_scope: class_level
+      native:
+        evidence_level: null
+        recommendation_grade: null
+        mcbs: null
+      explicit_grade_reported: false
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: First-line treatment, PS 2
+    interpretation_note: >
+      La guía indica que esta combinación no fue evaluada formalmente en PS 2.
+      Se genera revisión, no una desviación automática.
+
+  - id: ESMO-NSCLC-M-EXC-004
+    name: ECOG 3-4 fuera de la ruta rutinaria de pembrolizumab
+    rule_origin: clinical_guideline
+    conditions:
+      all:
+        - {field: ecog_ps, operator: in, value: [3, 4]}
+        - {field: prescribed_antineoplastic_drugs, operator: contains, value: pembrolizumab}
+    conclusion:
+      action: flag_potential_deviation
+      recommendation_type: best_supportive_care_recommended
+      audit_effect: opposes_prescription
+    evidence:
+      organization: ESMO
+      statement_scope: clinical_context
+      native:
+        evidence_level: "III"
+        recommendation_grade: "A"
+        mcbs: null
+      explicit_grade_reported: true
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: First-line treatment, PS 3-4
+
+  - id: ESMO-NSCLC-M-EXC-005
+    name: Contraindicación documentada para inmunoterapia
+    rule_origin: eligibility_boundary
+    conditions:
+      all:
+        - {field: immunotherapy_contraindication, operator: equals, value: "yes"}
+        - {field: prescribed_antineoplastic_drugs, operator: contains, value: pembrolizumab}
+    conclusion:
+      action: flag_for_expert_review
+      recommendation_type: outside_ici_eligibility
+      audit_effect: requires_clinical_review
+    evidence:
+      organization: ESMO
+      statement_scope: eligibility_boundary
+      native:
+        evidence_level: null
+        recommendation_grade: null
+        mcbs: null
+      explicit_grade_reported: false
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: ICI eligibility

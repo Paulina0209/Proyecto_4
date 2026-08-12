@@ -1,0 +1,136 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_ela_continuation
+status: draft_computable
+rules:
+- id: ESMO-NSCLC-ELA-CONT-001
+  name: Revisión al completar trece ciclos posoperatorios en la secuencia perioperatoria
+  rule_origin: trial_protocol
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: pembrolizumab_pathway
+      operator: equals
+      value: perioperative
+    - field: adjuvant_pembrolizumab_cycles_completed
+      operator: greater_than_or_equal
+      value: 13
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: review_planned_completion
+    recommendation_type: maximum_trial_protocol_reached
+    audit_effect: advisory
+  evidence:
+    organization: ESMO
+    statement_scope: trial_protocol
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Neoadjuvant and perioperative therapy - KEYNOTE-671
+    source_locator: p. 1252
+  interpretation_note: 'El límite de trece ciclos posoperatorios procede del protocolo
+    descrito para KEYNOTE-671. Alcanzarlo genera revisión de finalización, no una
+    suspensión automática.
+
+    '
+- id: ESMO-NSCLC-ELA-CONT-002
+  name: Revisión al completar un año de pembrolizumab adyuvante
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: pembrolizumab_pathway
+      operator: equals
+      value: adjuvant_only
+    - field: months_on_adjuvant_pembrolizumab
+      operator: greater_than_or_equal
+      value: 12
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: review_planned_completion
+    recommendation_type: one_year_duration_reached
+    audit_effect: advisory
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '2.0'
+        score: A (AT)
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of resectable stage I-III NSCLC - systemic therapy
+    source_locator: p. 1253
+- id: ESMO-NSCLC-ELA-CONT-003
+  name: Progresión durante pembrolizumab perioperatorio o adyuvante
+  rule_origin: safety_boundary
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: disease_progression
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: progression_during_curative_intent_therapy
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: safety_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Follow-up, long-term implications and survivorship
+- id: ESMO-NSCLC-ELA-CONT-004
+  name: Interrupción por toxicidad durante pembrolizumab
+  rule_origin: safety_boundary
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_discontinuation_reason
+      operator: equals
+      value: toxicity
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: toxicity_management_required
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: safety_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Follow-up, long-term implications and survivorship

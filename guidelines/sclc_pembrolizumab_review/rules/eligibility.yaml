@@ -1,0 +1,5 @@
+﻿# yaml-language-server: $schema=none
+
+rule_set_id: esmo_sclc_pembrolizumab_review_eligibility
+status: scaffold
+rules: []

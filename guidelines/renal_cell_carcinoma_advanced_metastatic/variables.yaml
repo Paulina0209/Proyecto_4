@@ -1,0 +1,164 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_renal_cell_carcinoma_advanced_metastatic
+status: draft_computable
+missing_markers:
+- null
+- unknown
+- not_documented
+variables:
+  guideline_temporal_applicability:
+    type: categorical
+    allowed_values:
+    - applicable
+    - not_yet_published
+    - uncertain
+    - unknown
+  cancer_type:
+    type: categorical
+    allowed_values:
+    - renal_cell_carcinoma
+    - other
+    - unknown
+  diagnosis_confirmed:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  histopathology_confirmed:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  histology_documented:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  rcc_histology:
+    type: categorical
+    allowed_values:
+    - clear_cell
+    - papillary
+    - chromophobe
+    - sarcomatoid_predominant
+    - collecting_duct
+    - SMARCB1_deficient
+    - FH_deficient
+    - other_non_clear_cell
+    - unknown
+  disease_setting:
+    type: categorical
+    allowed_values:
+    - advanced_unresectable
+    - metastatic_active
+    - recurrent_metastatic
+    - localized_operable
+    - locoregional_operable
+    - M1_NED_post_metastasectomy
+    - unknown
+  treatment_phase:
+    type: categorical
+    allowed_values:
+    - advanced_first_line
+    - advanced_subsequent
+    - adjuvant
+    - unknown
+  treatment_line:
+    type: integer
+    minimum: 1
+    missing_value: null
+  imdc_risk_group:
+    type: categorical
+    allowed_values:
+    - favourable
+    - intermediate
+    - poor
+    - unknown
+  ici_suitability:
+    type: categorical
+    allowed_values:
+    - eligible
+    - contraindicated
+    - unavailable
+    - uncertain
+    - unknown
+  prior_pd1_targeted_therapy:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  progression_on_prior_pd1:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  prior_pembrolizumab:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  prior_vegfr_tki:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  sarcomatoid_features:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  months_on_ici:
+    type: number
+    minimum: 0
+    missing_value: null
+  disease_progression:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  treatment_discontinuation_reason:
+    type: categorical
+    allowed_values:
+    - planned_completion
+    - progression
+    - toxicity
+    - patient_choice
+    - other
+    - none
+    - unknown
+  imaging_interval_months:
+    type: number
+    minimum: 0
+    missing_value: null
+  brain_metastases:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  bone_metastases:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  prescribed_antineoplastic_drugs:
+    type: list
+    item_type: string
+  prescribed_regimen_id:
+    type: string
+    missing_value: null
+derived_variables:
+  guideline_temporal_applicability: Derived by comparing prescription_date with 2024-05-22.
+  prior_pd1_targeted_therapy: Derived from previous systemic therapy history.
+  progression_on_prior_pd1: Derived from response and progression records during prior PD-1-directed therapy.

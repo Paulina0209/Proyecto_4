@@ -1,0 +1,159 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_rcc_localized_adjuvant_continuation
+status: draft_computable
+rules:
+- id: ESMO-RCC-LOC-CONT-001
+  name: Review planned completion after 12 months of adjuvant pembrolizumab
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: months_on_adjuvant_pembrolizumab
+      operator: greater_than_or_equal
+      value: 12
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: review_planned_completion
+    recommendation_type: up_to_one_year
+    audit_effect: advisory
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Adjuvant therapy in clear-cell RCC
+    source_locator: PDF pp. 4-5 (journal pp. 695-696)
+- id: ESMO-RCC-LOC-CONT-002
+  name: KEYNOTE-564 checkpoint after 17 cycles
+  rule_origin: trial_protocol_context
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: adjuvant_pembrolizumab_cycles_completed
+      operator: greater_than_or_equal
+      value: 17
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: review_protocol_completion
+    protocol_reference: KEYNOTE-564
+    audit_effect: advisory
+  evidence:
+    organization: ESMO
+    statement_scope: trial_protocol_context
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Adjuvant therapy in clear-cell RCC
+    source_locator: PDF p. 4 (journal p. 695)
+- id: ESMO-RCC-LOC-CONT-003
+  name: Recurrence while receiving adjuvant pembrolizumab requires clinical review
+  rule_origin: clinical_safety_boundary
+  conditions:
+    all:
+    - field: disease_recurrence
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: recurrence_during_adjuvant_treatment
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: clinical_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Follow-up and survivorship
+    source_locator: PDF pp. 11-12 (journal pp. 702-703)
+- id: ESMO-RCC-LOC-CONT-004
+  name: Treatment interruption for toxicity requires clinical review
+  rule_origin: clinical_safety_boundary
+  conditions:
+    all:
+    - field: treatment_discontinuation_reason
+      operator: equals
+      value: toxicity
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: toxicity_management
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: clinical_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Adjuvant therapy in clear-cell RCC
+    source_locator: PDF pp. 4-5 (journal pp. 695-696)
+- id: ESMO-RCC-LOC-CONT-005
+  name: Risk-based imaging follow-up during the first two years after nephrectomy
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: followup_months_since_nephrectomy
+      operator: less_than_or_equal
+      value: 24
+    - field: keynote564_risk_group
+      operator: in
+      value:
+      - intermediate_high
+      - high
+      - M1_NED
+    - field: imaging_interval_months
+      operator: greater_than
+      value: 6
+  conclusion:
+    action: review_followup_interval
+    recommendation_type: risk_based_imaging_followup
+    audit_effect: advisory
+  evidence:
+    organization: ESMO
+    statement_scope: followup_recommendation
+    native:
+      evidence_level: IV
+      recommendation_grade: B
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Follow-up, long-term implications and survivorship
+    source_locator: PDF pp. 11-12 (journal pp. 702-703)
+  interpretation_note: The text describes CT every 3-6 months for high-risk disease; the formal summary recommends
+    risk-based imaging for at least two years.

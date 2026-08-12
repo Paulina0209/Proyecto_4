@@ -1,0 +1,209 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_rcc_advanced_metastatic_exclusions
+status: draft_computable
+rules:
+- id: ESMO-RCC-ADV-EXC-000
+  name: Historical guideline version required before 22 May 2024
+  rule_origin: temporal_governance
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: not_yet_published
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: use_historical_guideline_version
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: temporal_governance
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Publication information
+    source_locator: PDF p. 1 (journal p. 692)
+- id: ESMO-RCC-ADV-EXC-001
+  name: M1 NED after complete local treatment belongs to the localized/adjuvant module
+  rule_origin: module_boundary
+  conditions:
+    all:
+    - field: disease_setting
+      operator: equals
+      value: M1_NED_post_metastasectomy
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: route_to_module
+    module_id: esmo_renal_cell_carcinoma_localized_adjuvant
+    audit_effect: outside_scope
+  evidence:
+    organization: ESMO
+    statement_scope: module_boundary
+    native:
+      evidence_level: II
+      recommendation_grade: B
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Role of surgery and local therapy in advanced/metastatic RCC
+    source_locator: PDF pp. 6 and 10 (journal pp. 697 and 701)
+- id: ESMO-RCC-ADV-EXC-002
+  name: Localized or locoregional operable disease belongs to the localized/adjuvant module
+  rule_origin: module_boundary
+  conditions:
+    all:
+    - field: disease_setting
+      operator: in
+      value:
+      - localized_operable
+      - locoregional_operable
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: route_to_module
+    module_id: esmo_renal_cell_carcinoma_localized_adjuvant
+    audit_effect: outside_scope
+  evidence:
+    organization: ESMO
+    statement_scope: module_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Management of local and locoregional disease
+    source_locator: PDF pp. 4-5 (journal pp. 695-696)
+- id: ESMO-RCC-ADV-EXC-003
+  name: Pembrolizumab with a contraindication to immune checkpoint inhibitors requires review
+  rule_origin: clinical_guideline_boundary
+  conditions:
+    all:
+    - field: ici_suitability
+      operator: in
+      value:
+      - contraindicated
+      - unavailable
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: ici_contraindicated_or_unavailable
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: class_level
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: First-line treatment for advanced and metastatic clear-cell RCC
+    source_locator: PDF pp. 7 and 10 (journal pp. 698 and 701)
+  interpretation_note: The guide lists non-ICI alternatives when ICIs are contraindicated or unavailable.
+- id: ESMO-RCC-ADV-EXC-004
+  name: First-line pembrolizumab monotherapy in clear-cell RCC is outside the positive regimen pathway
+  rule_origin: clinical_guideline_boundary
+  conditions:
+    all:
+    - field: rcc_histology
+      operator: equals
+      value: clear_cell
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: prescribed_antineoplastic_drugs
+      operator: exact_set
+      value:
+      - pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: clear_cell_first_line_requires_supported_combination
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: regimen_boundary
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: 4
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: First-line treatment for advanced and metastatic clear-cell RCC
+    source_locator: PDF pp. 7 and 10 (journal pp. 698 and 701)
+- id: ESMO-RCC-ADV-EXC-005
+  name: Collecting duct, SMARCB1-deficient or FH-deficient RCC requires another strategy
+  rule_origin: clinical_guideline_boundary
+  conditions:
+    all:
+    - field: rcc_histology
+      operator: in
+      value:
+      - collecting_duct
+      - SMARCB1_deficient
+      - FH_deficient
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: histology_specific_non_pembrolizumab_pathway
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: histology_specific_boundary
+    native:
+      evidence_level: III
+      recommendation_grade: C
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Systemic treatment of advanced non-clear-cell, non-papillary RCC
+    source_locator: PDF pp. 9-11 (journal pp. 700-702)
+- id: ESMO-RCC-ADV-EXC-006
+  name: Missing RCC histology prevents reliable pembrolizumab pathway selection
+  rule_origin: data_quality
+  conditions:
+    all:
+    - field: histology_documented
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: request_missing_information
+    recommendation_type: histology_required
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: diagnostic_requirement
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Diagnosis, pathology and molecular biology
+    source_locator: PDF pp. 1-3 (journal pp. 692-694)

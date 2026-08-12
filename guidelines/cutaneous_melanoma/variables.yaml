@@ -1,0 +1,283 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_cutaneous_melanoma
+status: draft_computable
+missing_markers:
+- null
+- unknown
+- not_documented
+variables:
+  guideline_temporal_applicability:
+    type: categorical
+    allowed_values:
+    - applicable
+    - not_yet_published
+    - uncertain
+    - unknown
+    description: Applicability of the 14-Nov-2024 ESMO version to the prescription date.
+  cancer_type:
+    type: categorical
+    allowed_values:
+    - melanoma
+    - other
+    - unknown
+  melanoma_primary_site:
+    type: categorical
+    allowed_values:
+    - cutaneous
+    - acral_cutaneous
+    - mucosal
+    - uveal
+    - unknown
+  diagnosis_confirmed:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  invasive_disease:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  ajcc_edition:
+    type: categorical
+    allowed_values:
+    - '8'
+    - other
+    - unknown
+  stage_group:
+    type: categorical
+    allowed_values:
+    - in_situ
+    - IA
+    - IB
+    - IIA
+    - IIB
+    - IIC
+    - IIIA
+    - IIIB
+    - IIIC
+    - IIID
+    - IV
+    - unknown
+  disease_setting:
+    type: categorical
+    allowed_values:
+    - localized
+    - locoregional
+    - resectable_stage_III
+    - resectable_stage_IV_NED
+    - unresectable_stage_III
+    - metastatic_stage_IV
+    - in_transit_metastases
+    - unknown
+  resectability_status:
+    type: categorical
+    allowed_values:
+    - resectable
+    - unresectable
+    - not_applicable
+    - unknown
+  treatment_phase:
+    type: categorical
+    allowed_values:
+    - neoadjuvant
+    - adjuvant
+    - advanced_first_line
+    - advanced_second_line
+    - advanced_subsequent
+    - unknown
+  treatment_line:
+    type: integer
+    minimum: 1
+    missing_value: null
+  age_years:
+    type: number
+    minimum: 0
+    missing_value: null
+  complete_resection:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  no_evidence_of_disease:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  weeks_since_complete_resection:
+    type: number
+    minimum: 0
+    missing_value: null
+  clinically_or_radiologically_detectable_ln_metastasis:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  pathologically_proven_ln_metastasis:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  sentinel_node_tumor_burden_mm:
+    type: number
+    minimum: 0
+    missing_value: null
+  in_transit_metastases:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  disease_free_interval_months:
+    type: number
+    minimum: 0
+    missing_value: null
+  braf_testing_completed:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  braf_v600_status:
+    type: categorical
+    allowed_values:
+    - V600E
+    - V600K
+    - V600_other
+    - wild_type
+    - not_detected
+    - unknown
+  pdl1_tc_percent:
+    type: number
+    minimum: 0
+    maximum: 100
+    missing_value: null
+  ici_suitability:
+    type: categorical
+    allowed_values:
+    - eligible
+    - immediate_contraindication
+    - absolute_contraindication
+    - uncertain
+    - unknown
+  brain_metastasis_status:
+    type: categorical
+    allowed_values:
+    - none
+    - treated_stable
+    - asymptomatic_active
+    - symptomatic_low_steroid
+    - symptomatic_high_steroid
+    - leptomeningeal
+    - unknown
+  rapid_response_required:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  ldh_status:
+    type: categorical
+    allowed_values:
+    - normal
+    - elevated
+    - above_2x_uln
+    - unknown
+  aggressive_symptomatic_disease:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  prior_neoadjuvant_pembrolizumab:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  adjuvant_pembrolizumab_planned:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  prior_anti_pd1_exposure:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  progression_on_prior_anti_pd1:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  immediate_previous_therapy_class:
+    type: categorical
+    allowed_values:
+    - anti_pd1
+    - ici_combination
+    - braf_mek
+    - chemotherapy
+    - other_non_ici
+    - none
+    - unknown
+  surgery_completed:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  neoadjuvant_pembrolizumab_cycles_completed:
+    type: integer
+    minimum: 0
+    missing_value: null
+  adjuvant_pembrolizumab_cycles_completed:
+    type: integer
+    minimum: 0
+    missing_value: null
+  months_on_adjuvant_pembrolizumab:
+    type: number
+    minimum: 0
+    missing_value: null
+  disease_progression:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  disease_recurrence:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  treatment_discontinuation_reason:
+    type: categorical
+    allowed_values:
+    - planned_completion
+    - progression
+    - recurrence
+    - toxicity
+    - patient_choice
+    - other
+    - none
+    - unknown
+  prescribed_antineoplastic_drugs:
+    type: list
+    item_type: string
+  prescribed_regimen_id:
+    type: string
+    missing_value: null
+derived_variables:
+  guideline_temporal_applicability: Derived by comparing prescription_date with 2024-11-14.
+  weeks_since_complete_resection: Derived from complete_resection_date and pembrolizumab_start_date.
+  prior_anti_pd1_exposure: Derived from prior systemic therapy history, including neoadjuvant and adjuvant treatment.

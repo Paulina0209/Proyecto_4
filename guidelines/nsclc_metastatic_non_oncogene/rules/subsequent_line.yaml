@@ -1,0 +1,97 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_m_subsequent_line
+status: draft_computable
+
+rules:
+
+  - id: ESMO-NSCLC-M-SL-001
+    name: Pembrolizumab en segunda línea o posterior sin ICI previa
+    rule_origin: clinical_guideline
+    conditions:
+      all:
+        - {field: treatment_line, operator: greater_than_or_equal, value: 2}
+        - {field: ecog_ps, operator: in, value: [0, 1, 2]}
+        - {field: prior_first_line_ici, operator: equals, value: "no"}
+        - {field: pdl1_tps, operator: greater_than_or_equal, value: 1}
+        - {field: smoking_status, operator: not_equals, value: never_smoker}
+        - {field: immunotherapy_contraindication, operator: equals, value: "no"}
+        - {field: major_comorbidity_precluding_ici, operator: equals, value: "no"}
+    conclusion:
+      action: support_regimen
+      regimen_id: pembro_monotherapy
+      recommendation_type: treatment_of_choice
+      audit_effect: supports_prescription
+    evidence:
+      organization: ESMO
+      statement_scope: drug_specific
+      native:
+        evidence_level: "I"
+        recommendation_grade: "A"
+        mcbs:
+          version: "1.1"
+          score: 5
+      explicit_grade_reported: true
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: Second-line treatment
+
+  - id: ESMO-NSCLC-M-SL-002
+    name: Reexposición a anti-PD-(L)1 después de beneficio previo
+    rule_origin: clinical_guideline
+    conditions:
+      all:
+        - {field: treatment_line, operator: greater_than_or_equal, value: 2}
+        - {field: prior_ici, operator: equals, value: "yes"}
+        - {field: prior_ici_substantial_benefit, operator: equals, value: "yes"}
+        - field: prior_ici_discontinuation_reason
+          operator: not_in
+          value: [progression, severe_toxicity]
+        - {field: immunotherapy_contraindication, operator: equals, value: "no"}
+    conclusion:
+      action: consider_class_rechallenge
+      drug_class: anti_PD_1_or_PD_L1
+      candidate_drug: pembrolizumab
+      recommendation_type: may_be_considered
+      audit_effect: supports_prescription
+    evidence:
+      organization: ESMO
+      statement_scope: class_level
+      native:
+        evidence_level: "III"
+        recommendation_grade: "B"
+        mcbs: null
+      explicit_grade_reported: true
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: ICI rechallenge after prior substantial benefit
+
+  - id: ESMO-NSCLC-M-SL-003
+    name: Reexposición no respaldada automáticamente tras progresión o toxicidad grave
+    rule_origin: guideline_interpretation
+    conditions:
+      all:
+        - {field: treatment_line, operator: greater_than_or_equal, value: 2}
+        - {field: prior_ici, operator: equals, value: "yes"}
+        - field: prior_ici_discontinuation_reason
+          operator: in
+          value: [progression, severe_toxicity]
+        - {field: prescribed_antineoplastic_drugs, operator: contains, value: pembrolizumab}
+    conclusion:
+      action: flag_for_expert_review
+      recommendation_type: insufficient_support_for_rechallenge
+      audit_effect: requires_clinical_review
+    evidence:
+      organization: ESMO
+      statement_scope: inferred_boundary
+      native:
+        evidence_level: null
+        recommendation_grade: null
+        mcbs: null
+      explicit_grade_reported: false
+    source:
+      guideline_id: esmo_nsclc_metastatic_non_oncogene_2023
+      section: Boundary of ICI rechallenge recommendation
+    interpretation_note: >
+      No se invierte automáticamente la recomendación positiva para declarar
+      una contraindicación. El sistema solicita revisión clínica.

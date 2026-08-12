@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_rcc_advanced_metastatic_eligibility
+status: draft_computable
+rules:
+- id: ESMO-RCC-ADV-ELIG-001
+  name: Case eligible for the advanced/metastatic renal cell carcinoma module
+  rule_origin: clinical_guideline_scope
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: cancer_type
+      operator: equals
+      value: renal_cell_carcinoma
+    - field: diagnosis_confirmed
+      operator: equals
+      value: 'yes'
+    - field: histopathology_confirmed
+      operator: equals
+      value: 'yes'
+    - field: disease_setting
+      operator: in
+      value:
+      - advanced_unresectable
+      - metastatic_active
+      - recurrent_metastatic
+  conclusion:
+    action: enter_module
+    module_id: esmo_renal_cell_carcinoma_advanced_metastatic
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: diagnostic_and_scope_requirement
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Diagnosis, pathology and management of advanced/metastatic disease
+    source_locator: PDF pp. 1-3 and 5-11 (journal pp. 692-694 and 696-702)

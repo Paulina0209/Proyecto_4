@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_renal_cell_carcinoma_localized_adjuvant
+status: draft_computable
+start_node: scope_and_time
+nodes:
+  scope_and_time:
+    questions:
+    - Is the 22-May-2024 ESMO version temporally applicable?
+    - Is renal cell carcinoma histopathologically confirmed?
+    - Is the histology clear-cell?
+    - Has all known disease been completely resected?
+    routes:
+      historical_record: historical_guideline_required
+      active_metastatic_disease: route_to_advanced_module
+      non_clear_cell: clinical_review
+      complete_resection_and_NED: risk_classification
+  risk_classification:
+    questions:
+    - Is the case pT2 grade 4 or sarcomatoid, N0 M0?
+    - Is the case pT3 N0 M0?
+    - Is the case pT4 N0 M0?
+    - Is regional nodal disease present with M0?
+    - Was oligometastatic disease completely resected and rendered M1 NED?
+    routes:
+      intermediate_high_or_high: adjuvant_pembrolizumab
+      M1_NED: adjuvant_pembrolizumab_M1_NED
+      low_or_not_classifiable: clinical_review
+  adjuvant_pembrolizumab:
+    result: evaluate adjuvant.yaml, continuation.yaml and exclusions.yaml
+  adjuvant_pembrolizumab_M1_NED:
+    result: evaluate M1 NED rule in adjuvant.yaml
+  historical_guideline_required:
+    result: requires_clinical_review
+  route_to_advanced_module:
+    result: outside_scope
+  clinical_review:
+    result: requires_clinical_review
+implementation_note: The current generic engine evaluates rule files independently. Production use requires a pathway
+  orchestrator.

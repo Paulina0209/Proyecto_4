@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_renal_cell_carcinoma_advanced_metastatic
+status: draft_computable
+regimens:
+- id: pembro_axitinib_first_line_ccrcc
+  name: Pembrolizumab plus axitinib for first-line advanced clear-cell RCC
+  components:
+  - pembrolizumab
+  - axitinib
+  treatment_phase: advanced_first_line
+  imdc_requirement: any risk group
+  source_locator: PDF p. 10 (journal p. 701)
+- id: pembro_lenvatinib_first_line_ccrcc
+  name: Pembrolizumab plus lenvatinib for first-line advanced clear-cell RCC
+  components:
+  - pembrolizumab
+  - lenvatinib
+  treatment_phase: advanced_first_line
+  imdc_requirement: any risk group
+  source_locator: PDF p. 10 (journal p. 701)
+- id: pembro_monotherapy_prcc
+  name: Pembrolizumab monotherapy for advanced papillary RCC
+  components:
+  - pembrolizumab
+  treatment_phase: advanced
+  regulatory_status_as_reported_by_source: not EMA or FDA approved
+  source_locator: PDF pp. 8 and 11 (journal pp. 699 and 702)
+- id: pembro_lenvatinib_prcc
+  name: Pembrolizumab plus lenvatinib as an alternative for advanced papillary RCC
+  components:
+  - pembrolizumab
+  - lenvatinib
+  treatment_phase: advanced_first_line
+  source_locator: PDF pp. 8 and 11 (journal pp. 699 and 702)
+- id: pembro_lenvatinib_chromophobe
+  name: Pembrolizumab plus lenvatinib for advanced chromophobe RCC
+  components:
+  - pembrolizumab
+  - lenvatinib
+  treatment_phase: advanced
+  source_locator: PDF pp. 9 and 11 (journal pp. 700 and 702)
+- id: pembro_axitinib_sarcomatoid
+  name: Pembrolizumab plus axitinib for advanced predominant sarcomatoid RCC
+  components:
+  - pembrolizumab
+  - axitinib
+  treatment_phase: advanced
+  source_locator: PDF pp. 9 and 11 (journal pp. 700 and 702)
+- id: pembro_lenvatinib_sarcomatoid
+  name: Pembrolizumab plus lenvatinib for advanced predominant sarcomatoid RCC
+  components:
+  - pembrolizumab
+  - lenvatinib
+  treatment_phase: advanced
+  source_locator: PDF pp. 9 and 11 (journal pp. 700 and 702)

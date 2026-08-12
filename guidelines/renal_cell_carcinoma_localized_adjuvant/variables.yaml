@@ -1,0 +1,193 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_renal_cell_carcinoma_localized_adjuvant
+status: draft_computable
+missing_markers:
+- null
+- unknown
+- not_documented
+variables:
+  guideline_temporal_applicability:
+    type: categorical
+    allowed_values:
+    - applicable
+    - not_yet_published
+    - uncertain
+    - unknown
+    description: Applicability of the 22-May-2024 ESMO version to the prescription date.
+  cancer_type:
+    type: categorical
+    allowed_values:
+    - renal_cell_carcinoma
+    - other
+    - unknown
+  diagnosis_confirmed:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  histopathology_confirmed:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  rcc_histology:
+    type: categorical
+    allowed_values:
+    - clear_cell
+    - papillary
+    - chromophobe
+    - collecting_duct
+    - SMARCB1_deficient
+    - FH_deficient
+    - other_non_clear_cell
+    - unknown
+  disease_setting:
+    type: categorical
+    allowed_values:
+    - localized_operable
+    - locoregional_operable
+    - M1_NED_post_metastasectomy
+    - advanced_unresectable
+    - metastatic_active
+    - recurrent_metastatic
+    - unknown
+  treatment_phase:
+    type: categorical
+    allowed_values:
+    - adjuvant
+    - surveillance
+    - advanced
+    - unknown
+  complete_resection:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  no_evidence_of_disease:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  metastasectomy_completed:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - not_applicable
+    - unknown
+  oligometastatic_disease:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  pathological_t_stage:
+    type: categorical
+    allowed_values:
+    - pT1
+    - pT2
+    - pT3
+    - pT4
+    - unknown
+  pathological_n_status:
+    type: categorical
+    allowed_values:
+    - N0
+    - N1
+    - Nx
+    - unknown
+  metastatic_status:
+    type: categorical
+    allowed_values:
+    - M0
+    - M1_NED
+    - M1_active
+    - unknown
+  nuclear_grade:
+    type: categorical
+    allowed_values:
+    - '1'
+    - '2'
+    - '3'
+    - '4'
+    - unknown
+  sarcomatoid_features:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  keynote564_risk_group:
+    type: categorical
+    allowed_values:
+    - intermediate_high
+    - high
+    - M1_NED
+    - low
+    - not_classifiable
+    - unknown
+  weeks_since_complete_resection:
+    type: number
+    minimum: 0
+    missing_value: null
+  months_on_adjuvant_pembrolizumab:
+    type: number
+    minimum: 0
+    missing_value: null
+  adjuvant_pembrolizumab_cycles_completed:
+    type: integer
+    minimum: 0
+    missing_value: null
+  ici_suitability:
+    type: categorical
+    allowed_values:
+    - eligible
+    - contraindicated
+    - uncertain
+    - unknown
+  long_term_ae_counselling_documented:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  disease_recurrence:
+    type: categorical
+    allowed_values:
+    - 'yes'
+    - 'no'
+    - unknown
+  treatment_discontinuation_reason:
+    type: categorical
+    allowed_values:
+    - planned_completion
+    - recurrence
+    - progression
+    - toxicity
+    - patient_choice
+    - other
+    - none
+    - unknown
+  followup_months_since_nephrectomy:
+    type: number
+    minimum: 0
+    missing_value: null
+  imaging_interval_months:
+    type: number
+    minimum: 0
+    missing_value: null
+  prescribed_antineoplastic_drugs:
+    type: list
+    item_type: string
+  prescribed_regimen_id:
+    type: string
+    missing_value: null
+derived_variables:
+  guideline_temporal_applicability: Derived by comparing prescription_date with 2024-05-22.
+  weeks_since_complete_resection: Derived from complete_resection_date and pembrolizumab_start_date.
+  keynote564_risk_group: Derived from pathological T stage, N status, grade, sarcomatoid features and M status.

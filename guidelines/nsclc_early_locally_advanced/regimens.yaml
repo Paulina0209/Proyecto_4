@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_early_locally_advanced
+
+regimens:
+
+  pembro_cisplatin_based_chemotherapy_neoadjuvant:
+    name: Pembrolizumab con quimioterapia basada en cisplatino
+    phase: neoadjuvant
+    expected_cycles: 4
+    matching:
+      all_of:
+        - pembrolizumab
+        - cisplatin_based_chemotherapy
+    source_scope: KEYNOTE_671_trial_protocol
+
+  pembro_adjuvant_after_neoadjuvant:
+    name: Pembrolizumab adyuvante después de pembrolizumab y quimioterapia neoadyuvantes
+    phase: adjuvant
+    maximum_cycles: 13
+    matching:
+      exact_antineoplastic_set:
+        - pembrolizumab
+    prerequisites:
+      prior_neoadjuvant_pembrolizumab: "yes"
+      prior_neoadjuvant_platinum_chemotherapy: "yes"
+      surgery_completed: "yes"
+
+  pembro_perioperative_sequence:
+    name: Secuencia perioperatoria de pembrolizumab
+    sequence:
+      - regimen_id: pembro_cisplatin_based_chemotherapy_neoadjuvant
+      - event: surgery
+      - regimen_id: pembro_adjuvant_after_neoadjuvant
+
+  pembro_adjuvant_after_platinum:
+    name: Pembrolizumab adyuvante después de quimioterapia basada en platino
+    phase: adjuvant
+    planned_duration_months: 12
+    matching:
+      exact_antineoplastic_set:
+        - pembrolizumab
+    prerequisites:
+      prior_neoadjuvant_pembrolizumab: "no"
+      prior_adjuvant_platinum_chemotherapy: "yes"
+      surgery_completed: "yes"
+      resection_margin_status: R0

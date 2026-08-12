@@ -1,0 +1,540 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_cutaneous_melanoma
+source_guideline:
+  organization: ESMO
+  year: 2024
+  journal_issue_year: 2025
+  doi: 10.1016/j.annonc.2024.11.006
+  available_online: '2024-11-14'
+status: synthetic_cases_for_technical_validation
+cases:
+- id: eligibility_cutaneous_melanoma_supported
+  description: Confirmed invasive cutaneous melanoma after publication of the guide.
+  rule_file: eligibility.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    cancer_type: melanoma
+    melanoma_primary_site: cutaneous
+    diagnosis_confirmed: 'yes'
+    invasive_disease: 'yes'
+  expected:
+    rule_id: ESMO-MEL-CUT-ELIG-001
+    status: applicable
+    audit_effect: none
+- id: eligibility_missing_primary_site_not_evaluable
+  description: Melanoma subtype is missing and cannot be assumed to be cutaneous.
+  rule_file: eligibility.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    cancer_type: melanoma
+    diagnosis_confirmed: 'yes'
+    invasive_disease: 'yes'
+  expected:
+    rule_id: ESMO-MEL-CUT-ELIG-001
+    status: not_evaluable
+    missing_fields:
+    - melanoma_primary_site
+- id: neoadjuvant_stage_iiib_detectable_nodes_supported
+  description: Resectable stage IIIB with pathologically proven clinically detectable nodal metastasis.
+  rule_file: neoadjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: neoadjuvant
+    disease_setting: resectable_stage_III
+    stage_group: IIIB
+    resectability_status: resectable
+    clinically_or_radiologically_detectable_ln_metastasis: 'yes'
+    pathologically_proven_ln_metastasis: 'yes'
+    adjuvant_pembrolizumab_planned: 'yes'
+    ici_suitability: eligible
+  expected:
+    rule_id: ESMO-MEL-CUT-NEO-001
+    status: applicable
+    audit_effect: supports_prescription
+- id: neoadjuvant_resectable_itm_supported
+  description: Resectable in-transit metastases with planned neoadjuvant plus adjuvant pembrolizumab.
+  rule_file: neoadjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: neoadjuvant
+    disease_setting: in_transit_metastases
+    in_transit_metastases: 'yes'
+    resectability_status: resectable
+    adjuvant_pembrolizumab_planned: 'yes'
+    ici_suitability: eligible
+  expected:
+    rule_id: ESMO-MEL-CUT-NEO-002
+    status: applicable
+    audit_effect: supports_prescription
+- id: adjuvant_stage_iib_pdl1_zero_supported
+  description: Completely resected stage IIB in an adult; PD-L1 zero does not block pembrolizumab.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    stage_group: IIB
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+    age_years: 52
+    ici_suitability: eligible
+    pdl1_tc_percent: 0
+  expected:
+    rule_id: ESMO-MEL-CUT-ADJ-001
+    status: applicable
+    audit_effect: supports_prescription
+- id: adjuvant_stage_iic_supported
+  description: Completely resected stage IIC in a patient aged 16 years.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    stage_group: IIC
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+    age_years: 16
+    ici_suitability: eligible
+  expected:
+    rule_id: ESMO-MEL-CUT-ADJ-001
+    status: applicable
+    audit_effect: supports_prescription
+- id: adjuvant_stage_iiia_burden_one_point_five_supported
+  description: Resected AJCC8 stage IIIA with sentinel-node burden at least 1 mm.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    disease_setting: resectable_stage_III
+    stage_group: IIIA
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+    weeks_since_complete_resection: 8
+    ici_suitability: eligible
+    sentinel_node_tumor_burden_mm: 1.5
+  expected:
+    rule_id: ESMO-MEL-CUT-ADJ-002
+    status: applicable
+    audit_effect: supports_prescription
+- id: adjuvant_stage_iiic_supported
+  description: Resected stage IIIC within 12 weeks.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    disease_setting: locoregional
+    stage_group: IIIC
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+    weeks_since_complete_resection: 6
+    ici_suitability: eligible
+  expected:
+    rule_id: ESMO-MEL-CUT-ADJ-002
+    status: applicable
+    audit_effect: supports_prescription
+- id: adjuvant_resected_stage_iv_ned_class_support
+  description: Stage IV rendered NED after complete local treatment.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    disease_setting: resectable_stage_IV_NED
+    stage_group: IV
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+    ici_suitability: eligible
+  expected:
+    rule_id: ESMO-MEL-CUT-ADJ-003
+    status: applicable
+    audit_effect: supports_prescription
+- id: adjuvant_after_neoadjuvant_sequence_supported
+  description: Postoperative continuation after neoadjuvant pembrolizumab without progression.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    prior_neoadjuvant_pembrolizumab: 'yes'
+    surgery_completed: 'yes'
+    disease_progression: 'no'
+    disease_recurrence: 'no'
+    ici_suitability: eligible
+  expected:
+    rule_id: ESMO-MEL-CUT-ADJ-004
+    status: applicable
+    audit_effect: supports_prescription
+- id: advanced_first_line_braf_v600e_supported
+  description: First-line pembrolizumab remains an option with BRAF V600E.
+  rule_file: unresectable_metastatic.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_stage_IV
+    resectability_status: unresectable
+    treatment_line: 1
+    prior_anti_pd1_exposure: 'no'
+    ici_suitability: eligible
+    brain_metastasis_status: none
+    braf_v600_status: V600E
+  expected:
+    rule_id: ESMO-MEL-CUT-MET-001
+    status: applicable
+    audit_effect: supports_prescription
+- id: advanced_first_line_braf_wild_type_supported
+  description: First-line pembrolizumab remains an option with BRAF wild type.
+  rule_file: unresectable_metastatic.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: unresectable_stage_III
+    resectability_status: unresectable
+    treatment_line: 1
+    prior_anti_pd1_exposure: 'no'
+    ici_suitability: eligible
+    brain_metastasis_status: treated_stable
+    braf_v600_status: wild_type
+  expected:
+    rule_id: ESMO-MEL-CUT-MET-001
+    status: applicable
+    audit_effect: supports_prescription
+- id: advanced_first_line_missing_braf_still_supported
+  description: BRAF status does not determine pembrolizumab eligibility, although testing is separately required.
+  rule_file: unresectable_metastatic.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_stage_IV
+    resectability_status: unresectable
+    treatment_line: 1
+    prior_anti_pd1_exposure: 'no'
+    ici_suitability: eligible
+    brain_metastasis_status: none
+  expected:
+    rule_id: ESMO-MEL-CUT-MET-001
+    status: applicable
+    audit_effect: supports_prescription
+- id: advanced_second_line_anti_pd1_naive_supported
+  description: Second-line pembrolizumab after a non-ICI first line.
+  rule_file: unresectable_metastatic.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_stage_IV
+    resectability_status: unresectable
+    treatment_line: 2
+    prior_anti_pd1_exposure: 'no'
+    ici_suitability: eligible
+    brain_metastasis_status: none
+    immediate_previous_therapy_class: braf_mek
+  expected:
+    rule_id: ESMO-MEL-CUT-MET-002
+    status: applicable
+    audit_effect: supports_prescription
+- id: unresectable_itm_anti_pd1_class_supported
+  description: Unresectable in-transit metastases suitable for anti-PD-1 therapy.
+  rule_file: unresectable_metastatic.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: in_transit_metastases
+    in_transit_metastases: 'yes'
+    resectability_status: unresectable
+    ici_suitability: eligible
+  expected:
+    rule_id: ESMO-MEL-CUT-MET-003
+    status: applicable
+    audit_effect: supports_prescription
+- id: third_line_ici_rechallenge_requires_review
+  description: Third-line pembrolizumab after a non-ICI immediate previous line.
+  rule_file: unresectable_metastatic.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_stage_IV
+    treatment_line: 3
+    immediate_previous_therapy_class: braf_mek
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-MET-004
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: adjuvant_twelve_months_completion_advisory
+  description: Stage IIB adjuvant treatment reaches 12 months.
+  rule_file: continuation.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    stage_group: IIB
+    treatment_phase: adjuvant
+    months_on_adjuvant_pembrolizumab: 12
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-CONT-001
+    status: applicable
+    audit_effect: advisory
+- id: three_neoadjuvant_cycles_surgery_checkpoint
+  description: SWOG S1801 protocol checkpoint after three preoperative doses.
+  rule_file: continuation.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: neoadjuvant
+    neoadjuvant_pembrolizumab_cycles_completed: 3
+    surgery_completed: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-CONT-002
+    status: applicable
+    audit_effect: advisory
+- id: fifteen_adjuvant_cycles_completion_advisory
+  description: SWOG S1801 protocol checkpoint after fifteen postoperative doses.
+  rule_file: continuation.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    prior_neoadjuvant_pembrolizumab: 'yes'
+    adjuvant_pembrolizumab_cycles_completed: 15
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-CONT-003
+    status: applicable
+    audit_effect: advisory
+- id: progression_during_pembrolizumab_requires_review
+  description: Progression during pembrolizumab.
+  rule_file: continuation.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_progression: 'yes'
+    disease_recurrence: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-CONT-004
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: toxicity_interruption_requires_review
+  description: Treatment interrupted for toxicity.
+  rule_file: continuation.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_discontinuation_reason: toxicity
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-CONT-005
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: historical_version_required_before_publication
+  description: Prescription predates online publication of the 2024 update.
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: not_yet_published
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-000
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: uveal_melanoma_outside_scope
+  description: Uveal melanoma must be routed to its own module.
+  rule_file: exclusions.yaml
+  facts:
+    melanoma_primary_site: uveal
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-001
+    status: applicable
+    audit_effect: outside_scope
+- id: mucosal_melanoma_outside_scope
+  description: Mucosal melanoma is not evaluated in the cutaneous module.
+  rule_file: exclusions.yaml
+  facts:
+    melanoma_primary_site: mucosal
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-001
+    status: applicable
+    audit_effect: outside_scope
+- id: melanoma_in_situ_requires_review
+  description: Pembrolizumab in melanoma in situ is outside the treatment pathway.
+  rule_file: exclusions.yaml
+  facts:
+    stage_group: in_situ
+    invasive_disease: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-002
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: stage_iiia_burden_below_one_potential_deviation
+  description: Adjuvant pembrolizumab in AJCC8 stage IIIA with sentinel-node burden below 1 mm.
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    stage_group: IIIA
+    sentinel_node_tumor_burden_mm: 0.6
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-003
+    status: applicable
+    audit_effect: potential_deviation
+- id: neoadjuvant_without_adjuvant_plan_requires_review
+  description: Neoadjuvant pembrolizumab without the planned postoperative phase.
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: neoadjuvant
+    adjuvant_pembrolizumab_planned: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-004
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: neoadjuvant_without_detectable_nodes_requires_review
+  description: Neoadjuvant pembrolizumab without detectable proven nodal disease or ITMs.
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: neoadjuvant
+    clinically_or_radiologically_detectable_ln_metastasis: 'no'
+    pathologically_proven_ln_metastasis: 'no'
+    in_transit_metastases: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-005
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: missing_braf_testing_requires_review
+  description: BRAF V600 testing is not documented in stage IV disease.
+  rule_file: exclusions.yaml
+  facts:
+    stage_group: IV
+    braf_testing_completed: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-006
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: immediate_ici_contraindication_requires_review
+  description: Temporary or immediate ICI contraindication.
+  rule_file: exclusions.yaml
+  facts:
+    ici_suitability: immediate_contraindication
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-007
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: absolute_ici_contraindication_requires_review
+  description: Absolute ICI contraindication.
+  rule_file: exclusions.yaml
+  facts:
+    ici_suitability: absolute_contraindication
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-008
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: active_brain_metastases_route_to_specialized_review
+  description: Active asymptomatic melanoma brain metastases.
+  rule_file: exclusions.yaml
+  facts:
+    brain_metastasis_status: asymptomatic_active
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-009
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: pembrolizumab_lenvatinib_after_pd1_progression_review
+  description: Pembrolizumab plus lenvatinib after prior anti-PD-1 progression.
+  rule_file: exclusions.yaml
+  facts:
+    progression_on_prior_anti_pd1: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - lenvatinib
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-010
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: pembrolizumab_tvec_combination_review
+  description: Pembrolizumab combined with talimogene laherparepvec.
+  rule_file: exclusions.yaml
+  facts:
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - talimogene_laherparepvec
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-011
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: second_line_pembrolizumab_after_pd1_progression_review
+  description: Immediate second-line pembrolizumab reuse after anti-PD-1 progression.
+  rule_file: exclusions.yaml
+  facts:
+    treatment_line: 2
+    prior_anti_pd1_exposure: 'yes'
+    progression_on_prior_anti_pd1: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-012
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: adjuvant_start_after_twelve_weeks_review
+  description: Stage IIIC adjuvant pembrolizumab started 15 weeks after resection.
+  rule_file: exclusions.yaml
+  facts:
+    treatment_phase: adjuvant
+    stage_group: IIIC
+    weeks_since_complete_resection: 15
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-013
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: adjuvant_stage_iib_under_twelve_review
+  description: Stage IIB adjuvant pembrolizumab in a patient younger than 12 years.
+  rule_file: exclusions.yaml
+  facts:
+    treatment_phase: adjuvant
+    stage_group: IIB
+    age_years: 10
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-014
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: adjuvant_stage_iia_outside_positive_pathway
+  description: Adjuvant pembrolizumab in stage IIA.
+  rule_file: exclusions.yaml
+  facts:
+    treatment_phase: adjuvant
+    stage_group: IIA
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-MEL-CUT-EXC-015
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: advanced_first_line_missing_brain_status_not_evaluable
+  description: Active brain metastasis status is missing and cannot be assumed absent.
+  rule_file: unresectable_metastatic.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_stage_IV
+    resectability_status: unresectable
+    treatment_line: 1
+    prior_anti_pd1_exposure: 'no'
+    ici_suitability: eligible
+  expected:
+    rule_id: ESMO-MEL-CUT-MET-001
+    status: not_evaluable
+    missing_fields:
+    - brain_metastasis_status

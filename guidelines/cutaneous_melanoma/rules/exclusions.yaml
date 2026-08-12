@@ -1,0 +1,523 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_cutaneous_melanoma_exclusions
+status: draft_computable
+rules:
+- id: ESMO-MEL-CUT-EXC-000
+  name: Historical guideline version required before 14 November 2024
+  rule_origin: temporal_governance
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: not_yet_published
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: request_historical_guideline_version
+    recommendation_type: temporal_non_applicability
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: temporal_governance
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Publication metadata
+    source_locator: p. 10
+- id: ESMO-MEL-CUT-EXC-001
+  name: Non-cutaneous melanoma is outside this module
+  rule_origin: clinical_guideline_scope
+  conditions:
+    all:
+    - field: melanoma_primary_site
+      operator: in
+      value:
+      - uveal
+      - mucosal
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: route_to_other_module
+    recommendation_type: outside_scope
+    audit_effect: outside_scope
+  evidence:
+    organization: ESMO
+    statement_scope: scope_definition
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Introduction and scope
+    source_locator: p. 10
+- id: ESMO-MEL-CUT-EXC-002
+  name: Melanoma in situ or non-invasive disease is outside the pembrolizumab treatment pathway
+  rule_origin: clinical_scope
+  conditions:
+    all:
+    - any:
+      - field: stage_group
+        operator: equals
+        value: in_situ
+      - field: invasive_disease
+        operator: equals
+        value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: outside_pembrolizumab_pathway
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: scope_definition
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Introduction and management of localized melanoma
+    source_locator: pp. 10 and 12
+- id: ESMO-MEL-CUT-EXC-003
+  name: Adjuvant systemic treatment is generally not recommended for AJCC8 stage IIIA with sentinel-node burden
+    below 1 mm
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: stage_group
+      operator: equals
+      value: IIIA
+    - field: sentinel_node_tumor_burden_mm
+      operator: less_than
+      value: 1
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_potential_deviation
+    recommendation_type: adjuvant_systemic_treatment_generally_not_recommended
+    audit_effect: potential_deviation
+  evidence:
+    organization: ESMO
+    statement_scope: class_level
+    native:
+      evidence_level: I
+      recommendation_grade: D
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Adjuvant systemic therapy in resected stage III and IV NED
+    source_locator: p. 18
+- id: ESMO-MEL-CUT-EXC-004
+  name: Neoadjuvant pembrolizumab without a planned adjuvant phase does not match the recommended sequence
+  rule_origin: computable_interpretation
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: neoadjuvant
+    - field: adjuvant_pembrolizumab_planned
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: sequence_incomplete
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: regimen_sequence
+    native:
+      evidence_level: II
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Neoadjuvant plus adjuvant pembrolizumab recommendation
+    source_locator: p. 18
+- id: ESMO-MEL-CUT-EXC-005
+  name: Neoadjuvant pembrolizumab outside pathologically proven clinically detectable nodal disease requires review
+  rule_origin: computable_boundary
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: neoadjuvant
+    - any:
+      - field: clinically_or_radiologically_detectable_ln_metastasis
+        operator: equals
+        value: 'no'
+      - field: pathologically_proven_ln_metastasis
+        operator: equals
+        value: 'no'
+    - field: in_transit_metastases
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: outside_recommended_neoadjuvant_population
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: population_boundary
+    native:
+      evidence_level: II
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Neoadjuvant plus adjuvant pembrolizumab recommendation
+    source_locator: p. 18
+- id: ESMO-MEL-CUT-EXC-006
+  name: BRAF V600 testing missing in stage III or IV melanoma
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: stage_group
+      operator: in
+      value:
+      - IIIA
+      - IIIB
+      - IIIC
+      - IIID
+      - IV
+    - field: braf_testing_completed
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: request_missing_information
+    recommendation_type: mandatory_braf_testing_not_documented
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: diagnostic_requirement
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Molecular characterisation
+    source_locator: p. 11
+- id: ESMO-MEL-CUT-EXC-007
+  name: Immediate contraindication to ICI requires reassessment before pembrolizumab
+  rule_origin: clinical_guideline_figure_boundary
+  conditions:
+    all:
+    - field: ici_suitability
+      operator: equals
+      value: immediate_contraindication
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: temporary_ici_ineligibility
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: figure_footnote
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Advanced melanoma treatment algorithm footnote
+    source_locator: p. 19
+    figure: Figure 4
+- id: ESMO-MEL-CUT-EXC-008
+  name: Absolute contraindication to ICI requires multidisciplinary review
+  rule_origin: clinical_guideline_figure_boundary
+  conditions:
+    all:
+    - field: ici_suitability
+      operator: equals
+      value: absolute_contraindication
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: absolute_ici_contraindication
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: figure_footnote
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Advanced melanoma treatment algorithm footnote
+    source_locator: p. 19
+    figure: Figure 4
+- id: ESMO-MEL-CUT-EXC-009
+  name: Active melanoma brain metastases require the dedicated brain-metastasis pathway
+  rule_origin: clinical_guideline_routing
+  conditions:
+    all:
+    - field: brain_metastasis_status
+      operator: in
+      value:
+      - asymptomatic_active
+      - symptomatic_low_steroid
+      - symptomatic_high_steroid
+      - leptomeningeal
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: route_to_specialized_review
+    recommendation_type: active_brain_metastasis_pathway
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: specialized_pathway
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Melanoma brain metastases recommendations
+    source_locator: pp. 23-24
+    figure: Figure 5
+  interpretation_note: The dedicated recommendations prioritize other strategies; pembrolizumab monotherapy is not
+    explicitly recommended for active MBMs.
+- id: ESMO-MEL-CUT-EXC-010
+  name: Pembrolizumab plus lenvatinib after anti-PD-1 progression is not approved as reported by the guide
+  rule_origin: clinical_guideline_regulatory_boundary
+  conditions:
+    all:
+    - field: progression_on_prior_anti_pd1
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains_all
+      value:
+      - pembrolizumab
+      - lenvatinib
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: not_approved_not_standard
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: narrative_evidence
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+    regulatory_status_as_reported_by_source: not EMA or FDA approved in this setting
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: LEAP-004 and later-line treatment discussion
+    source_locator: pp. 21 and 24
+- id: ESMO-MEL-CUT-EXC-011
+  name: Pembrolizumab combined with T-VEC requires review because no additional clinical benefit was reported
+  rule_origin: clinical_guideline_narrative_boundary
+  conditions:
+    all:
+    - field: prescribed_antineoplastic_drugs
+      operator: contains_all
+      value:
+      - pembrolizumab
+      - talimogene_laherparepvec
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: combination_without_additional_clinical_benefit
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: narrative_evidence
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: First-line treatment of unresectable stage III and IV melanoma
+    source_locator: p. 18
+- id: ESMO-MEL-CUT-EXC-012
+  name: Immediate pembrolizumab reuse after anti-PD-1 progression is not routine second-line care
+  rule_origin: computable_interpretation
+  conditions:
+    all:
+    - field: treatment_line
+      operator: equals
+      value: 2
+    - field: prior_anti_pd1_exposure
+      operator: equals
+      value: 'yes'
+    - field: progression_on_prior_anti_pd1
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: post_anti_pd1_progression_strategy_required
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: sequencing_interpretation
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Second-line treatment after anti-PD-1 therapy
+    source_locator: pp. 21-24
+- id: ESMO-MEL-CUT-EXC-013
+  name: Adjuvant pembrolizumab initiated more than 12 weeks after complete resection requires review
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: stage_group
+      operator: in
+      value:
+      - IIIA
+      - IIIB
+      - IIIC
+      - IIID
+    - field: weeks_since_complete_resection
+      operator: greater_than
+      value: 12
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: outside_recommended_start_window
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: timing_requirement
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Adjuvant systemic therapy in resected stage III and IV NED
+    source_locator: pp. 17-18
+- id: ESMO-MEL-CUT-EXC-014
+  name: Stage IIB-IIC adjuvant pembrolizumab below age 12 requires review
+  rule_origin: trial_and_regulatory_boundary
+  conditions:
+    all:
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: stage_group
+      operator: in
+      value:
+      - IIB
+      - IIC
+    - field: age_years
+      operator: less_than
+      value: 12
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: outside_trial_and_reported_approval_age
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: trial_and_regulatory_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: KEYNOTE-716 trial population and reported EMA approval
+    source_locator: p. 12
+- id: ESMO-MEL-CUT-EXC-015
+  name: Adjuvant pembrolizumab in stage I or IIA is outside the positive pembrolizumab recommendations in this guide
+  rule_origin: absence_of_positive_pathway
+  conditions:
+    all:
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: stage_group
+      operator: in
+      value:
+      - IA
+      - IB
+      - IIA
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: outside_positive_pembrolizumab_pathway
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: absence_of_positive_recommendation
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Locoregional treatment algorithm
+    source_locator: pp. 13 and 17
+    figure: Figure 1
+  interpretation_note: Absence of a positive pathway is not treated as an explicit ESMO grade-D recommendation.

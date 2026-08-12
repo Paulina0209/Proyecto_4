@@ -1,0 +1,87 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_rcc_advanced_metastatic_subsequent_line
+status: draft_computable
+rules:
+- id: ESMO-RCC-ADV-SL-001
+  name: Pembrolizumab may be considered in later-line papillary RCC if not previously used
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: disease_setting
+      operator: in
+      value:
+      - advanced_unresectable
+      - metastatic_active
+      - recurrent_metastatic
+    - field: rcc_histology
+      operator: equals
+      value: papillary
+    - field: treatment_line
+      operator: greater_than_or_equal
+      value: 2
+    - field: prior_pembrolizumab
+      operator: equals
+      value: 'no'
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_monotherapy_prcc
+    recommendation_type: cautiously_recommended_if_not_previously_used
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: IV
+      recommendation_grade: C
+      mcbs: null
+    explicit_grade_reported: true
+    regulatory_status_as_reported_by_source: not EMA or FDA approved
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Systemic treatment for advanced and metastatic papillary RCC
+    source_locator: PDF pp. 8-11 (journal pp. 699-702)
+- id: ESMO-RCC-ADV-SL-002
+  name: Further PD-(L)1-directed therapy after progression on first-line PD-1 therapy is not recommended
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: treatment_line
+      operator: greater_than_or_equal
+      value: 2
+    - field: prior_pd1_targeted_therapy
+      operator: equals
+      value: 'yes'
+    - field: progression_on_prior_pd1
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_potential_deviation
+    recommendation_type: further_pd1_after_progression_not_recommended
+    audit_effect: potential_deviation
+  evidence:
+    organization: ESMO
+    statement_scope: class_level
+    native:
+      evidence_level: I
+      recommendation_grade: D
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Further-line treatment for advanced and metastatic clear-cell RCC
+    source_locator: PDF pp. 8 and 11 (journal pp. 699 and 702)
+  interpretation_note: This is a class-level negative recommendation applied to pembrolizumab as a PD-1-directed
+    agent.

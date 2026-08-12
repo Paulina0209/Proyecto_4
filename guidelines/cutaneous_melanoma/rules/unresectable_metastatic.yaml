@@ -1,0 +1,189 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_cutaneous_melanoma_unresectable_metastatic
+status: draft_computable
+rules:
+- id: ESMO-MEL-CUT-MET-001
+  name: First-line pembrolizumab monotherapy for unresectable stage III or stage IV melanoma
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: disease_setting
+      operator: in
+      value:
+      - unresectable_stage_III
+      - metastatic_stage_IV
+    - field: resectability_status
+      operator: equals
+      value: unresectable
+    - field: treatment_line
+      operator: equals
+      value: 1
+    - field: prior_anti_pd1_exposure
+      operator: equals
+      value: 'no'
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+    - field: brain_metastasis_status
+      operator: in
+      value:
+      - none
+      - treated_stable
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_monotherapy_advanced
+    recommendation_type: recommended_first_line_option
+    braf_requirement: none
+    pdl1_requirement: none
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A/4
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: First-line treatment of unresectable stage III and IV melanoma
+    source_locator: pp. 18 and 22-23
+    figure: Figure 4
+- id: ESMO-MEL-CUT-MET-002
+  name: Second-line pembrolizumab for an anti-PD-1-naive patient
+  rule_origin: clinical_guideline_with_contextual_constraint
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: disease_setting
+      operator: in
+      value:
+      - unresectable_stage_III
+      - metastatic_stage_IV
+    - field: resectability_status
+      operator: equals
+      value: unresectable
+    - field: treatment_line
+      operator: equals
+      value: 2
+    - field: prior_anti_pd1_exposure
+      operator: equals
+      value: 'no'
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+    - field: brain_metastasis_status
+      operator: in
+      value:
+      - none
+      - treated_stable
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_monotherapy_advanced
+    recommendation_type: recommended_second_line_option
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A/4
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Second-line treatment
+    source_locator: p. 23
+  interpretation_note: The anti-PD-1-naive constraint avoids treating immediate anti-PD-1 reuse after progression
+    as routine second-line care.
+- id: ESMO-MEL-CUT-MET-003
+  name: Anti-PD-1-based systemic therapy for unresectable satellite or in-transit metastases
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: disease_setting
+      operator: equals
+      value: in_transit_metastases
+    - field: in_transit_metastases
+      operator: equals
+      value: 'yes'
+    - field: resectability_status
+      operator: equals
+      value: unresectable
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+  conclusion:
+    action: support_regimen_class
+    regimen_class: anti_pd1_based_immunotherapy
+    candidate_drug: pembrolizumab
+    recommendation_type: class_level_recommended_option
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: class_level
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Treatment of in-transit metastases
+    source_locator: pp. 15 and 17
+    figure: Figure 3
+- id: ESMO-MEL-CUT-MET-004
+  name: Third-line ICI-class rechallenge requires individualized review
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: disease_setting
+      operator: in
+      value:
+      - unresectable_stage_III
+      - metastatic_stage_IV
+    - field: treatment_line
+      operator: greater_than_or_equal
+      value: 3
+    - field: immediate_previous_therapy_class
+      operator: not_in
+      value:
+      - anti_pd1
+      - ici_combination
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: class_rechallenge_can_be_considered
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: class_level
+    native:
+      evidence_level: IV
+      recommendation_grade: B
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Subsequent lines of treatment
+    source_locator: p. 24
+  interpretation_note: This is an ICI-class statement and does not establish pembrolizumab as a routine drug-specific
+    third-line standard.

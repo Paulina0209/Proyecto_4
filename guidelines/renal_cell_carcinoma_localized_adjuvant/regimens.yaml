@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_renal_cell_carcinoma_localized_adjuvant
+status: draft_computable
+regimens:
+- id: pembro_adjuvant_keynote564
+  name: Adjuvant pembrolizumab after complete resection of intermediate-high/high-risk clear-cell RCC
+  components:
+  - pembrolizumab
+  treatment_phase: adjuvant
+  planned_duration_months: 12
+  protocol_context:
+    dose: 200 mg every 3 weeks
+    planned_cycles: 17
+    start_window_weeks_after_surgery: 12
+    note: Trial schedule described in KEYNOTE-564; local dosing validation remains required.
+  source_locator: PDF pp. 4-5 (journal pp. 695-696)
+- id: pembro_adjuvant_M1_NED
+  name: Adjuvant pembrolizumab after complete local treatment of oligometastatic RCC rendered M1 NED
+  components:
+  - pembrolizumab
+  treatment_phase: adjuvant
+  planned_duration_months: 12
+  statement_scope: drug_specific
+  source_locator: PDF p. 10 (journal p. 701)

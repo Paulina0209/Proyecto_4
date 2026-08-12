@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_renal_cell_carcinoma_advanced_metastatic
+module_version: 1.0-draft
+name: ESMO renal cell carcinoma - advanced/metastatic pembrolizumab
+organization: ESMO
+development_status: draft_computable
+clinical_validation_status: pending
+technical_validation_status: initial_automated_tests_included
+source:
+  title: 'Renal cell carcinoma: ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up'
+  authors: Powles et al.
+  doi: 10.1016/j.annonc.2024.05.537
+  available_online: '2024-05-22'
+  last_update: 2024-05
+  journal_issue: Annals of Oncology, Volume 35, Issue 8, 2024
+  guideline_id: esmo_renal_cell_carcinoma_2024
+  evidence_system:
+    levels_of_evidence_and_grades: ESMO
+    mcbs_version: '1.1'
+clinical_scope:
+  drug_of_interest: pembrolizumab
+  disease: advanced or metastatic renal cell carcinoma
+  included_settings:
+  - first-line advanced/metastatic clear-cell RCC
+  - first- and later-line advanced/metastatic papillary RCC
+  - advanced chromophobe RCC
+  - advanced RCC with predominant sarcomatoid histology
+  excluded_settings:
+  - localized or locoregional disease without active metastases
+  - M1 NED after complete local treatment
+  - collecting duct, SMARCB1-deficient and FH-deficient RCC as positive pembrolizumab pathways
+temporal_applicability:
+  version_effective_from: '2024-05-22'
+  policy: Records before this date require the guideline version applicable on the prescription date.
+licensing:
+  source_notice: All rights reserved, including text and data mining and AI-related uses.
+  module_use: private_internal_research_only_pending_permission
+  public_distribution: not_authorized
+limitations:
+- This is a computable draft and not a substitute for specialist judgement.
+- The guide reports regulatory status at the time of writing; this module does not treat it as current legal advice.
+- Class- and histology-specific recommendations are preserved without collapsing their evidence grades.
+- The rule engine evaluates rule files independently; a production orchestrator must enforce module eligibility
+  and pathway order.

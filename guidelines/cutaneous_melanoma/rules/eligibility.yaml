@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_cutaneous_melanoma_eligibility
+status: draft_computable
+rules:
+- id: ESMO-MEL-CUT-ELIG-001
+  name: Case eligible for the invasive cutaneous melanoma module
+  rule_origin: clinical_guideline_scope
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: cancer_type
+      operator: equals
+      value: melanoma
+    - field: melanoma_primary_site
+      operator: in
+      value:
+      - cutaneous
+      - acral_cutaneous
+    - field: diagnosis_confirmed
+      operator: equals
+      value: 'yes'
+    - field: invasive_disease
+      operator: equals
+      value: 'yes'
+  conclusion:
+    action: enter_module
+    module_id: esmo_cutaneous_melanoma
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: scope_definition
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Introduction and scope
+    source_locator: p. 10

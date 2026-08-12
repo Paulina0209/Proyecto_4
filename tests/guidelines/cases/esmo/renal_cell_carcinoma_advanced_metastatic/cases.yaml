@@ -1,0 +1,408 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_renal_cell_carcinoma_advanced_metastatic
+source_guideline:
+  organization: ESMO
+  year: 2024
+  doi: 10.1016/j.annonc.2024.05.537
+  available_online: '2024-05-22'
+status: synthetic_cases_for_technical_validation
+cases:
+- id: advanced_eligibility_supported
+  description: Histologically confirmed active metastatic RCC.
+  rule_file: eligibility.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    cancer_type: renal_cell_carcinoma
+    diagnosis_confirmed: 'yes'
+    histopathology_confirmed: 'yes'
+    disease_setting: metastatic_active
+  expected:
+    rule_id: ESMO-RCC-ADV-ELIG-001
+    status: applicable
+    audit_effect: none
+- id: advanced_eligibility_missing_setting
+  description: Disease setting is missing.
+  rule_file: eligibility.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    cancer_type: renal_cell_carcinoma
+    diagnosis_confirmed: 'yes'
+    histopathology_confirmed: 'yes'
+  expected:
+    rule_id: ESMO-RCC-ADV-ELIG-001
+    status: not_evaluable
+    missing_fields:
+    - disease_setting
+- id: advanced_ccrcc_lenvatinib_favourable_supported
+  description: First-line pembrolizumab plus lenvatinib in favourable-risk ccRCC.
+  rule_file: first_line.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_active
+    treatment_line: 1
+    rcc_histology: clear_cell
+    ici_suitability: eligible
+    imdc_risk_group: favourable
+    prescribed_antineoplastic_drugs:
+    - lenvatinib
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-FL-001
+    status: applicable
+    audit_effect: supports_prescription
+- id: advanced_ccrcc_axitinib_poor_supported
+  description: First-line pembrolizumab plus axitinib in poor-risk ccRCC.
+  rule_file: first_line.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: advanced_unresectable
+    treatment_line: 1
+    rcc_histology: clear_cell
+    ici_suitability: eligible
+    imdc_risk_group: poor
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - axitinib
+  expected:
+    rule_id: ESMO-RCC-ADV-FL-002
+    status: applicable
+    audit_effect: supports_prescription
+- id: advanced_ccrcc_lenvatinib_unknown_imdc_supported
+  description: IMDC is not a condition for the pembrolizumab-lenvatinib recommendation.
+  rule_file: first_line.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_active
+    treatment_line: 1
+    rcc_histology: clear_cell
+    ici_suitability: eligible
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - lenvatinib
+  expected:
+    rule_id: ESMO-RCC-ADV-FL-001
+    status: applicable
+    audit_effect: supports_prescription
+- id: advanced_prcc_pembro_monotherapy_supported
+  description: First-line pembrolizumab monotherapy as an alternative in pRCC.
+  rule_file: first_line.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_active
+    treatment_line: 1
+    rcc_histology: papillary
+    ici_suitability: eligible
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-FL-003
+    status: applicable
+    audit_effect: supports_prescription
+- id: advanced_prcc_lenvatinib_pembro_supported
+  description: First-line pembrolizumab plus lenvatinib as an alternative in pRCC.
+  rule_file: first_line.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_active
+    treatment_line: 1
+    rcc_histology: papillary
+    ici_suitability: eligible
+    prescribed_antineoplastic_drugs:
+    - lenvatinib
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-FL-004
+    status: applicable
+    audit_effect: supports_prescription
+- id: advanced_chromophobe_lenvatinib_pembro_supported
+  description: Pembrolizumab plus lenvatinib in advanced chromophobe RCC.
+  rule_file: first_line.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: advanced_unresectable
+    treatment_line: 1
+    rcc_histology: chromophobe
+    ici_suitability: eligible
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - lenvatinib
+  expected:
+    rule_id: ESMO-RCC-ADV-FL-005
+    status: applicable
+    audit_effect: supports_prescription
+- id: advanced_sarcomatoid_axitinib_pembro_supported
+  description: Pembrolizumab plus axitinib in predominant sarcomatoid RCC.
+  rule_file: first_line.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_active
+    treatment_line: 1
+    rcc_histology: sarcomatoid_predominant
+    ici_suitability: eligible
+    prescribed_antineoplastic_drugs:
+    - axitinib
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-FL-006
+    status: applicable
+    audit_effect: supports_prescription
+- id: advanced_sarcomatoid_lenvatinib_pembro_supported
+  description: Pembrolizumab plus lenvatinib in predominant sarcomatoid RCC.
+  rule_file: first_line.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: recurrent_metastatic
+    treatment_line: 1
+    rcc_histology: sarcomatoid_predominant
+    ici_suitability: eligible
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - lenvatinib
+  expected:
+    rule_id: ESMO-RCC-ADV-FL-007
+    status: applicable
+    audit_effect: supports_prescription
+- id: advanced_prcc_second_line_pembro_supported
+  description: Later-line pRCC with no prior pembrolizumab.
+  rule_file: subsequent_line.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_active
+    rcc_histology: papillary
+    treatment_line: 2
+    prior_pembrolizumab: 'no'
+    ici_suitability: eligible
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-SL-001
+    status: applicable
+    audit_effect: supports_prescription
+- id: advanced_prcc_second_line_prior_pembro_not_applicable
+  description: The later-line pRCC rule does not apply if pembrolizumab was already given.
+  rule_file: subsequent_line.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_active
+    rcc_histology: papillary
+    treatment_line: 2
+    prior_pembrolizumab: 'yes'
+    ici_suitability: eligible
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-SL-001
+    status: not_applicable
+- id: advanced_pd1_rechallenge_after_progression_potential_deviation
+  description: Further pembrolizumab after progression on first-line PD-1 therapy.
+  rule_file: subsequent_line.yaml
+  facts:
+    treatment_line: 2
+    prior_pd1_targeted_therapy: 'yes'
+    progression_on_prior_pd1: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - lenvatinib
+  expected:
+    rule_id: ESMO-RCC-ADV-SL-002
+    status: applicable
+    audit_effect: potential_deviation
+- id: advanced_twenty_four_month_ici_advisory
+  description: Pembrolizumab reaches two years.
+  rule_file: continuation.yaml
+  facts:
+    months_on_ici: 24
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - axitinib
+  expected:
+    rule_id: ESMO-RCC-ADV-CONT-001
+    status: applicable
+    audit_effect: advisory
+- id: advanced_imaging_interval_advisory
+  description: CT interval is longer than four months during systemic therapy.
+  rule_file: continuation.yaml
+  facts:
+    disease_setting: metastatic_active
+    imaging_interval_months: 5
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - lenvatinib
+  expected:
+    rule_id: ESMO-RCC-ADV-CONT-002
+    status: applicable
+    audit_effect: advisory
+- id: advanced_progression_review
+  description: Progression while pembrolizumab remains prescribed.
+  rule_file: continuation.yaml
+  facts:
+    disease_progression: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-CONT-003
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: advanced_toxicity_review
+  description: Treatment interrupted because of toxicity.
+  rule_file: continuation.yaml
+  facts:
+    treatment_discontinuation_reason: toxicity
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-CONT-004
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: advanced_historical_version_required
+  description: Prescription predates the online publication date.
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: not_yet_published
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-EXC-000
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: advanced_m1_ned_outside_scope
+  description: M1 NED is routed to the localized/adjuvant module.
+  rule_file: exclusions.yaml
+  facts:
+    disease_setting: M1_NED_post_metastasectomy
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-EXC-001
+    status: applicable
+    audit_effect: outside_scope
+- id: advanced_localized_outside_scope
+  description: Localized operable disease is routed to the adjuvant module.
+  rule_file: exclusions.yaml
+  facts:
+    disease_setting: localized_operable
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-EXC-002
+    status: applicable
+    audit_effect: outside_scope
+- id: advanced_ici_contraindicated_review
+  description: Pembrolizumab prescribed despite ICI contraindication.
+  rule_file: exclusions.yaml
+  facts:
+    ici_suitability: contraindicated
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - axitinib
+  expected:
+    rule_id: ESMO-RCC-ADV-EXC-003
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: advanced_ccrcc_pembro_monotherapy_review
+  description: First-line pembrolizumab monotherapy in clear-cell RCC.
+  rule_file: exclusions.yaml
+  facts:
+    rcc_histology: clear_cell
+    treatment_line: 1
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-EXC-004
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: advanced_collecting_duct_review
+  description: Collecting duct RCC has a different histology-specific pathway.
+  rule_file: exclusions.yaml
+  facts:
+    rcc_histology: collecting_duct
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-EXC-005
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: advanced_fh_deficient_review
+  description: FH-deficient RCC has a different histology-specific pathway.
+  rule_file: exclusions.yaml
+  facts:
+    rcc_histology: FH_deficient
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - lenvatinib
+  expected:
+    rule_id: ESMO-RCC-ADV-EXC-005
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: advanced_unknown_histology_review
+  description: RCC histology is not documented and prevents pathway selection.
+  rule_file: exclusions.yaml
+  facts:
+    histology_documented: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-EXC-006
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: advanced_first_line_missing_histology_not_evaluable
+  description: The clear-cell first-line rule cannot be evaluated without histology.
+  rule_file: first_line.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_active
+    treatment_line: 1
+    ici_suitability: eligible
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - lenvatinib
+  expected:
+    rule_id: ESMO-RCC-ADV-FL-001
+    status: not_evaluable
+    missing_fields:
+    - rcc_histology
+- id: advanced_first_line_missing_ici_suitability_not_evaluable
+  description: ICI suitability is required for positive support.
+  rule_file: first_line.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_active
+    treatment_line: 1
+    rcc_histology: clear_cell
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - axitinib
+  expected:
+    rule_id: ESMO-RCC-ADV-FL-002
+    status: not_evaluable
+    missing_fields:
+    - ici_suitability
+- id: advanced_prcc_second_line_missing_prior_pembro_not_evaluable
+  description: Prior pembrolizumab exposure must be known in later-line pRCC.
+  rule_file: subsequent_line.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    disease_setting: metastatic_active
+    rcc_histology: papillary
+    treatment_line: 2
+    ici_suitability: eligible
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-SL-001
+    status: not_evaluable
+    missing_fields:
+    - prior_pembrolizumab
+- id: advanced_no_progression_rechallenge_rule_not_applicable
+  description: The negative rechallenge rule requires documented progression.
+  rule_file: subsequent_line.yaml
+  facts:
+    treatment_line: 2
+    prior_pd1_targeted_therapy: 'yes'
+    progression_on_prior_pd1: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-ADV-SL-002
+    status: not_applicable

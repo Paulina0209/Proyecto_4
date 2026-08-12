@@ -1,0 +1,229 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_rcc_localized_adjuvant_exclusions
+status: draft_computable
+rules:
+- id: ESMO-RCC-LOC-EXC-000
+  name: Historical guideline version required before 22 May 2024
+  rule_origin: temporal_governance
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: not_yet_published
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: use_historical_guideline_version
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: temporal_governance
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Publication information
+    source_locator: PDF p. 1 (journal p. 692)
+- id: ESMO-RCC-LOC-EXC-001
+  name: Active advanced or metastatic disease belongs to the advanced module
+  rule_origin: module_boundary
+  conditions:
+    all:
+    - field: disease_setting
+      operator: in
+      value:
+      - advanced_unresectable
+      - metastatic_active
+      - recurrent_metastatic
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: route_to_module
+    module_id: esmo_renal_cell_carcinoma_advanced_metastatic
+    audit_effect: outside_scope
+  evidence:
+    organization: ESMO
+    statement_scope: module_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Management of advanced and metastatic disease
+    source_locator: PDF pp. 5-11 (journal pp. 696-702)
+- id: ESMO-RCC-LOC-EXC-002
+  name: Non-clear-cell histology is outside the positive adjuvant pembrolizumab pathway
+  rule_origin: clinical_guideline_boundary
+  conditions:
+    all:
+    - field: rcc_histology
+      operator: in
+      value:
+      - papillary
+      - chromophobe
+      - collecting_duct
+      - SMARCB1_deficient
+      - FH_deficient
+      - other_non_clear_cell
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: outside_clear_cell_adjuvant_evidence
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: indication_boundary
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Adjuvant therapy in clear-cell RCC
+    source_locator: PDF pp. 4-5 (journal pp. 695-696)
+- id: ESMO-RCC-LOC-EXC-003
+  name: Low-risk localized disease is outside KEYNOTE-564 positive criteria
+  rule_origin: clinical_guideline_boundary
+  conditions:
+    all:
+    - field: keynote564_risk_group
+      operator: equals
+      value: low
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: outside_keynote564_positive_risk_groups
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: indication_boundary
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Risk assessment and adjuvant therapy in clear-cell RCC
+    source_locator: PDF pp. 3-5 (journal pp. 694-696)
+- id: ESMO-RCC-LOC-EXC-004
+  name: Adjuvant pembrolizumab started after 12 weeks requires review
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: weeks_since_complete_resection
+      operator: greater_than
+      value: 12
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: outside_reported_start_window
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Adjuvant therapy in clear-cell RCC
+    source_locator: PDF pp. 4-5 (journal pp. 695-696)
+- id: ESMO-RCC-LOC-EXC-005
+  name: Residual or incompletely resected disease requires review outside the adjuvant pathway
+  rule_origin: clinical_guideline_boundary
+  conditions:
+    all:
+    - any:
+      - field: complete_resection
+        operator: equals
+        value: 'no'
+      - field: no_evidence_of_disease
+        operator: equals
+        value: 'no'
+      - field: metastatic_status
+        operator: equals
+        value: M1_active
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: active_or_residual_disease
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: indication_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Adjuvant therapy in clear-cell RCC
+    source_locator: PDF pp. 4-6 (journal pp. 695-697)
+- id: ESMO-RCC-LOC-EXC-006
+  name: Missing documentation of long-term adverse-event counselling
+  rule_origin: documentation_quality
+  conditions:
+    all:
+    - field: long_term_ae_counselling_documented
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: request_documentation_review
+    recommendation_type: counselling_documentation
+    audit_effect: advisory
+  evidence:
+    organization: ESMO
+    statement_scope: process_of_care
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Adjuvant therapy in clear-cell RCC
+    source_locator: PDF p. 5 (journal p. 696)

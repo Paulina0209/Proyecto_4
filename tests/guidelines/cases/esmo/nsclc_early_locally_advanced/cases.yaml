@@ -1,0 +1,265 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_early_locally_advanced
+source_guideline:
+  organization: ESMO
+  year: 2025
+  doi: 10.1016/j.annonc.2025.08.003
+  publication_date: '2025-08-28'
+status: synthetic_cases_for_technical_validation
+cases:
+- id: neo_perioperative_pembrolizumab_supported
+  description: NSCLC resecable estadio IIIA, EGFR WT y ALK negativo, en fase neoadyuvante.
+  rule_file: neoadjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: neoadjuvant
+    resectability_status: resectable
+    clinical_stage_group: IIIA
+    egfr_status: wild_type
+    alk_status: negative
+    biomarker_testing_complete: 'yes'
+    mdt_review_completed: 'yes'
+    immunotherapy_contraindication: 'no'
+    cisplatin_eligible: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - cisplatin
+    - pemetrexed
+  expected:
+    rule_id: ESMO-NSCLC-ELA-NEO-001
+    status: applicable
+    audit_effect: supports_prescription
+- id: perioperative_continuation_after_surgery_supported
+  description: Continuación posoperatoria de la secuencia perioperatoria.
+  rule_file: perioperative.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    pembrolizumab_pathway: perioperative
+    prior_neoadjuvant_pembrolizumab: 'yes'
+    prior_neoadjuvant_platinum_chemotherapy: 'yes'
+    surgery_completed: 'yes'
+    disease_progression: 'no'
+    immunotherapy_contraindication: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-NSCLC-ELA-PERI-001
+    status: applicable
+    audit_effect: supports_prescription
+- id: adjuvant_continuation_after_neoadjuvant_supported
+  description: Pembrolizumab adyuvante después de pembrolizumab y platino neoadyuvantes.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    pembrolizumab_pathway: perioperative
+    prior_neoadjuvant_pembrolizumab: 'yes'
+    prior_neoadjuvant_platinum_chemotherapy: 'yes'
+    surgery_completed: 'yes'
+    disease_progression: 'no'
+    immunotherapy_contraindication: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-NSCLC-ELA-ADJ-001
+    status: applicable
+    audit_effect: supports_prescription
+- id: adjuvant_only_after_platinum_supported_pdl1_zero
+  description: Pembrolizumab adyuvante después de resección R0 y platino, con PD-L1
+    0%.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    pembrolizumab_pathway: adjuvant_only
+    surgery_completed: 'yes'
+    resection_margin_status: R0
+    pathological_stage_group: IIIA
+    tumor_size_cm: 5.2
+    egfr_status: wild_type
+    alk_status: negative
+    prior_neoadjuvant_pembrolizumab: 'no'
+    prior_adjuvant_platinum_chemotherapy: 'yes'
+    disease_progression: 'no'
+    immunotherapy_contraindication: 'no'
+    pdl1_test_completed: 'yes'
+    pdl1_tc_percent: 0
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-NSCLC-ELA-ADJ-002
+    status: applicable
+    audit_effect: supports_prescription
+- id: pcr_does_not_automatically_justify_adjuvant_omission
+  description: Omisión adyuvante basada únicamente en respuesta patológica completa.
+  rule_file: perioperative.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    prior_neoadjuvant_pembrolizumab: 'yes'
+    surgery_completed: 'yes'
+    pathologic_response: pCR
+    adjuvant_pembrolizumab_planned: 'no'
+  expected:
+    rule_id: ESMO-NSCLC-ELA-PERI-002
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: historical_version_required_before_publication
+  description: Prescripción anterior a la publicación de la versión ESMO 2025.
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: not_yet_published
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-NSCLC-ELA-EXC-000
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: stage_i_pembrolizumab_requires_review
+  description: Pembrolizumab prescrito en estadio IA2.
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    clinical_stage_group: IA2
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-NSCLC-ELA-EXC-001
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: unresectable_stage_iii_pembrolizumab_requires_review
+  description: Pembrolizumab en estadio IIIB irresecable.
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    resectability_status: unresectable
+    clinical_stage_group: IIIB
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-NSCLC-ELA-EXC-003
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: egfr_mutation_routes_out_of_pembrolizumab_pathway
+  description: Alteración sensibilizante de EGFR en contexto neoadyuvante.
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    egfr_status: sensitizing_mutation
+    treatment_phase: neoadjuvant
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - cisplatin
+  expected:
+    rule_id: ESMO-NSCLC-ELA-EXC-004
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: alk_rearrangement_routes_out_of_pembrolizumab_pathway
+  description: Reordenamiento de ALK en contexto adyuvante.
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    alk_status: rearranged
+    treatment_phase: adjuvant
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-NSCLC-ELA-EXC-005
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: neoadjuvant_pembrolizumab_without_cisplatin_requires_review
+  description: Pembrolizumab neoadyuvante sin componente basado en cisplatino.
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: neoadjuvant
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+    - carboplatin
+    - paclitaxel
+  expected:
+    rule_id: ESMO-NSCLC-ELA-EXC-006
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: adjuvant_without_prior_platinum_requires_review
+  description: Pembrolizumab adyuvante aislado sin platino previo documentado.
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    prior_neoadjuvant_pembrolizumab: 'no'
+    prior_adjuvant_platinum_chemotherapy: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-NSCLC-ELA-EXC-007
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: incomplete_biomarkers_requires_information_review
+  description: Biomarcadores mínimos incompletos antes de pembrolizumab.
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    biomarker_testing_complete: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-NSCLC-ELA-EXC-010
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: missing_egfr_is_not_interpreted_as_wild_type
+  description: La ausencia de EGFR impide evaluar la regla neoadyuvante.
+  rule_file: neoadjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: neoadjuvant
+    resectability_status: resectable
+    clinical_stage_group: IIIA
+    alk_status: negative
+    biomarker_testing_complete: 'yes'
+    mdt_review_completed: 'yes'
+    immunotherapy_contraindication: 'no'
+    cisplatin_eligible: 'yes'
+  expected:
+    rule_id: ESMO-NSCLC-ELA-NEO-001
+    status: not_evaluable
+    missing_fields:
+    - egfr_status
+- id: thirteen_adjuvant_cycles_generate_completion_review
+  description: La secuencia perioperatoria alcanza trece ciclos posoperatorios.
+  rule_file: continuation.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    pembrolizumab_pathway: perioperative
+    adjuvant_pembrolizumab_cycles_completed: 13
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-NSCLC-ELA-CONT-001
+    status: applicable
+    audit_effect: advisory
+- id: twelve_months_adjuvant_generate_completion_review
+  description: La ruta adyuvante aislada alcanza doce meses.
+  rule_file: continuation.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    pembrolizumab_pathway: adjuvant_only
+    months_on_adjuvant_pembrolizumab: 12
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-NSCLC-ELA-CONT-002
+    status: applicable
+    audit_effect: advisory
+- id: toxicity_requires_expert_review
+  description: Interrupción por toxicidad durante pembrolizumab.
+  rule_file: continuation.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_discontinuation_reason: toxicity
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-NSCLC-ELA-CONT-004
+    status: applicable
+    audit_effect: requires_clinical_review

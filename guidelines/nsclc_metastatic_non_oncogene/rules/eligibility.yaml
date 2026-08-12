@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_m_eligibility
+status: draft_computable
+
+rules:
+
+  - id: ESMO-NSCLC-M-ELIG-001
+    name: Caso dentro del alcance del módulo
+    rule_origin: system_policy
+    conditions:
+      all:
+        - {field: cancer_type, operator: equals, value: NSCLC}
+        - {field: disease_setting, operator: in, value: [advanced, metastatic, recurrent]}
+        - {field: molecular_pathway_status, operator: equals, value: non_oncogene_addicted}
+    conclusion:
+      action: enter_module
+      audit_effect: none
+    evidence:
+      organization: INTERNAL
+      native: {}
+      explicit_grade_reported: false
+    source:
+      source_type: system_scope

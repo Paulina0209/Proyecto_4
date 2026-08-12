@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_rcc_localized_adjuvant_eligibility
+status: draft_computable
+rules:
+- id: ESMO-RCC-LOC-ELIG-001
+  name: Case eligible for the localized/adjuvant renal cell carcinoma module
+  rule_origin: clinical_guideline_scope
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: cancer_type
+      operator: equals
+      value: renal_cell_carcinoma
+    - field: diagnosis_confirmed
+      operator: equals
+      value: 'yes'
+    - field: histopathology_confirmed
+      operator: equals
+      value: 'yes'
+    - field: rcc_histology
+      operator: equals
+      value: clear_cell
+    - field: disease_setting
+      operator: in
+      value:
+      - localized_operable
+      - locoregional_operable
+      - M1_NED_post_metastasectomy
+    - field: complete_resection
+      operator: equals
+      value: 'yes'
+    - field: no_evidence_of_disease
+      operator: equals
+      value: 'yes'
+  conclusion:
+    action: enter_module
+    module_id: esmo_renal_cell_carcinoma_localized_adjuvant
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: scope_definition
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Risk assessment and management of local and locoregional disease
+    source_locator: PDF pp. 3-5 (journal pp. 694-696)
+    figure: Figure 2

@@ -1,0 +1,494 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_ela_exclusions
+status: draft_computable
+rules:
+- id: ESMO-NSCLC-ELA-EXC-000
+  name: La prescripción es anterior a la publicación de esta versión de la guía
+  rule_origin: temporal_scope
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: not_yet_published
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: route_to_historical_guideline_review
+    recommendation_type: historical_guideline_version_required
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: INTERNAL
+    statement_scope: temporal_scope
+    native: {}
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    publication_date: '2025-08-28'
+  interpretation_note: Esta regla evita evaluar prescripciones de 2024 o anteriores
+    al 28 de agosto de 2025 con una guía que todavía no había sido publicada.
+- id: ESMO-NSCLC-ELA-EXC-001
+  name: Pembrolizumab prescrito en estadio I sin una ruta respaldada por este módulo
+  rule_origin: coverage_gap
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - any:
+      - field: clinical_stage_group
+        operator: in
+        value:
+        - IA1
+        - IA2
+        - IA3
+        - IB
+      - field: pathological_stage_group
+        operator: in
+        value:
+        - IA1
+        - IA2
+        - IA3
+        - IB
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: no_pembrolizumab_pathway_identified
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: coverage_gap
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of stage I NSCLC
+    source_locator: Figure 1, p. 1249
+  interpretation_note: 'La ausencia de una ruta positiva de pembrolizumab no se convierte
+    por sí sola en una recomendación explícita en contra; por eso se solicita revisión.
+
+    '
+- id: ESMO-NSCLC-ELA-EXC-002
+  name: Enfermedad metastásica fuera del alcance de este módulo
+  rule_origin: system_scope
+  conditions:
+    any:
+    - field: disease_setting
+      operator: equals
+      value: metastatic
+    - field: clinical_stage_group
+      operator: equals
+      value: IV
+  conclusion:
+    action: route_to_metastatic_nsclc_module
+    recommendation_type: outside_current_module
+    audit_effect: none
+  evidence:
+    organization: INTERNAL
+    statement_scope: system_scope
+    native: {}
+    explicit_grade_reported: false
+  source:
+    source_type: system_scope
+- id: ESMO-NSCLC-ELA-EXC-003
+  name: Pembrolizumab en NSCLC estadio III irresecable requiere revisión
+  rule_origin: coverage_gap
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: resectability_status
+      operator: equals
+      value: unresectable
+    - field: clinical_stage_group
+      operator: in
+      value:
+      - IIIA
+      - IIIB
+      - IIIC
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: no_pembrolizumab_consolidation_pathway_identified
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: coverage_gap
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of unresectable stage III NSCLC
+    source_locator: pp. 1255-1256
+  interpretation_note: 'La guía describe quimiorradioterapia seguida por osimertinib
+    en EGFR mutado o durvalumab en EGFR wild-type. No formula una recomendación específica
+    de pembrolizumab en este contexto.
+
+    '
+- id: ESMO-NSCLC-ELA-EXC-004
+  name: Alteración sensibilizante de EGFR fuera de la ruta perioperatoria de pembrolizumab
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: egfr_status
+      operator: in
+      value:
+      - sensitizing_mutation
+      - other_non_sensitizing_alteration
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+    - field: treatment_phase
+      operator: in
+      value:
+      - neoadjuvant
+      - adjuvant
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: molecular_exclusion_from_pembrolizumab_pathway
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: eligibility_restriction
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '2.0'
+        score: A (AT)
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of resectable stage I-III NSCLC - systemic therapy
+    source_locator: p. 1253
+- id: ESMO-NSCLC-ELA-EXC-005
+  name: Rearreglo de ALK fuera de la ruta perioperatoria de pembrolizumab
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: alk_status
+      operator: equals
+      value: rearranged
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+    - field: treatment_phase
+      operator: in
+      value:
+      - neoadjuvant
+      - adjuvant
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: molecular_exclusion_from_pembrolizumab_pathway
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: eligibility_restriction
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '2.0'
+        score: A (AT)
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of resectable stage I-III NSCLC - systemic therapy
+    source_locator: p. 1253
+- id: ESMO-NSCLC-ELA-EXC-006
+  name: Pembrolizumab neoadyuvante sin quimioterapia basada en cisplatino
+  rule_origin: regimen_boundary
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: neoadjuvant
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+    - not:
+        field: prescribed_antineoplastic_drugs
+        operator: contains_any
+        value:
+        - cisplatin
+        - cisplatin_based_chemotherapy
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: regimen_not_matching_keynote_671_sequence
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: trial_protocol
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Neoadjuvant and perioperative therapy - KEYNOTE-671
+    source_locator: p. 1252
+- id: ESMO-NSCLC-ELA-EXC-006B
+  name: Paciente no elegible para cisplatino dentro de la secuencia KEYNOTE-671
+  rule_origin: regimen_boundary
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: neoadjuvant
+    - field: cisplatin_eligible
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: cisplatin_based_regimen_not_applicable
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: trial_protocol
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Neoadjuvant and perioperative therapy - KEYNOTE-671
+    source_locator: p. 1252
+  interpretation_note: 'KEYNOTE-671 utilizó quimioterapia basada en cisplatino. La
+    guía no proporciona en este apartado una alternativa específica con pembrolizumab
+    para pacientes no elegibles para cisplatino.
+
+    '
+- id: ESMO-NSCLC-ELA-EXC-007
+  name: Pembrolizumab adyuvante aislado sin quimioterapia previa basada en platino
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: prior_neoadjuvant_pembrolizumab
+      operator: equals
+      value: 'no'
+    - field: prior_adjuvant_platinum_chemotherapy
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: prerequisite_platinum_chemotherapy_not_documented
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: regulatory_and_sequence_restriction
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '2.0'
+        score: A (AT)
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of resectable stage I-III NSCLC - systemic therapy
+    source_locator: p. 1253
+- id: ESMO-NSCLC-ELA-EXC-008
+  name: Pembrolizumab adyuvante después de resección incompleta
+  rule_origin: eligibility_boundary
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: resection_margin_status
+      operator: in
+      value:
+      - R1
+      - R2
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: complete_resection_not_documented
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: eligibility_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of resectable stage I-III NSCLC
+    source_locator: Figures 1-2 and systemic therapy recommendations
+- id: ESMO-NSCLC-ELA-EXC-009
+  name: Contraindicación documentada para inmunoterapia
+  rule_origin: safety_boundary
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: immunotherapy_contraindication
+      operator: equals
+      value: 'yes'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: outside_ici_eligibility
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: safety_boundary
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Systemic therapy eligibility
+- id: ESMO-NSCLC-ELA-EXC-010
+  name: Biomarcadores mínimos incompletos antes de definir la secuencia sistémica
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: biomarker_testing_complete
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: request_missing_information
+    recommendation_type: not_evaluable
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: clinical_context
+    native:
+      evidence_level: V
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of resectable stage I-III NSCLC - systemic therapy
+    source_locator: p. 1253
+- id: ESMO-NSCLC-ELA-EXC-011
+  name: PD-L1 no evaluado antes de definir la estrategia perioperatoria
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: pdl1_test_completed
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: request_missing_information
+    recommendation_type: biomarker_workup_incomplete
+    audit_effect: advisory
+  evidence:
+    organization: ESMO
+    statement_scope: diagnostic_prerequisite
+    native:
+      evidence_level: IV
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Diagnosis, pathology and molecular biology
+    source_locator: p. 1247
+  interpretation_note: 'La expresión de PD-L1 no establece un umbral para la recomendación
+    de pembrolizumab perioperatorio o adyuvante aquí modelada, pero la guía recomienda
+    realizar la prueba para apoyar la decisión.
+
+    '
+- id: ESMO-NSCLC-ELA-EXC-012
+  name: Estadio III resecable sin discusión multidisciplinaria documentada
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: clinical_stage_group
+      operator: in
+      value:
+      - IIIA
+      - IIIB
+    - field: resectability_status
+      operator: equals
+      value: resectable
+    - field: mdt_review_completed
+      operator: equals
+      value: 'no'
+    - field: prescribed_antineoplastic_drugs
+      operator: contains
+      value: pembrolizumab
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: mdt_review_required
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: clinical_context
+    native:
+      evidence_level: V
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of resectable stage I-III NSCLC
+    source_locator: p. 1253

@@ -1,0 +1,334 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_renal_cell_carcinoma_localized_adjuvant
+source_guideline:
+  organization: ESMO
+  year: 2024
+  doi: 10.1016/j.annonc.2024.05.537
+  available_online: '2024-05-22'
+status: synthetic_cases_for_technical_validation
+cases:
+- id: localized_eligibility_supported
+  description: Completely resected clear-cell RCC after publication.
+  rule_file: eligibility.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    cancer_type: renal_cell_carcinoma
+    diagnosis_confirmed: 'yes'
+    histopathology_confirmed: 'yes'
+    rcc_histology: clear_cell
+    disease_setting: localized_operable
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+  expected:
+    rule_id: ESMO-RCC-LOC-ELIG-001
+    status: applicable
+    audit_effect: none
+- id: localized_eligibility_missing_histology
+  description: Histology is required and cannot be inferred.
+  rule_file: eligibility.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    cancer_type: renal_cell_carcinoma
+    diagnosis_confirmed: 'yes'
+    histopathology_confirmed: 'yes'
+    disease_setting: localized_operable
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+  expected:
+    rule_id: ESMO-RCC-LOC-ELIG-001
+    status: not_evaluable
+    missing_fields:
+    - rcc_histology
+- id: adjuvant_pt2_grade4_supported
+  description: pT2 grade 4 N0 M0 clear-cell RCC within 12 weeks.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    rcc_histology: clear_cell
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+    weeks_since_complete_resection: 8
+    ici_suitability: eligible
+    pathological_t_stage: pT2
+    nuclear_grade: '4'
+    sarcomatoid_features: 'no'
+    pathological_n_status: N0
+    metastatic_status: M0
+  expected:
+    rule_id: ESMO-RCC-LOC-ADJ-001
+    status: applicable
+    audit_effect: supports_prescription
+- id: adjuvant_pt2_sarcomatoid_supported
+  description: pT2 with sarcomatoid features N0 M0.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    rcc_histology: clear_cell
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+    weeks_since_complete_resection: 10
+    ici_suitability: eligible
+    pathological_t_stage: pT2
+    nuclear_grade: '3'
+    sarcomatoid_features: 'yes'
+    pathological_n_status: N0
+    metastatic_status: M0
+  expected:
+    rule_id: ESMO-RCC-LOC-ADJ-001
+    status: applicable
+    audit_effect: supports_prescription
+- id: adjuvant_pt3_supported
+  description: pT3 N0 M0 clear-cell RCC.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    rcc_histology: clear_cell
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+    weeks_since_complete_resection: 6
+    ici_suitability: eligible
+    pathological_t_stage: pT3
+    pathological_n_status: N0
+    metastatic_status: M0
+  expected:
+    rule_id: ESMO-RCC-LOC-ADJ-002
+    status: applicable
+    audit_effect: supports_prescription
+- id: adjuvant_pt4_supported
+  description: pT4 N0 M0 clear-cell RCC.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    rcc_histology: clear_cell
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+    weeks_since_complete_resection: 7
+    ici_suitability: eligible
+    pathological_t_stage: pT4
+    pathological_n_status: N0
+    metastatic_status: M0
+  expected:
+    rule_id: ESMO-RCC-LOC-ADJ-003
+    status: applicable
+    audit_effect: supports_prescription
+- id: adjuvant_node_positive_supported
+  description: Node-positive M0 clear-cell RCC.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    rcc_histology: clear_cell
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+    weeks_since_complete_resection: 9
+    ici_suitability: eligible
+    pathological_n_status: N1
+    metastatic_status: M0
+  expected:
+    rule_id: ESMO-RCC-LOC-ADJ-004
+    status: applicable
+    audit_effect: supports_prescription
+- id: adjuvant_m1_ned_supported
+  description: Oligometastatic disease completely resected and rendered M1 NED.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    rcc_histology: clear_cell
+    disease_setting: M1_NED_post_metastasectomy
+    oligometastatic_disease: 'yes'
+    metastasectomy_completed: 'yes'
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+    metastatic_status: M1_NED
+    weeks_since_complete_resection: 8
+    ici_suitability: eligible
+  expected:
+    rule_id: ESMO-RCC-LOC-ADJ-005
+    status: applicable
+    audit_effect: supports_prescription
+- id: adjuvant_twelve_month_completion_advisory
+  description: Adjuvant pembrolizumab reaches one year.
+  rule_file: continuation.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    months_on_adjuvant_pembrolizumab: 12
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-LOC-CONT-001
+    status: applicable
+    audit_effect: advisory
+- id: adjuvant_seventeen_cycles_advisory
+  description: Seventeen KEYNOTE-564 cycles completed.
+  rule_file: continuation.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    adjuvant_pembrolizumab_cycles_completed: 17
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-LOC-CONT-002
+    status: applicable
+    audit_effect: advisory
+- id: adjuvant_recurrence_review
+  description: Disease recurrence during adjuvant treatment.
+  rule_file: continuation.yaml
+  facts:
+    disease_recurrence: 'yes'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-LOC-CONT-003
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: adjuvant_toxicity_review
+  description: Treatment interruption due to toxicity.
+  rule_file: continuation.yaml
+  facts:
+    treatment_discontinuation_reason: toxicity
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-LOC-CONT-004
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: high_risk_followup_interval_advisory
+  description: High-risk case with imaging interval longer than six months in first two years.
+  rule_file: continuation.yaml
+  facts:
+    followup_months_since_nephrectomy: 18
+    keynote564_risk_group: high
+    imaging_interval_months: 8
+  expected:
+    rule_id: ESMO-RCC-LOC-CONT-005
+    status: applicable
+    audit_effect: advisory
+- id: localized_historical_version_required
+  description: Prescription predates online publication of the 2024 update.
+  rule_file: exclusions.yaml
+  facts:
+    guideline_temporal_applicability: not_yet_published
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-LOC-EXC-000
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: localized_active_metastatic_outside_scope
+  description: Active metastatic disease must be routed to the advanced module.
+  rule_file: exclusions.yaml
+  facts:
+    disease_setting: metastatic_active
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-LOC-EXC-001
+    status: applicable
+    audit_effect: outside_scope
+- id: localized_non_clear_cell_review
+  description: Papillary histology in an adjuvant pembrolizumab prescription.
+  rule_file: exclusions.yaml
+  facts:
+    rcc_histology: papillary
+    treatment_phase: adjuvant
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-LOC-EXC-002
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: localized_low_risk_review
+  description: Low-risk disease is outside positive KEYNOTE-564 criteria.
+  rule_file: exclusions.yaml
+  facts:
+    keynote564_risk_group: low
+    treatment_phase: adjuvant
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-LOC-EXC-003
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: localized_start_after_twelve_weeks_review
+  description: Adjuvant pembrolizumab started 15 weeks after complete resection.
+  rule_file: exclusions.yaml
+  facts:
+    treatment_phase: adjuvant
+    weeks_since_complete_resection: 15
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-LOC-EXC-004
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: localized_incomplete_resection_review
+  description: Adjuvant label used despite incomplete resection.
+  rule_file: exclusions.yaml
+  facts:
+    complete_resection: 'no'
+    no_evidence_of_disease: 'no'
+    metastatic_status: M0
+    treatment_phase: adjuvant
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-LOC-EXC-005
+    status: applicable
+    audit_effect: requires_clinical_review
+- id: localized_missing_counselling_advisory
+  description: Long-term adverse-event counselling is not documented.
+  rule_file: exclusions.yaml
+  facts:
+    long_term_ae_counselling_documented: 'no'
+    prescribed_antineoplastic_drugs:
+    - pembrolizumab
+  expected:
+    rule_id: ESMO-RCC-LOC-EXC-006
+    status: applicable
+    audit_effect: advisory
+- id: localized_pt2_missing_grade_not_evaluable
+  description: pT2 cannot be classified without grade or sarcomatoid information.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    rcc_histology: clear_cell
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+    weeks_since_complete_resection: 8
+    ici_suitability: eligible
+    pathological_t_stage: pT2
+    sarcomatoid_features: 'no'
+    pathological_n_status: N0
+    metastatic_status: M0
+  expected:
+    rule_id: ESMO-RCC-LOC-ADJ-001
+    status: not_evaluable
+    missing_fields:
+    - nuclear_grade
+- id: localized_m1_ned_missing_metastasectomy_not_evaluable
+  description: M1 NED route requires confirmation of complete metastasectomy.
+  rule_file: adjuvant.yaml
+  facts:
+    guideline_temporal_applicability: applicable
+    treatment_phase: adjuvant
+    rcc_histology: clear_cell
+    disease_setting: M1_NED_post_metastasectomy
+    oligometastatic_disease: 'yes'
+    complete_resection: 'yes'
+    no_evidence_of_disease: 'yes'
+    metastatic_status: M1_NED
+    weeks_since_complete_resection: 8
+    ici_suitability: eligible
+  expected:
+    rule_id: ESMO-RCC-LOC-ADJ-005
+    status: not_evaluable
+    missing_fields:
+    - metastasectomy_completed

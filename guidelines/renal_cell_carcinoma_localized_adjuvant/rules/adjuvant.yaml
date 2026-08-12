@@ -1,0 +1,247 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_rcc_localized_adjuvant_adjuvant
+status: draft_computable
+rules:
+- id: ESMO-RCC-LOC-ADJ-001
+  name: Adjuvant pembrolizumab for pT2 grade 4 or sarcomatoid N0 M0 clear-cell RCC
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - &id001
+      field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - &id002
+      field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - &id003
+      field: rcc_histology
+      operator: equals
+      value: clear_cell
+    - &id004
+      field: complete_resection
+      operator: equals
+      value: 'yes'
+    - &id005
+      field: no_evidence_of_disease
+      operator: equals
+      value: 'yes'
+    - &id006
+      field: weeks_since_complete_resection
+      operator: less_than_or_equal
+      value: 12
+    - &id007
+      field: ici_suitability
+      operator: equals
+      value: eligible
+    - field: pathological_t_stage
+      operator: equals
+      value: pT2
+    - any:
+      - field: nuclear_grade
+        operator: equals
+        value: '4'
+      - field: sarcomatoid_features
+        operator: equals
+        value: 'yes'
+    - field: pathological_n_status
+      operator: equals
+      value: N0
+    - field: metastatic_status
+      operator: equals
+      value: M0
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_adjuvant_keynote564
+    recommendation_type: should_be_considered
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs: &id008
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Adjuvant therapy in clear-cell RCC
+    source_locator: PDF pp. 3-5 (journal pp. 694-696)
+    figure: Figure 2
+- id: ESMO-RCC-LOC-ADJ-002
+  name: Adjuvant pembrolizumab for pT3 N0 M0 clear-cell RCC
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - *id001
+    - *id002
+    - *id003
+    - *id004
+    - *id005
+    - *id006
+    - *id007
+    - field: pathological_t_stage
+      operator: equals
+      value: pT3
+    - field: pathological_n_status
+      operator: equals
+      value: N0
+    - field: metastatic_status
+      operator: equals
+      value: M0
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_adjuvant_keynote564
+    recommendation_type: should_be_considered
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs: *id008
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Adjuvant therapy in clear-cell RCC
+    source_locator: PDF pp. 3-5 (journal pp. 694-696)
+    figure: Figure 2
+- id: ESMO-RCC-LOC-ADJ-003
+  name: Adjuvant pembrolizumab for pT4 N0 M0 clear-cell RCC
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - *id001
+    - *id002
+    - *id003
+    - *id004
+    - *id005
+    - *id006
+    - *id007
+    - field: pathological_t_stage
+      operator: equals
+      value: pT4
+    - field: pathological_n_status
+      operator: equals
+      value: N0
+    - field: metastatic_status
+      operator: equals
+      value: M0
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_adjuvant_keynote564
+    recommendation_type: should_be_considered
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs: *id008
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Adjuvant therapy in clear-cell RCC
+    source_locator: PDF pp. 3-5 (journal pp. 694-696)
+    figure: Figure 2
+- id: ESMO-RCC-LOC-ADJ-004
+  name: Adjuvant pembrolizumab for node-positive M0 clear-cell RCC
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - *id001
+    - *id002
+    - *id003
+    - *id004
+    - *id005
+    - *id006
+    - *id007
+    - field: pathological_n_status
+      operator: equals
+      value: N1
+    - field: metastatic_status
+      operator: equals
+      value: M0
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_adjuvant_keynote564
+    recommendation_type: should_be_considered
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs: *id008
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Adjuvant therapy in clear-cell RCC
+    source_locator: PDF pp. 3-5 (journal pp. 694-696)
+    figure: Figure 2
+- id: ESMO-RCC-LOC-ADJ-005
+  name: Adjuvant pembrolizumab after complete resection of oligometastatic RCC rendered M1 NED
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: rcc_histology
+      operator: equals
+      value: clear_cell
+    - field: disease_setting
+      operator: equals
+      value: M1_NED_post_metastasectomy
+    - field: oligometastatic_disease
+      operator: equals
+      value: 'yes'
+    - field: metastasectomy_completed
+      operator: equals
+      value: 'yes'
+    - field: complete_resection
+      operator: equals
+      value: 'yes'
+    - field: no_evidence_of_disease
+      operator: equals
+      value: 'yes'
+    - field: metastatic_status
+      operator: equals
+      value: M1_NED
+    - field: weeks_since_complete_resection
+      operator: less_than_or_equal
+      value: 12
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_adjuvant_M1_NED
+    recommendation_type: can_be_offered
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: II
+      recommendation_grade: B
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_renal_cell_carcinoma_2024
+    section: Role of surgery and local therapy in advanced and metastatic ccRCC
+    source_locator: PDF p. 10 (journal p. 701)
+  interpretation_note: The case is historically metastatic but currently M1_NED; it is routed to the adjuvant module
+    rather than active metastatic therapy.

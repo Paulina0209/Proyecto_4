@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_renal_cell_carcinoma_advanced_metastatic
+status: draft_computable
+start_node: scope_and_time
+nodes:
+  scope_and_time:
+    questions:
+    - Is the 22-May-2024 ESMO version temporally applicable?
+    - Is active advanced or metastatic RCC present?
+    - Is histology confirmed?
+    routes:
+      historical_record: historical_guideline_required
+      M1_NED: route_to_localized_adjuvant_module
+      active_advanced_or_metastatic: histology
+  histology:
+    routes:
+      clear_cell: clear_cell_first_line_or_subsequent
+      papillary: papillary_pathway
+      chromophobe: chromophobe_pathway
+      sarcomatoid_predominant: sarcomatoid_pathway
+      collecting_duct_or_SMARCB1_or_FH_deficient: clinical_review_other_strategy
+      unknown: not_evaluable
+  clear_cell_first_line_or_subsequent:
+    first_line: evaluate first_line.yaml
+    after_pd1_progression: evaluate subsequent_line.yaml and exclusions.yaml
+  papillary_pathway:
+    first_line: evaluate first_line.yaml
+    later_line_if_pembrolizumab_not_previously_used: evaluate subsequent_line.yaml
+  chromophobe_pathway:
+    result: evaluate first_line.yaml
+  sarcomatoid_pathway:
+    result: evaluate first_line.yaml
+  historical_guideline_required:
+    result: requires_clinical_review
+  route_to_localized_adjuvant_module:
+    result: outside_scope
+  clinical_review_other_strategy:
+    result: requires_clinical_review
+  not_evaluable:
+    result: not_evaluable
+implementation_note: The current generic engine evaluates rule files independently. Production use requires a pathway
+  orchestrator.

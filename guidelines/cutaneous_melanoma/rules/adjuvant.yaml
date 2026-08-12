@@ -1,0 +1,217 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_cutaneous_melanoma_adjuvant
+status: draft_computable
+rules:
+- id: ESMO-MEL-CUT-ADJ-001
+  name: Pembrolizumab adjuvant for completely resected stage IIB-IIC melanoma
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: stage_group
+      operator: in
+      value:
+      - IIB
+      - IIC
+    - field: complete_resection
+      operator: equals
+      value: 'yes'
+    - field: no_evidence_of_disease
+      operator: equals
+      value: 'yes'
+    - field: age_years
+      operator: greater_than_or_equal
+      value: 12
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_adjuvant_stage_iib_iic
+    planned_duration_months: 12
+    pdl1_requirement: none
+    recommendation_type: should_be_considered
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Adjuvant systemic therapy in stage IIB-IIC melanoma
+    source_locator: pp. 12-13 and 17
+    figure: Figure 1
+  interpretation_note: Benefit-risk discussion should include recurrence-free survival benefit and immature overall
+    survival data.
+- id: ESMO-MEL-CUT-ADJ-002
+  name: Pembrolizumab adjuvant for completely resected stage III melanoma
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: disease_setting
+      operator: in
+      value:
+      - locoregional
+      - resectable_stage_III
+    - field: stage_group
+      operator: in
+      value:
+      - IIIA
+      - IIIB
+      - IIIC
+      - IIID
+    - field: complete_resection
+      operator: equals
+      value: 'yes'
+    - field: no_evidence_of_disease
+      operator: equals
+      value: 'yes'
+    - field: weeks_since_complete_resection
+      operator: less_than_or_equal
+      value: 12
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+    - any:
+      - field: stage_group
+        operator: in
+        value:
+        - IIIB
+        - IIIC
+        - IIID
+      - all:
+        - field: stage_group
+          operator: equals
+          value: IIIA
+        - field: sentinel_node_tumor_burden_mm
+          operator: greater_than_or_equal
+          value: 1
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_adjuvant_resected_stage_iii
+    pdl1_requirement: none
+    recommendation_type: standard_option
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '1.1'
+        score: A
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Adjuvant systemic therapy in resected stage III and IV NED
+    source_locator: pp. 14 and 17-18
+    figure: Figures 1-2
+- id: ESMO-MEL-CUT-ADJ-003
+  name: Adjuvant anti-PD-1 after complete treatment of resectable stage IV melanoma
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: disease_setting
+      operator: equals
+      value: resectable_stage_IV_NED
+    - field: stage_group
+      operator: equals
+      value: IV
+    - field: complete_resection
+      operator: equals
+      value: 'yes'
+    - field: no_evidence_of_disease
+      operator: equals
+      value: 'yes'
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+  conclusion:
+    action: support_regimen_class
+    regimen_class_id: anti_pd1_adjuvant_resected_stage_iv_ned
+    candidate_drug: pembrolizumab
+    recommendation_type: class_level_option
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: class_level
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Adjuvant systemic therapy in resected stage III and IV NED
+    source_locator: pp. 18 and 22
+    figure: Figure 2
+  interpretation_note: The recommendation is for the anti-PD-1 class; it is not a drug-specific pembrolizumab statement.
+- id: ESMO-MEL-CUT-ADJ-004
+  name: Adjuvant continuation after neoadjuvant pembrolizumab and surgery
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: prior_neoadjuvant_pembrolizumab
+      operator: equals
+      value: 'yes'
+    - field: surgery_completed
+      operator: equals
+      value: 'yes'
+    - field: disease_progression
+      operator: equals
+      value: 'no'
+    - field: disease_recurrence
+      operator: equals
+      value: 'no'
+    - field: ici_suitability
+      operator: equals
+      value: eligible
+  conclusion:
+    action: support_sequence_continuation
+    regimen_id: pembro_neoadjuvant_adjuvant_s1801
+    recommendation_type: planned_perioperative_continuation
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: II
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+    regulatory_status_as_reported_by_source: not EMA or FDA approved as neoadjuvant therapy
+  source:
+    guideline_id: esmo_cutaneous_melanoma_2024
+    section: Neoadjuvant and neoadjuvant plus adjuvant systemic therapy in resectable stage III melanoma
+    source_locator: pp. 16 and 18

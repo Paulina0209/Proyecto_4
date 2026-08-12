@@ -1,0 +1,13 @@
+﻿# yaml-language-server: $schema=none
+
+module_id: esmo_sclc_pembrolizumab_review
+status: scaffold
+source:
+  organization: ESMO
+  title: null
+  version: null
+clinical_scope:
+  drug_of_interest: pembrolizumab
+validation:
+  technical: not_started
+  clinical: pending

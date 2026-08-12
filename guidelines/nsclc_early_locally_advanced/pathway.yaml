@@ -1,0 +1,165 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_early_locally_advanced
+pathway_id: esmo_nsclc_early_locally_advanced_pathway
+status: draft_computable
+start_node: confirm_diagnosis
+
+nodes:
+
+  confirm_diagnosis:
+    type: decision
+    field: cancer_type
+    branches:
+      NSCLC: confirm_disease_setting
+      unknown: insufficient_information
+      default: outside_scope
+
+  confirm_disease_setting:
+    type: decision
+    field: disease_setting
+    branches:
+      early: confirm_temporal_applicability
+      locally_advanced: confirm_temporal_applicability
+      unknown: insufficient_information
+      default: outside_scope
+
+
+  confirm_temporal_applicability:
+    type: decision
+    field: guideline_temporal_applicability
+    branches:
+      applicable: evaluate_resectability
+      not_yet_published: route_to_historical_guideline_review
+      uncertain: insufficient_information
+      unknown: insufficient_information
+
+  evaluate_resectability:
+    type: decision
+    field: resectability_status
+    branches:
+      resectable: evaluate_clinical_stage
+      completely_resected: evaluate_pathological_stage
+      unresectable: evaluate_unresectable_context
+      indeterminate: multidisciplinary_review_required
+      unknown: insufficient_information
+
+  evaluate_clinical_stage:
+    type: decision
+    field: clinical_stage_group
+    branches:
+      IA1: evaluate_stage_I_pembrolizumab
+      IA2: evaluate_stage_I_pembrolizumab
+      IA3: evaluate_stage_I_pembrolizumab
+      IB: evaluate_stage_I_pembrolizumab
+      IIA: evaluate_egfr
+      IIB: evaluate_egfr
+      IIIA: evaluate_egfr
+      IIIB: evaluate_egfr
+      IIIC: multidisciplinary_review_required
+      unknown: insufficient_information
+      default: outside_scope
+
+  evaluate_pathological_stage:
+    type: decision
+    field: pathological_stage_group
+    branches:
+      IA1: evaluate_stage_I_pembrolizumab
+      IA2: evaluate_stage_I_pembrolizumab
+      IA3: evaluate_stage_I_pembrolizumab
+      IB: evaluate_stage_I_pembrolizumab
+      IIA: evaluate_egfr
+      IIB: evaluate_egfr
+      IIIA: evaluate_egfr
+      IIIB: multidisciplinary_review_required
+      IIIC: multidisciplinary_review_required
+      unknown: insufficient_information
+      default: outside_scope
+
+  evaluate_egfr:
+    type: decision
+    field: egfr_status
+    branches:
+      wild_type: evaluate_alk
+      other_non_sensitizing_alteration: route_to_targeted_therapy_review
+      sensitizing_mutation: route_to_targeted_therapy_review
+      pending: insufficient_information
+      unknown: insufficient_information
+
+  evaluate_alk:
+    type: decision
+    field: alk_status
+    branches:
+      negative: evaluate_treatment_phase
+      rearranged: route_to_targeted_therapy_review
+      pending: insufficient_information
+      unknown: insufficient_information
+
+  evaluate_treatment_phase:
+    type: decision
+    field: treatment_phase
+    branches:
+      neoadjuvant: evaluate_neoadjuvant
+      surgery: evaluate_perioperative
+      adjuvant: evaluate_adjuvant
+      definitive_chemoradiotherapy: evaluate_unresectable_context
+      consolidation: evaluate_unresectable_context
+      surveillance: evaluate_continuation
+      unknown: insufficient_information
+
+  evaluate_neoadjuvant:
+    type: rule_group
+    rule_files:
+      - rules/neoadjuvant.yaml
+      - rules/perioperative.yaml
+      - rules/exclusions.yaml
+
+  evaluate_perioperative:
+    type: rule_group
+    rule_files:
+      - rules/perioperative.yaml
+      - rules/continuation.yaml
+      - rules/exclusions.yaml
+
+  evaluate_adjuvant:
+    type: rule_group
+    rule_files:
+      - rules/adjuvant.yaml
+      - rules/continuation.yaml
+      - rules/exclusions.yaml
+
+  evaluate_continuation:
+    type: rule_group
+    rule_files:
+      - rules/continuation.yaml
+      - rules/exclusions.yaml
+
+  evaluate_stage_I_pembrolizumab:
+    type: rule_group
+    rule_files:
+      - rules/exclusions.yaml
+
+  evaluate_unresectable_context:
+    type: rule_group
+    rule_files:
+      - rules/exclusions.yaml
+
+  route_to_historical_guideline_review:
+    type: terminal
+    result: historical_guideline_version_required
+
+  route_to_targeted_therapy_review:
+    type: terminal
+    result: requires_clinical_review
+
+  multidisciplinary_review_required:
+    type: terminal
+    result: requires_clinical_review
+
+  insufficient_information:
+    type: terminal
+    result: not_evaluable
+
+  outside_scope:
+    type: terminal
+    result: outside_scope

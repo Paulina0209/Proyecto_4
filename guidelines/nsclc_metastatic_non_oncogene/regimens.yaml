@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_metastatic_non_oncogene
+
+regimens:
+
+  pembro_monotherapy:
+    name: Pembrolizumab en monoterapia
+    matching:
+      exact_antineoplastic_set: [pembrolizumab]
+
+  pembro_pemetrexed_platinum_induction:
+    name: Pembrolizumab, pemetrexed y platino
+    phase: induction
+    expected_cycles: 4
+    matching:
+      all_of: [pembrolizumab, pemetrexed]
+      one_of: [carboplatin, cisplatin]
+
+  pembro_pemetrexed_maintenance:
+    name: Pembrolizumab y pemetrexed de mantenimiento
+    phase: maintenance
+    matching:
+      all_of: [pembrolizumab, pemetrexed]
+
+  pembro_carboplatin_taxane_induction:
+    name: Pembrolizumab, carboplatino y taxano
+    phase: induction
+    expected_cycles: 4
+    matching:
+      all_of: [pembrolizumab, carboplatin]
+      one_of: [paclitaxel, nab_paclitaxel]
+
+  pembro_maintenance:
+    name: Pembrolizumab de mantenimiento
+    phase: maintenance
+    matching:
+      contains: [pembrolizumab]

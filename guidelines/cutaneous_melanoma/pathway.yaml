@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_cutaneous_melanoma
+pathway_id: esmo_cutaneous_melanoma_pathway
+status: draft_computable_documentary_pathway
+start_node: module_scope
+nodes:
+  module_scope:
+    question: Is this confirmed invasive cutaneous melanoma?
+    'yes': temporal_applicability
+    'no': outside_scope
+    unknown: not_evaluable
+  temporal_applicability:
+    question: Was the 14-Nov-2024 version applicable on the prescription date?
+    applicable: clinical_setting
+    not_yet_published: historical_guideline_required
+    uncertain: clinical_review
+  clinical_setting:
+    branches:
+      resected_stage_IIB_IIC: adjuvant_pembrolizumab
+      resected_stage_III: adjuvant_pembrolizumab
+      resectable_stage_III_detectable_nodes: neoadjuvant_adjuvant_pembrolizumab
+      resectable_ITM: neoadjuvant_adjuvant_or_adjuvant
+      resectable_stage_IV_NED: adjuvant_anti_pd1_class
+      unresectable_stage_III_or_IV: advanced_systemic_therapy
+      active_brain_metastases: brain_metastasis_specialized_review
+  advanced_systemic_therapy:
+    questions:
+    - What prior neoadjuvant/adjuvant treatment was received?
+    - Is the patient eligible for ICI therapy?
+    - Is active brain metastatic disease present?
+    - What is the treatment line?
+    - Was anti-PD-1 therapy previously used?
+    first_line_anti_pd1_naive: pembrolizumab_supported
+    second_line_anti_pd1_naive: pembrolizumab_supported
+    post_anti_pd1_progression: clinical_review_other_strategy
+  adjuvant_pembrolizumab:
+    result: evaluate adjuvant.yaml
+  neoadjuvant_adjuvant_pembrolizumab:
+    result: evaluate neoadjuvant.yaml and adjuvant.yaml
+  neoadjuvant_adjuvant_or_adjuvant:
+    result: evaluate neoadjuvant.yaml and adjuvant.yaml
+  adjuvant_anti_pd1_class:
+    result: evaluate class-level rule in adjuvant.yaml
+  pembrolizumab_supported:
+    result: evaluate unresectable_metastatic.yaml
+  brain_metastasis_specialized_review:
+    result: do not infer support from general melanoma rules
+  historical_guideline_required:
+    result: requires_clinical_review
+  outside_scope:
+    result: outside_scope
+  not_evaluable:
+    result: not_evaluable
+  clinical_review:
+    result: requires_clinical_review
+implementation_note: The current generic engine evaluates rule files independently. Production use requires a pathway
+  orchestrator.
