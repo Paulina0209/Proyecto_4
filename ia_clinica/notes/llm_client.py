@@ -95,7 +95,7 @@ class RuleBasedLLMClient(LLMClient):
     #: quedarán, correctamente, marcadas como "missing".
     _KEYWORDS = {
         "S": ("refiere", "motivo de consulta", "síntoma", "sintoma", "antecedente", "dice que", "reporta"),
-        "O": ("examen físico", "examen fisico", "signos vitales", "laboratorio", "resultado", "hallazgo", "tac", "resonancia", "biopsia"),
+        "O": ("examen físico", "examen fisico", "signos vitales", "laboratorio", "resultado", "hallazgo", "tac", "resonancia", "biopsia", "biomarcador"),
         "A": ("impresión", "impresion", "diagnóstico", "diagnostico", "evaluación", "evaluacion", "sospecha"),
         "P": ("plan", "indicación", "indicacion", "seguimiento", "se solicita", "se inicia", "control en"),
     }

@@ -43,6 +43,14 @@ implementa como un submódulo propio (por ejemplo, `ia_clinica/notes` para
 IA-02 — generación automática de notas clínicas). Ver
 `docs/ia_clinica_notas.md` para el detalle de IA-02.
 
+### historia_clinica_mock
+
+Base de datos SQLite pequeña con datos sintéticos (pacientes, consultas,
+laboratorios, imagenología, biomarcadores), usada para probar `ia_clinica`
+de forma end-to-end. No implementa HC-01 a HC-06 (integración real con
+sistemas externos); es una herramienta de prueba/demo. Ver
+`docs/historia_clinica_mock.md`.
+
 ### docs
 
 Contiene la matriz clínica, el árbol de decisión y el modelo de evidencia.

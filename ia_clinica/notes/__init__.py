@@ -32,6 +32,7 @@ from ia_clinica.notes.models import (
     ClinicalNoteDraft,
     NoteSectionDraft,
     SourceSpan,
+    split_sentences,
 )
 from ia_clinica.notes.formats import NoteFormatSpec, NoteSectionSpec, SOAP_FORMAT, get_format
 
@@ -43,6 +44,7 @@ __all__ = [
     "ClinicalNoteDraft",
     "NoteSectionDraft",
     "SourceSpan",
+    "split_sentences",
     "NoteFormatSpec",
     "NoteSectionSpec",
     "SOAP_FORMAT",

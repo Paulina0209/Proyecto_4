@@ -23,6 +23,18 @@ from typing import Dict, List, Optional
 #: consulta la redacte ya fragmentada.
 _SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+|\n+")
 
+
+def split_sentences(text: str) -> List[str]:
+    """Separa un texto libre en oraciones no vacías.
+
+    Función pública (además de usarla ``ClinicalContext.from_text``)
+    porque otros módulos que construyen un ``ClinicalContext`` a partir de
+    texto libre (por ejemplo, un adaptador de base de datos) necesitan la
+    misma lógica de segmentación sin duplicarla.
+    """
+
+    return [s.strip() for s in _SENTENCE_SPLIT_PATTERN.split(text) if s.strip()]
+
 #: Texto fijo usado cuando falta información para completar una sección.
 #: Es intencionalmente constante e importado por el generador: así se evita
 #: que cualquier variación de redacción del LLM termine "rellenando" una
@@ -115,7 +127,7 @@ class ClinicalContext:
         oración en vez de a nivel de párrafo completo.
         """
 
-        sentences = [s.strip() for s in _SENTENCE_SPLIT_PATTERN.split(text) if s.strip()]
+        sentences = split_sentences(text)
         segments = [
             SourceSpan(id=f"seg-{i}", text=sentence, origin=origin, timestamp=timestamp)
             for i, sentence in enumerate(sentences, start=1)

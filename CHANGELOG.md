@@ -16,6 +16,18 @@
   nivel (`ia_clinica`, `guidelines`) sean importables en las pruebas sin
   instalar el proyecto.
 - `docs/ia_clinica_notas.md`: documentación de diseño de IA-02.
+- `ClinicalContext.from_text()` y `split_sentences()` en
+  `ia_clinica.notes.models`: permiten construir el contexto a partir de un
+  único párrafo de texto libre (no solo fragmentos ya separados a mano).
+- Nuevo componente `historia_clinica_mock/`: base de datos SQLite con
+  datos sintéticos (pacientes, consultas, laboratorios, imagenología,
+  biomarcadores) y un adaptador (`adapters.construir_contexto_clinico`)
+  que conecta esos datos con `ia_clinica.notes` para poder generar
+  borradores de nota a partir de una consulta guardada, con trazabilidad
+  hasta la fila exacta de la base de datos. Ver
+  `docs/historia_clinica_mock.md`.
+- Pruebas en `tests/historia_clinica_mock/` (esquema, seed, repository,
+  adaptador e integración end-to-end con IA-02).
 
 ### Notas
 
