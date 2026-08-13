@@ -33,6 +33,16 @@ políticas institucionales de priorización.
 
 Contiene metadatos, variables, rutas, regímenes y reglas de cada escenario clínico.
 
+### ia_clinica
+
+Contiene las capacidades del agente copiloto de IA (épica IA del backlog:
+IA-01 a IA-04). Es independiente del motor de reglas de `core`/`guidelines`:
+no navega rutas clínicas ni evalúa reglas de tratamiento, y no usa el
+contenido de `guidelines` como entrada. Cada historia de la épica IA se
+implementa como un submódulo propio (por ejemplo, `ia_clinica/notes` para
+IA-02 — generación automática de notas clínicas). Ver
+`docs/ia_clinica_notas.md` para el detalle de IA-02.
+
 ### docs
 
 Contiene la matriz clínica, el árbol de decisión y el modelo de evidencia.
