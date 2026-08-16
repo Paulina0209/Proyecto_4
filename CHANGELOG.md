@@ -28,6 +28,23 @@
   `docs/historia_clinica_mock.md`.
 - Pruebas en `tests/historia_clinica_mock/` (esquema, seed, repository,
   adaptador e integración end-to-end con IA-02).
+- `historia_clinica_mock`: nuevas consultas a nivel de todo el paciente
+  (`laboratorios_de_paciente`, `imagenologia_de_paciente`,
+  `biomarcadores_de_paciente`) y `obtener_hallazgos_de_paciente` (modelo
+  `HallazgoClinico`), para historias que necesitan combinar todo el
+  expediente disponible, no una sola consulta.
+- Nuevo componente `dx_clinica/` que implementa **DX-02 — Apoyo al
+  diagnóstico diferencial**: lista priorizada de alternativas
+  diagnósticas sustentadas en hallazgos reales del expediente
+  (`historia_clinica_mock`) y en evidencia trazable leída de
+  `guidelines/*/metadata.yaml` (implementación mínima de IA-04, que
+  todavía no existe como historia propia). Incluye detección simple de
+  negación en el emparejamiento de texto (para no confundir "sin
+  hallazgos de progresión" con progresión real) y nunca presenta
+  porcentajes ni probabilidades numéricas, solo un orden explicable por
+  conteo de criterios sustentados. Ver `docs/dx_clinica.md`.
+- Pruebas en `tests/dx_clinica/` (matcher/negación, catálogo de
+  evidencia, y los cinco criterios de aceptación de DX-02).
 
 ### Notas
 

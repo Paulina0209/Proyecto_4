@@ -61,6 +61,27 @@ class Biomarcador:
     resultado: str
 
 
+@dataclass(frozen=True)
+class HallazgoClinico:
+    """Un hecho clínico atómico y trazable del expediente de un paciente.
+
+    Es el "hecho" mínimo que consumen los módulos que razonan sobre el
+    expediente completo de un paciente (por ejemplo, ``dx_clinica`` para
+    el diagnóstico diferencial), a diferencia de ``SourceSpan`` de
+    ``ia_clinica.notes``, que está acotado a una sola consulta. El ``id``
+    conserva el prefijo del registro de origen (``lab-3``, ``imagen-2``,
+    ``biomarcador-1``, ``consulta-1-nota-4``) para que cualquier hallazgo
+    usado corriente abajo se pueda trazar hasta la fila exacta de la base
+    de datos.
+    """
+
+    id: str
+    paciente_id: int
+    origen: str  # "consulta" | "laboratorio" | "imagenologia" | "biomarcador"
+    texto: str
+    fecha: str
+
+
 def obtener_paciente(conn: sqlite3.Connection, paciente_id: int) -> Optional[Paciente]:
     row = conn.execute("SELECT * FROM pacientes WHERE id = ?", (paciente_id,)).fetchone()
     return _fila_a_paciente(row) if row else None
@@ -95,6 +116,35 @@ def imagenologia_de_consulta(conn: sqlite3.Connection, consulta_id: int) -> List
 def biomarcadores_de_consulta(conn: sqlite3.Connection, consulta_id: int) -> List[Biomarcador]:
     rows = conn.execute(
         "SELECT * FROM biomarcadores WHERE consulta_id = ? ORDER BY id", (consulta_id,)
+    ).fetchall()
+    return [_fila_a_biomarcador(row) for row in rows]
+
+
+# -- Consultas a nivel de todo el paciente (no acotadas a una consulta) -----
+#
+# IA-02 necesita solo lo "de esta consulta puntual". DX-02, en cambio,
+# necesita combinar todos los datos clínicos disponibles del expediente
+# (observación técnica: "combinar los datos clínicos recuperados del
+# expediente"), así que estas funciones no filtran por consulta_id.
+
+
+def laboratorios_de_paciente(conn: sqlite3.Connection, paciente_id: int) -> List[ResultadoLaboratorio]:
+    rows = conn.execute(
+        "SELECT * FROM laboratorios WHERE paciente_id = ? ORDER BY fecha", (paciente_id,)
+    ).fetchall()
+    return [_fila_a_laboratorio(row) for row in rows]
+
+
+def imagenologia_de_paciente(conn: sqlite3.Connection, paciente_id: int) -> List[EstudioImagenologico]:
+    rows = conn.execute(
+        "SELECT * FROM imagenologia WHERE paciente_id = ? ORDER BY fecha", (paciente_id,)
+    ).fetchall()
+    return [_fila_a_imagenologia(row) for row in rows]
+
+
+def biomarcadores_de_paciente(conn: sqlite3.Connection, paciente_id: int) -> List[Biomarcador]:
+    rows = conn.execute(
+        "SELECT * FROM biomarcadores WHERE paciente_id = ? ORDER BY fecha", (paciente_id,)
     ).fetchall()
     return [_fila_a_biomarcador(row) for row in rows]
 

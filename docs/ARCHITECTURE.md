@@ -47,9 +47,19 @@ IA-02 — generación automática de notas clínicas). Ver
 
 Base de datos SQLite pequeña con datos sintéticos (pacientes, consultas,
 laboratorios, imagenología, biomarcadores), usada para probar `ia_clinica`
-de forma end-to-end. No implementa HC-01 a HC-06 (integración real con
-sistemas externos); es una herramienta de prueba/demo. Ver
-`docs/historia_clinica_mock.md`.
+y `dx_clinica` de forma end-to-end. No implementa HC-01 a HC-06
+(integración real con sistemas externos); es una herramienta de
+prueba/demo. Ver `docs/historia_clinica_mock.md`.
+
+### dx_clinica
+
+Contiene las capacidades de la épica Diagnóstico (DX-01, DX-02...).
+Implementa DX-02 — apoyo al diagnóstico diferencial: combina los
+hallazgos clínicos de `historia_clinica_mock` con un catálogo diagnóstico
+explícito y con evidencia leída de `guidelines/*/metadata.yaml` (una
+implementación mínima de lo que después será IA-04). No usa las reglas de
+tratamiento del motor `core`/`guidelines`; solo lee sus metadatos como
+fuente de evidencia citable. Ver `docs/dx_clinica.md`.
 
 ### docs
 
