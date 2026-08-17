@@ -1,0 +1,81 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_early_locally_advanced
+module_version: "1.0"
+
+name: >
+  Cáncer de pulmón de células no pequeñas temprano y localmente avanzado
+
+organization: ESMO
+
+source:
+  title: >
+    Early and locally advanced non-small-cell lung cancer:
+    ESMO Clinical Practice Guideline for diagnosis, treatment and follow-up
+  publication_year: 2025
+  last_guideline_update: "2025-08"
+  doi: "10.1016/j.annonc.2025.08.003"
+  fixed_source_version: true
+  publication_date: "2025-08-28"
+
+temporal_applicability:
+  applies_to_prescriptions_on_or_after: "2025-08-28"
+  prescriptions_before_publication: historical_guideline_version_required
+  rationale: >
+    La auditoría retrospectiva debe comparar cada prescripción con la versión
+    de la guía vigente en la fecha del evento clínico.
+
+clinical_scope:
+  cancer_type: NSCLC
+  disease_setting:
+    - early
+    - locally_advanced
+  stage_groups:
+    - IA1
+    - IA2
+    - IA3
+    - IB
+    - IIA
+    - IIB
+    - IIIA
+    - IIIB
+    - IIIC
+  resectability_status:
+    - resectable
+    - completely_resected
+    - unresectable
+  drug_of_interest: pembrolizumab
+  therapeutic_contexts:
+    - neoadjuvant
+    - perioperative
+    - adjuvant
+
+positive_pembrolizumab_pathways:
+  - resectable_stage_II_III_perioperative
+  - completely_resected_stage_II_IIIA_adjuvant_after_platinum
+
+excluded_scope:
+  - metastatic_nsclc
+  - recurrent_metastatic_nsclc
+  - small_cell_lung_cancer
+  - lung_carcinoid
+  - metastatic_oncogene_addicted_nsclc
+
+development_status: draft_computable
+
+validation:
+  technical_validation_status: partial
+  clinical_validation_status: pending
+  validated_by: null
+  validation_date: null
+
+evidence_model:
+  native_fields_required: true
+  normalization_crosswalk: src/cdss/standards/evidence_crosswalk.yaml
+  alert_priority_policy: src/cdss/standards/alert_priority.yaml
+  priority_policy_status: provisional
+
+usage:
+  purpose: academic_internal_research
+  commercial_use: false
+  publication_permission: pending

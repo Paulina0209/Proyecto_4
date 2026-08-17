@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_ela_eligibility
+status: draft_computable
+rules:
+- id: ESMO-NSCLC-ELA-ELIG-001
+  name: Caso dentro del alcance del módulo
+  rule_origin: system_policy
+  conditions:
+    all:
+    - field: cancer_type
+      operator: equals
+      value: NSCLC
+    - field: disease_setting
+      operator: in
+      value:
+      - early
+      - locally_advanced
+  conclusion:
+    action: enter_module
+    audit_effect: none
+  evidence:
+    organization: INTERNAL
+    statement_scope: system_scope
+    native: {}
+    explicit_grade_reported: false
+  source:
+    source_type: system_scope
+- id: ESMO-NSCLC-ELA-ELIG-002
+  name: Evaluación sistémica preparada con biomarcadores (EGFR, ALK, RET, PD-L1) y discusión multidisciplinaria
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: biomarker_testing_complete
+      operator: equals
+      value: 'yes'
+    - field: mdt_review_completed
+      operator: equals
+      value: 'yes'
+  conclusion:
+    action: proceed_to_systemic_pathway_evaluation
+    recommendation_type: prerequisite_completed
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: clinical_context
+    native:
+      evidence_level: V
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of resectable stage I-III NSCLC - systemic therapy
+    source_locator: p. 1253

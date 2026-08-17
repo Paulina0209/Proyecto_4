@@ -1,0 +1,73 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_ela_neoadjuvant
+status: draft_computable
+rules:
+- id: ESMO-NSCLC-ELA-NEO-001
+  name: Pembrolizumab con quimioterapia neoadyuvante como parte de una secuencia perioperatoria
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: neoadjuvant
+    - field: resectability_status
+      operator: equals
+      value: resectable
+    - field: clinical_stage_group
+      operator: in
+      value:
+      - IIA
+      - IIB
+      - IIIA
+      - IIIB
+    - field: egfr_status
+      operator: equals
+      value: wild_type
+    - field: alk_status
+      operator: equals
+      value: negative
+    - field: ret_status
+      operator: equals
+      value: negative
+    - field: biomarker_testing_complete
+      operator: equals
+      value: 'yes'
+    - field: mdt_review_completed
+      operator: equals
+      value: 'yes'
+    - field: immunotherapy_contraindication
+      operator: equals
+      value: 'no'
+    - field: cisplatin_eligible
+      operator: equals
+      value: 'yes'
+  conclusion:
+    action: support_sequence
+    sequence_regimen_id: pembro_perioperative_sequence
+    induction_regimen_id: pembro_cisplatin_based_chemotherapy_neoadjuvant
+    post_surgery_regimen_id: pembro_adjuvant_after_neoadjuvant
+    recommendation_type: recommended_option
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: regimen_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '2.0'
+        score: A (AT)
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of resectable stage I-III NSCLC - systemic therapy
+    source_locator: p. 1253
+  interpretation_note: 'La recomendación de pembrolizumab es perioperatoria: pembrolizumab
+    con quimioterapia antes de la cirugía y pembrolizumab después de la cirugía. No
+    se interpreta como pembrolizumab neoadyuvante en monoterapia.
+
+    '

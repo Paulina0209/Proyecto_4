@@ -7,7 +7,7 @@ source:
   version: v1.3 - August 2026
   publish_date: '2025-11-26T23:00:00Z'
 sync:
-  last_checked_at: '2026-08-17T17:37:21.388049+00:00'
+  last_checked_at: '2026-08-17T18:22:48.085962+00:00'
   last_known_update: '2026-08-07T06:30:00Z'
   last_processed_publication_id: 169ef135-40cd-4c33-9823-57e8ede46f5a
   last_match_status: matched_codename

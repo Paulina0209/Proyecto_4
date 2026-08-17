@@ -1,0 +1,131 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_ela_adjuvant
+status: draft_computable
+rules:
+- id: ESMO-NSCLC-ELA-ADJ-001
+  name: Pembrolizumab adyuvante como continuación de la secuencia perioperatoria
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: pembrolizumab_pathway
+      operator: equals
+      value: perioperative
+    - field: prior_neoadjuvant_pembrolizumab
+      operator: equals
+      value: 'yes'
+    - field: prior_neoadjuvant_platinum_chemotherapy
+      operator: equals
+      value: 'yes'
+    - field: surgery_completed
+      operator: equals
+      value: 'yes'
+    - field: disease_progression
+      operator: equals
+      value: 'no'
+    - field: immunotherapy_contraindication
+      operator: equals
+      value: 'no'
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_adjuvant_after_neoadjuvant
+    recommendation_type: perioperative_continuation
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: regimen_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '2.0'
+        score: A (AT)
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of resectable stage I-III NSCLC - systemic therapy
+    source_locator: pp. 1252-1253
+- id: ESMO-NSCLC-ELA-ADJ-002
+  name: Pembrolizumab adyuvante durante un año después de resección completa y quimioterapia
+    con platino
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: treatment_phase
+      operator: equals
+      value: adjuvant
+    - field: pembrolizumab_pathway
+      operator: equals
+      value: adjuvant_only
+    - field: surgery_completed
+      operator: equals
+      value: 'yes'
+    - field: resection_margin_status
+      operator: equals
+      value: R0
+    - field: pathological_stage_group
+      operator: in
+      value:
+      - IIA
+      - IIB
+      - IIIA
+    - field: tumor_size_cm
+      operator: greater_than_or_equal
+      value: 4
+    - field: egfr_status
+      operator: equals
+      value: wild_type
+    - field: alk_status
+      operator: equals
+      value: negative
+    - field: ret_status
+      operator: equals
+      value: negative
+    - field: prior_neoadjuvant_pembrolizumab
+      operator: equals
+      value: 'no'
+    - field: prior_adjuvant_platinum_chemotherapy
+      operator: equals
+      value: 'yes'
+    - field: disease_progression
+      operator: equals
+      value: 'no'
+    - field: immunotherapy_contraindication
+      operator: equals
+      value: 'no'
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_adjuvant_after_platinum
+    planned_duration_months: 12
+    recommendation_type: recommended_option
+    pdl1_requirement: none
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: drug_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '2.0'
+        score: A (AT)
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of resectable stage I-III NSCLC - systemic therapy
+    source_locator: p. 1253
+  interpretation_note: 'La recomendación aplica independientemente de la expresión
+    de PD-L1. La aprobación regulatoria citada por la guía corresponde al uso después
+    de quimioterapia basada en platino. La población elegible se define como enfermedad
+    EGFR, ALK y RET wild-type.
+
+    '

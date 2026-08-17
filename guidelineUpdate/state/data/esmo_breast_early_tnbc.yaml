@@ -7,7 +7,7 @@ source:
   publish_date: '2023-12-13T00:00:00Z'
   version: null
 sync:
-  last_checked_at: '2026-08-17T17:37:21.374598+00:00'
+  last_checked_at: '2026-08-17T18:22:48.065878+00:00'
   last_known_update: '2023-12-13T00:00:00Z'
   last_processed_publication_id: f9fbaea0-f0e3-5d65-a509-5e4bb88dfd0b
   last_match_status: matched_codename
