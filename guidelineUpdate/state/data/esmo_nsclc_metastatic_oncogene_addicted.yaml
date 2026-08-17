@@ -1,0 +1,13 @@
+module_id: esmo_nsclc_metastatic_oncogene_addicted
+source:
+  doi: 10.1016/j.annonc.2022.12.009
+  epub_date: 2023-01-24
+  codename: esmo_oncogene_addicted_non_small_cell_lung_cancer_
+  guideline_type: living_guideline
+  version: v1.3 - February 2026
+  publish_date: '2024-07-30T22:00:00Z'
+sync:
+  last_checked_at: '2026-08-17T17:37:21.400084+00:00'
+  last_known_update: '2026-02-25T17:00:00Z'
+  last_processed_publication_id: 4df2c661-e9b4-4cf2-a1a4-d52323218a4d
+  last_match_status: matched_codename

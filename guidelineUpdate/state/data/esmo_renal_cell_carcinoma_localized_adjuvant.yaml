@@ -1,0 +1,13 @@
+module_id: esmo_renal_cell_carcinoma_localized_adjuvant
+source:
+  doi: 10.1016/j.annonc.2024.05.537
+  epub_date: 2024-05-22
+  codename: renal_cell_carcinoma_living_guideline
+  guideline_type: living_guideline
+  version: v1.1 - June 2025
+  publish_date: '2025-06-12T09:49:00Z'
+sync:
+  last_checked_at: '2026-08-17T17:37:21.412265+00:00'
+  last_known_update: '2025-06-12T09:49:00Z'
+  last_processed_publication_id: c0f38fa4-4c43-4686-ba36-459245008f99
+  last_match_status: matched_codename

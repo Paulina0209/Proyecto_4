@@ -1,0 +1,13 @@
+module_id: esmo_uveal_melanoma
+source:
+  doi: 10.1016/j.esmoop.2026.106888
+  epub_date: 2026-04-01
+  codename: cpg_uveal_melanoma
+  guideline_type: esmo_clinical_practice_guideline
+  publish_date: '2026-04-02T08:00:00Z'
+  version: null
+sync:
+  last_checked_at: '2026-08-17T17:37:21.417715+00:00'
+  last_known_update: '2026-04-02T08:00:00Z'
+  last_processed_publication_id: 5b81fb1c-fac2-45e6-b0a1-d30318575275
+  last_match_status: matched_codename
