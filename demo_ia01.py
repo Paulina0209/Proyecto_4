@@ -13,6 +13,7 @@ from historia_clinica_mock.db import crear_conexion
 from historia_clinica_mock.repository import listar_pacientes
 from historia_clinica_mock.seed import sembrar_datos_sinteticos
 from ia_clinica.explainability import PatientRecommendationService
+from evidencia_clinica import EvidenceSearchService
 
 
 def seleccionar_paciente(conn) -> int:
@@ -125,6 +126,49 @@ def mostrar_recomendaciones(conn, paciente, recommendation_service) -> None:
         mostrar_explicacion(explanation, index)
 
 
+
+def _terminos_clinicos_paciente(conn, patient_id: int) -> list[str]:
+    hallazgos = obtener_hallazgos_de_paciente(conn, patient_id)
+    return [h.texto for h in hallazgos]
+
+
+def mostrar_evidencia(conn, paciente, evidence_service, query: str = "") -> None:
+    query = query.strip()
+    if query:
+        results = evidence_service.search(query)
+        context_label = f"búsqueda libre: {query}"
+    else:
+        results = evidence_service.search_for_patient(
+            paciente,
+            _terminos_clinicos_paciente(conn, paciente.id),
+        )
+        context_label = f"contexto del paciente activo: {paciente.nombre}"
+
+    print("\n" + "=" * 78)
+    print("EVIDENCIA CIENTÍFICA — EV-01")
+    print(f"Contexto: {context_label}")
+    print("Catálogo: guías versionadas incluidas localmente en la plataforma")
+    print("=" * 78)
+
+    if not results:
+        print("\nNo se encontró evidencia registrada que coincida con la búsqueda.")
+        print("El sistema no inventa referencias ni resultados externos.")
+        return
+
+    for index, result in enumerate(results, start=1):
+        doc = result.document
+        print(f"\n{index}. {doc.organization} — {doc.title}")
+        print(f"   Fecha/publicación: {doc.publication_date or 'no registrada'}")
+        print(f"   DOI: {doc.doi or 'no registrado'}")
+        print(f"   Módulo: {doc.module_id}")
+        print(f"   Fuente local: {doc.source_path}")
+        print(f"   Coincidencias: {', '.join(result.matched_terms) or 'contexto clínico'}")
+        print(f"   Validación clínica: {doc.validation_status or 'no especificada'}")
+        print(f"   Licenciamiento: {doc.licensing_status or 'no especificado'}")
+
+    print("\nNota: este MVP muestra metadatos y referencias, no reproduce el contenido íntegro")
+    print("de journals o guías con posibles restricciones de licenciamiento.")
+
 def main() -> None:
     conn = crear_conexion()
     sembrar_datos_sinteticos(conn)
@@ -132,16 +176,17 @@ def main() -> None:
     repository = MockSQLiteClinicalRepository(conn)
     query_service = NaturalLanguageClinicalQueryService(repository)
     recommendation_service = PatientRecommendationService()
+    evidence_service = EvidenceSearchService()
 
     print("=" * 78)
-    print("COPILOTO CLÍNICO — DEMO UNIFICADA IA-01 + IA-05")
+    print("COPILOTO CLÍNICO — DEMO UNIFICADA IA-01 + IA-05 + EV-01")
     print("Fuente: historia_clinica_mock (SQLite, datos 100% sintéticos)")
     print("=" * 78)
 
     patient_id = seleccionar_paciente(conn)
     paciente = obtener_paciente_activo(conn, patient_id)
     print(f"\nPaciente activo: {paciente.nombre} [ID interno: {patient_id}]")
-    print("Comandos: 'recomendaciones' | 'cambiar' | 'salir'")
+    print("Comandos: 'recomendaciones' | 'evidencia [texto]' | 'cambiar' | 'salir'")
     print("También puedes preguntar por un dato clínico disponible del paciente activo.")
 
     while True:
@@ -159,6 +204,14 @@ def main() -> None:
 
         if command in {"recomendaciones", "recomendacion", "recomendación", "recomendaciónes"}:
             mostrar_recomendaciones(conn, paciente, recommendation_service)
+            continue
+
+        if command == "evidencia":
+            mostrar_evidencia(conn, paciente, evidence_service)
+            continue
+
+        if command.startswith("evidencia "):
+            mostrar_evidencia(conn, paciente, evidence_service, question.split(" ", 1)[1])
             continue
 
         if not question:
