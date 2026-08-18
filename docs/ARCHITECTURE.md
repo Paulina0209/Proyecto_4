@@ -33,6 +33,34 @@ políticas institucionales de priorización.
 
 Contiene metadatos, variables, rutas, regímenes y reglas de cada escenario clínico.
 
+### ia_clinica
+
+Contiene las capacidades del agente copiloto de IA (épica IA del backlog:
+IA-01 a IA-04). Es independiente del motor de reglas de `core`/`guidelines`:
+no navega rutas clínicas ni evalúa reglas de tratamiento, y no usa el
+contenido de `guidelines` como entrada. Cada historia de la épica IA se
+implementa como un submódulo propio (por ejemplo, `ia_clinica/notes` para
+IA-02 — generación automática de notas clínicas). Ver
+`docs/ia_clinica_notas.md` para el detalle de IA-02.
+
+### historia_clinica_mock
+
+Base de datos SQLite pequeña con datos sintéticos (pacientes, consultas,
+laboratorios, imagenología, biomarcadores), usada para probar `ia_clinica`
+y `dx_clinica` de forma end-to-end. No implementa HC-01 a HC-06
+(integración real con sistemas externos); es una herramienta de
+prueba/demo. Ver `docs/historia_clinica_mock.md`.
+
+### dx_clinica
+
+Contiene las capacidades de la épica Diagnóstico (DX-01, DX-02...).
+Implementa DX-02 — apoyo al diagnóstico diferencial: combina los
+hallazgos clínicos de `historia_clinica_mock` con un catálogo diagnóstico
+explícito y con evidencia leída de `guidelines/*/metadata.yaml` (una
+implementación mínima de lo que después será IA-04). No usa las reglas de
+tratamiento del motor `core`/`guidelines`; solo lee sus metadatos como
+fuente de evidencia citable. Ver `docs/dx_clinica.md`.
+
 ### docs
 
 Contiene la matriz clínica, el árbol de decisión y el modelo de evidencia.
