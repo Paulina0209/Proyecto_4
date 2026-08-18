@@ -1,0 +1,45 @@
+sources:
+  - module_id: esmo_breast_early_tnbc
+    name: Early Breast Cancer
+    codename: early_breast_cancer
+
+  - module_id: esmo_breast_metastatic_tnbc
+    name: Metastatic Breast Cancer
+    codename: metastatic_breast_cancer
+
+  - module_id: esmo_cutaneous_melanoma
+    name: Cutaneous Melanoma
+    codename: esmo_living_guideline__cutaneous_melanoma
+    guideline_type: living_guideline
+
+  - module_id: esmo_nsclc_early_locally_advanced
+    name: Early and Locally Advanced NSCLC
+    codename: _lg_early_nsclc
+    guideline_type: living_guideline
+
+  - module_id: esmo_nsclc_metastatic_non_oncogene
+    name: Metastatic Non-Small Cell Lung Cancer
+    codename: test_living_guideline
+    guideline_type: living_guideline
+
+  - module_id: esmo_nsclc_metastatic_oncogene_addicted
+    name: Oncogene-Addicted Metastatic NSCLC
+    codename: esmo_oncogene_addicted_non_small_cell_lung_cancer_
+    guideline_type: living_guideline
+
+  - module_id: esmo_renal_cell_carcinoma_advanced_metastatic
+    name: Advanced and Metastatic Renal Cell Carcinoma
+    codename: renal_cell_carcinoma_living_guideline
+    guideline_type: living_guideline
+
+  - module_id: esmo_renal_cell_carcinoma_localized_adjuvant
+    name: Localised Renal Cell Carcinoma
+    codename: renal_cell_carcinoma_living_guideline
+    guideline_type: living_guideline
+
+  - module_id: esmo_sclc_pembrolizumab_review
+    name: Small Cell Lung Cancer
+
+  - module_id: esmo_uveal_melanoma
+    name: Uveal Melanoma
+    codename: cpg_uveal_melanoma

@@ -1,0 +1,239 @@
+# yaml-language-server: $schema=none
+
+module_id: esmo_nsclc_early_locally_advanced
+
+variables:
+
+  cancer_type:
+    type: categorical
+    allowed_values: [NSCLC, SCLC, carcinoid, other, unknown]
+
+  histology:
+    type: categorical
+    allowed_values: [squamous, non_squamous, not_otherwise_specified, unknown]
+
+  disease_setting:
+    type: categorical
+    allowed_values: [early, locally_advanced, metastatic, recurrent, unknown]
+
+  clinical_stage_group:
+    description: >
+      Grupo de estadio clínico normalizado. La edición TNM original debe
+      conservarse por separado para trazabilidad.
+    type: categorical
+    allowed_values:
+      - IA1
+      - IA2
+      - IA3
+      - IB
+      - IIA
+      - IIB
+      - IIIA
+      - IIIB
+      - IIIC
+      - IV
+      - unknown
+
+  pathological_stage_group:
+    type: categorical
+    allowed_values:
+      - IA1
+      - IA2
+      - IA3
+      - IB
+      - IIA
+      - IIB
+      - IIIA
+      - IIIB
+      - IIIC
+      - IV
+      - not_applicable
+      - unknown
+
+  tnm_edition:
+    type: categorical
+    allowed_values: [TNM7, TNM8, TNM9, unknown]
+
+  tumor_size_cm:
+    type: number
+    minimum: 0
+    missing_value: null
+
+  node_positive:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  resectability_status:
+    type: categorical
+    allowed_values:
+      - resectable
+      - completely_resected
+      - unresectable
+      - indeterminate
+      - unknown
+
+  mdt_review_completed:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  egfr_status:
+    type: categorical
+    allowed_values:
+      - wild_type
+      - sensitizing_mutation
+      - other_non_sensitizing_alteration
+      - pending
+      - unknown
+
+  alk_status:
+    type: categorical
+    allowed_values: [negative, rearranged, pending, unknown]
+
+  ret_status:
+    description: >
+      Estado de alteraciones de RET (fusiones). Testeo molecular recomendado
+      [ESCAT I-A] en NSCLC resecable estadio IB (>3 cm o alto riesgo)-IIIA
+      para identificar candidatos a selpercatinib adyuvante.
+    type: categorical
+    allowed_values: [negative, rearranged, pending, unknown]
+
+  pdl1_test_completed:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  pdl1_tc_percent:
+    type: number
+    unit: percent
+    minimum: 0
+    maximum: 100
+    missing_value: null
+
+  biomarker_testing_complete:
+    description: >
+      Indica si EGFR, ALK, PD-L1 y, cuando corresponde al estadio resecable
+      pertinente de la ruta perioperatoria/adyuvante, RET están disponibles
+      para definir la secuencia sistémica recomendada por el equipo
+      multidisciplinario.
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  immunotherapy_contraindication:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  platinum_chemotherapy_eligible:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  cisplatin_eligible:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  treatment_phase:
+    type: categorical
+    allowed_values:
+      - neoadjuvant
+      - surgery
+      - adjuvant
+      - surveillance
+      - definitive_chemoradiotherapy
+      - consolidation
+      - unknown
+
+  pembrolizumab_pathway:
+    type: categorical
+    allowed_values: [perioperative, adjuvant_only, unknown]
+
+  prior_neoadjuvant_pembrolizumab:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  prior_neoadjuvant_platinum_chemotherapy:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  neoadjuvant_pembrolizumab_cycles_completed:
+    type: integer
+    minimum: 0
+    missing_value: null
+
+  surgery_completed:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  resection_margin_status:
+    type: categorical
+    allowed_values: [R0, R1, R2, not_applicable, unknown]
+
+  pathologic_response:
+    type: categorical
+    allowed_values:
+      - pCR
+      - MPR
+      - residual_viable_tumor
+      - not_assessed
+      - unknown
+
+  prior_adjuvant_platinum_chemotherapy:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  adjuvant_pembrolizumab_planned:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  adjuvant_pembrolizumab_cycles_completed:
+    type: integer
+    minimum: 0
+    missing_value: null
+
+  months_on_adjuvant_pembrolizumab:
+    type: number
+    minimum: 0
+    missing_value: null
+
+  disease_progression:
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  treatment_discontinuation_reason:
+    type: categorical
+    allowed_values:
+      - planned_completion
+      - toxicity
+      - progression
+      - patient_choice
+      - other
+      - unknown
+
+  ctdna_status:
+    description: >
+      Resultado de detección o aclaramiento de ctDNA después de tratamiento
+      con intención curativa. No se recomienda utilizar este resultado para
+      guiar escalamiento o desescalamiento de tratamiento fuera de ensayos
+      clínicos [IV, E].
+    type: categorical
+    allowed_values: [detected, cleared, not_tested, pending, unknown]
+
+  ctdna_guided_treatment_change:
+    description: >
+      Indica si una decisión de escalamiento o desescalamiento de tratamiento
+      fue guiada por el resultado de ctDNA fuera de un ensayo clínico. Este
+      uso no está recomendado [IV, E].
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
+
+  prescribed_antineoplastic_drugs:
+    type: list
+    item_type: string
+
+  prescription_date:
+    type: date
+    missing_value: null
+
+  guideline_temporal_applicability:
+    description: >
+      Resultado derivado al comparar la fecha de prescripción con la fecha
+      de publicación de esta versión de la guía.
+    type: categorical
+    allowed_values: [applicable, not_yet_published, uncertain, unknown]

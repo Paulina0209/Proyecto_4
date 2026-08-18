@@ -1,0 +1,13 @@
+module_id: esmo_cutaneous_melanoma
+source:
+  doi: 10.1016/j.annonc.2024.11.006
+  epub_date: 2024-11-14
+  codename: esmo_living_guideline__cutaneous_melanoma
+  guideline_type: living_guideline
+  version: v1.0 - February 2025
+  publish_date: '2025-02-16T23:00:00Z'
+sync:
+  last_checked_at: '2026-08-18T13:54:11.372084+00:00'
+  last_known_update: '2025-02-16T23:00:00Z'
+  last_processed_publication_id: 3eb360a7-182c-432e-8746-f4fa1d868e84
+  last_match_status: matched_codename

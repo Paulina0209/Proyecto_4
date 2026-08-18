@@ -1,0 +1,9 @@
+module_id: esmo_sclc_pembrolizumab_review
+source:
+  doi: null
+  epub_date: null
+sync:
+  last_checked_at: '2026-08-16T17:18:08.469918+00:00'
+  last_known_update: null
+  last_processed_publication_id: null
+  last_match_status: ambiguous

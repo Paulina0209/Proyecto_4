@@ -1,0 +1,13 @@
+module_id: esmo_breast_metastatic_tnbc
+source:
+  doi: 10.1016/j.annonc.2021.09.019
+  epub_date: 2021-10-19
+  codename: metastatic_breast_cancer
+  guideline_type: esmo_clinical_practice_guideline
+  publish_date: '2026-05-29T13:00:00Z'
+  version: null
+sync:
+  last_checked_at: '2026-08-18T13:54:11.365797+00:00'
+  last_known_update: '2026-05-29T13:00:00Z'
+  last_processed_publication_id: a94467d4-5998-518b-b271-5b3b3d508407
+  last_match_status: matched_codename

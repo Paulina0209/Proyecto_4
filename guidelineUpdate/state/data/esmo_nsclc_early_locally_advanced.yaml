@@ -1,0 +1,13 @@
+module_id: esmo_nsclc_early_locally_advanced
+source:
+  doi: 10.1016/j.annonc.2025.08.003
+  epub_date: 2025-08-28
+  codename: _lg_early_nsclc
+  guideline_type: living_guideline
+  version: v1.3 - August 2026
+  publish_date: '2025-11-26T23:00:00Z'
+sync:
+  last_checked_at: '2026-08-18T13:54:11.373338+00:00'
+  last_known_update: '2026-08-07T06:30:00Z'
+  last_processed_publication_id: 169ef135-40cd-4c33-9823-57e8ede46f5a
+  last_match_status: matched_codename

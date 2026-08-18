@@ -1,0 +1,13 @@
+module_id: esmo_nsclc_metastatic_non_oncogene
+source:
+  doi: 10.1016/j.annonc.2022.12.013
+  epub_date: 2023-01-17
+  codename: test_living_guideline
+  guideline_type: living_guideline
+  version: v1.2 - January 2025
+  publish_date: '2024-03-26T08:52:00Z'
+sync:
+  last_checked_at: '2026-08-18T13:54:11.380331+00:00'
+  last_known_update: '2025-01-24T08:52:00Z'
+  last_processed_publication_id: 55c7d141-0be0-48b7-8704-ae7062e506a9
+  last_match_status: matched_codename

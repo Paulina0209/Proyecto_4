@@ -1,0 +1,134 @@
+# yaml-language-server: $schema=none
+
+rule_set_id: esmo_nsclc_ela_perioperative
+status: draft_computable
+rules:
+- id: ESMO-NSCLC-ELA-PERI-001
+  name: Continuidad de la secuencia perioperatoria después de cirugía
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: pembrolizumab_pathway
+      operator: equals
+      value: perioperative
+    - field: prior_neoadjuvant_pembrolizumab
+      operator: equals
+      value: 'yes'
+    - field: prior_neoadjuvant_platinum_chemotherapy
+      operator: equals
+      value: 'yes'
+    - field: surgery_completed
+      operator: equals
+      value: 'yes'
+    - field: disease_progression
+      operator: equals
+      value: 'no'
+    - field: immunotherapy_contraindication
+      operator: equals
+      value: 'no'
+  conclusion:
+    action: support_regimen
+    regimen_id: pembro_adjuvant_after_neoadjuvant
+    sequence_regimen_id: pembro_perioperative_sequence
+    recommendation_type: perioperative_continuation
+    audit_effect: supports_prescription
+  evidence:
+    organization: ESMO
+    statement_scope: regimen_specific
+    native:
+      evidence_level: I
+      recommendation_grade: A
+      mcbs:
+        version: '2.0'
+        score: A (AT)
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of resectable stage I-III NSCLC - systemic therapy
+    source_locator: pp. 1252-1253
+- id: ESMO-NSCLC-ELA-PERI-002
+  name: Revisión de omisión adyuvante basada únicamente en respuesta patológica completa
+  rule_origin: guideline_interpretation_boundary
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: prior_neoadjuvant_pembrolizumab
+      operator: equals
+      value: 'yes'
+    - field: surgery_completed
+      operator: equals
+      value: 'yes'
+    - field: pathologic_response
+      operator: equals
+      value: pCR
+    - field: adjuvant_pembrolizumab_planned
+      operator: equals
+      value: 'no'
+  conclusion:
+    action: flag_for_expert_review
+    recommendation_type: deescalation_not_established
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: evidence_gap
+    native:
+      evidence_level: null
+      recommendation_grade: null
+      mcbs: null
+    explicit_grade_reported: false
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Neoadjuvant and perioperative therapy
+    source_locator: p. 1252
+  interpretation_note: 'La guía señala que no existen comparaciones directas que permitan
+    establecer qué pacientes pueden omitir la fase adyuvante después de una respuesta
+    patológica completa. La regla genera revisión, no desviación.
+
+    '
+- id: ESMO-NSCLC-ELA-PERI-003
+  name: Uso de ctDNA para guiar escalamiento o desescalamiento de tratamiento fuera de ensayos clínicos
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: curative_intent_treatment_completed
+      operator: equals
+      value: 'yes'
+    - field: ctdna_result_available
+      operator: equals
+      value: 'yes'
+    - field: ctdna_guided_treatment_modification_intended
+      operator: equals
+      value: 'yes'
+    - field: within_clinical_trial
+      operator: equals
+      value: 'no'
+  conclusion:
+    action: do_not_recommend
+    recommendation_type: ctdna_guided_treatment_modification_not_recommended
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: biomarker_specific
+    native:
+      evidence_level: IV
+      recommendation_grade: E
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Neoadjuvant and perioperative therapy
+    source_locator: p. 1252
+  interpretation_note: 'La guía establece explícitamente que la detección o el
+    aclaramiento de ctDNA después de un tratamiento con intención curativa no
+    debe utilizarse para guiar el escalamiento o desescalamiento del tratamiento
+    fuera del contexto de ensayos clínicos.
+
+    '
