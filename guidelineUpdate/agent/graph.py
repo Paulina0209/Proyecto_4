@@ -155,10 +155,15 @@ redactarlo con seguridad como regla -- ese cambio NO debe ir en
 affected_files como create/modify, solo describirse."""
 
 
-def detect_and_classify_changes_node(state: GraphState) -> dict:
-    import anthropic
+# Cuantas imagenes (slides) se mandan por llamada a la API. Si un
+# documento tiene mas que esto, se detecta en varias tandas en vez de
+# una sola llamada con max_tokens=16000 -- eso es lo que generaba el
+# corte silencioso que caia en el except JSONDecodeError de mas abajo.
+_MAX_IMAGES_PER_BATCH = 8
 
-    client = anthropic.Anthropic(api_key=state["api_key"])
+
+def _build_shared_context_block(state: GraphState) -> dict:
+    
 
     gap_summary = "\n".join(
         f"- {g['variable']}: en pathway={g['referenced_in_pathway']}, "
@@ -170,37 +175,54 @@ def detect_and_classify_changes_node(state: GraphState) -> dict:
         "(sin texto extraible -- el contenido esta en las imagenes que siguen)"
     )
 
-    content = [
-        {
-            "type": "text",
-            "text": (
-                f"--- Tabla de variables verificada (modulo {state['module_id']}) ---\n\n"
-                + gap_summary
-                + f"\n\n--- Representacion actual (modulo {state['module_id']}) ---\n\n"
-                + state["current_rules_text"]
-                + "\n\n--- Documento oficial nuevo (texto) ---\n\n"
-                + new_text_block
-            ),
-        }
-    ]
+    text = (
+        f"--- Tabla de variables verificada (modulo {state['module_id']}) ---\n\n"
+        + gap_summary
+        + f"\n\n--- Representacion actual (modulo {state['module_id']}) ---\n\n"
+        + state["current_rules_text"]
+        + "\n\n--- Documento oficial nuevo (texto) ---\n\n"
+        + new_text_block
+    )
 
-    for media_type, blob in state["new_document_images"]:
-        content.append(
-            {
-                "type": "image",
-                "source": {
-                    "type": "base64",
-                    "media_type": media_type,
-                    "data": base64.b64encode(blob).decode("utf-8"),
-                },
-            }
-        )
+    # cache_control marca este bloque para prompt caching: si hay varias
+    # tandas de imagenes, este texto (que puede ser grande) se repaga
+    # solo la primera vez y las siguientes llamadas leen del cache.
+    return {"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}
 
-    if state["new_document_images"]:
+
+def _call_detect_batch(
+    client, state: GraphState, shared_block: dict, image_batch, batch_index: int, total_batches: int
+) -> list[ChangeItem]:
+    
+
+    content = [shared_block]
+
+    if image_batch:
         content.append(
             {
                 "type": "text",
-                "text": f"(las {len(state['new_document_images'])} imagenes de arriba son las slides del documento nuevo, en orden)",
+                "text": (
+                    f"\n\n--- Tanda {batch_index}/{total_batches} de imagenes del documento "
+                    "nuevo -- detecta cambios usando el contexto compartido de arriba mas "
+                    "las imagenes que siguen en esta tanda (en orden) ---"
+                ),
+            }
+        )
+        for media_type, blob in image_batch:
+            content.append(
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": media_type,
+                        "data": base64.b64encode(blob).decode("utf-8"),
+                    },
+                }
+            )
+        content.append(
+            {
+                "type": "text",
+                "text": f"(las {len(image_batch)} imagenes de arriba son la tanda {batch_index}/{total_batches}, en orden)",
             }
         )
 
@@ -211,18 +233,61 @@ def detect_and_classify_changes_node(state: GraphState) -> dict:
         messages=[{"role": "user", "content": content}],
     )
     raw = "".join(block.text for block in response.content if block.type == "text")
-    changes = _parse_changes_json(raw)
+
+    if response.stop_reason == "max_tokens":
+        # Corte explicito por limite de tokens -- se deja constancia como
+        # tal en vez de mandarlo a _parse_changes_json, que lo hubiera
+        # reportado como "no se pudo parsear" (JSON mal formado) sin
+        # aclarar que la causa fue el limite y no el modelo.
+        return [
+            {
+                "description": (
+                    f"Tanda {batch_index}/{total_batches}: la deteccion se corto por "
+                    "limite de max_tokens (no es un error de formato JSON) -- puede "
+                    "faltar informacion de esta tanda, revisar manualmente."
+                ),
+                "action": "uncertain",
+                "affected_files": [],
+                "source_excerpt": raw[:500],
+                "requires_human_review": True,
+            }
+        ]
+
+    return _parse_changes_json(raw)
+
+
+def detect_and_classify_changes_node(state: GraphState) -> dict:
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=state["api_key"])
+    shared_block = _build_shared_context_block(state)
+    images = state["new_document_images"]
+
+    all_changes: list[ChangeItem] = []
+
+    if not images:
+        all_changes.extend(_call_detect_batch(client, state, shared_block, [], 1, 1))
+    else:
+        batches = [
+            images[i : i + _MAX_IMAGES_PER_BATCH]
+            for i in range(0, len(images), _MAX_IMAGES_PER_BATCH)
+        ]
+        total_batches = len(batches)
+        for batch_index, image_batch in enumerate(batches, start=1):
+            all_changes.extend(
+                _call_detect_batch(client, state, shared_block, image_batch, batch_index, total_batches)
+            )
 
     files_to_propose = sorted(
         {
             f
-            for c in changes
+            for c in all_changes
             if c["action"] in ("create", "modify")
             for f in c["affected_files"]
         }
     )
 
-    return {"changes": changes, "files_to_propose": files_to_propose}
+    return {"changes": all_changes, "files_to_propose": files_to_propose}
 
 
 def _parse_changes_json(raw: str) -> list[ChangeItem]:

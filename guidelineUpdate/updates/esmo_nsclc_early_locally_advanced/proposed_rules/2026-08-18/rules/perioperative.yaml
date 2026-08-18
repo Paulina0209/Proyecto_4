@@ -90,3 +90,45 @@ rules:
     patológica completa. La regla genera revisión, no desviación.
 
     '
+- id: ESMO-NSCLC-ELA-PERI-003
+  name: Uso de ctDNA para guiar escalamiento o desescalamiento de tratamiento fuera de ensayos clínicos
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: curative_intent_treatment_completed
+      operator: equals
+      value: 'yes'
+    - field: ctdna_result_available
+      operator: equals
+      value: 'yes'
+    - field: ctdna_guided_treatment_modification_intended
+      operator: equals
+      value: 'yes'
+    - field: within_clinical_trial
+      operator: equals
+      value: 'no'
+  conclusion:
+    action: do_not_recommend
+    recommendation_type: ctdna_guided_treatment_modification_not_recommended
+    audit_effect: requires_clinical_review
+  evidence:
+    organization: ESMO
+    statement_scope: biomarker_specific
+    native:
+      evidence_level: IV
+      recommendation_grade: E
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Neoadjuvant and perioperative therapy
+    source_locator: p. 1252
+  interpretation_note: 'La guía establece explícitamente que la detección o el
+    aclaramiento de ctDNA después de un tratamiento con intención curativa no
+    debe utilizarse para guiar el escalamiento o desescalamiento del tratamiento
+    fuera del contexto de ensayos clínicos.
+
+    '

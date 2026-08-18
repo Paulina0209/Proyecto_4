@@ -11,6 +11,13 @@ Descarga el contenido fuente de un modulo, segun su tipo:
 En los dos casos, ademas descarga cualquier archivo adjunto (slide
 set en .pptx, etc.) que Kontent.ai tenga asociado al item.
 
+process() devuelve el Path del documento que se usa para comparar
+contra las reglas actuales (ver rule_agent.load_new_document_text/
+load_new_document_images): si hay un slide set (.pptx) entre los
+adjuntos descargados, ES ese el que se devuelve -- el HTML/PDF
+tambien queda guardado en disco, pero no es lo que se le pasa al
+LLM. Si no hay pptx, se devuelve el HTML/PDF como antes.
+
 Guarda todo versionado por fecha en:
     guidelineUpdates/<module_id>/documents/<fecha>_full.pdf
     guidelineUpdates/<module_id>/documents/<fecha>_content.html
@@ -541,7 +548,16 @@ def process(codename, module_id):
         print(f"ERROR: {module_id} ({codename}) no tiene article_pdf ni subpages -- tipo desconocido.")
         return None
 
-    download_file_assets(session, modular_content, module_id, date_str)
+    saved_assets = download_file_assets(session, modular_content, module_id, date_str)
+
+    pptx_path = next((p for p in saved_assets if p.suffix.lower() == ".pptx"), None)
+
+    if pptx_path is not None:
+        # El slide set se prefiere sobre el HTML/PDF como documento
+        # para comparar -- el HTML/PDF igual queda guardado en disco
+        # (document_path arriba), solo no es lo que se le pasa al LLM.
+        print(f"  Usando el slide set como documento a comparar: {pptx_path.name}")
+        return pptx_path
 
     return document_path
 

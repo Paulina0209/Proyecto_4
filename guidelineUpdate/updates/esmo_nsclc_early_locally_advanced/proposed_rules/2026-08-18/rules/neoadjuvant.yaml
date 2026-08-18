@@ -30,9 +30,6 @@ rules:
     - field: alk_status
       operator: equals
       value: negative
-    - field: ret_status
-      operator: equals
-      value: negative
     - field: biomarker_testing_complete
       operator: equals
       value: 'yes'

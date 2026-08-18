@@ -27,7 +27,7 @@ rules:
   source:
     source_type: system_scope
 - id: ESMO-NSCLC-ELA-ELIG-002
-  name: Evaluación sistémica preparada con biomarcadores (EGFR, ALK, RET, PD-L1) y discusión multidisciplinaria
+  name: Evaluación sistémica preparada con biomarcadores y discusión multidisciplinaria
   rule_origin: clinical_guideline
   conditions:
     all:
@@ -49,6 +49,42 @@ rules:
     statement_scope: clinical_context
     native:
       evidence_level: V
+      recommendation_grade: A
+      mcbs: null
+    explicit_grade_reported: true
+  source:
+    guideline_id: esmo_nsclc_early_locally_advanced_2025
+    section: Management of resectable stage I-III NSCLC - systemic therapy
+    source_locator: p. 1253
+- id: ESMO-NSCLC-ELA-ELIG-003
+  name: Evaluación sistémica preparada con biomarcadores completos incluyendo RET en ruta perioperatoria/adyuvante resecable
+  rule_origin: clinical_guideline
+  conditions:
+    all:
+    - field: guideline_temporal_applicability
+      operator: equals
+      value: applicable
+    - field: resectable_perioperative_adjuvant_pathway
+      operator: equals
+      value: 'yes'
+    - field: biomarker_testing_complete
+      operator: equals
+      value: 'yes'
+    - field: ret_testing_completed
+      operator: equals
+      value: 'yes'
+    - field: mdt_review_completed
+      operator: equals
+      value: 'yes'
+  conclusion:
+    action: proceed_to_systemic_pathway_evaluation
+    recommendation_type: prerequisite_completed
+    audit_effect: none
+  evidence:
+    organization: ESMO
+    statement_scope: clinical_context
+    native:
+      evidence_level: I
       recommendation_grade: A
       mcbs: null
     explicit_grade_reported: true

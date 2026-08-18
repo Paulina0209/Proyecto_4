@@ -100,6 +100,7 @@ nodes:
     field: ret_status
     branches:
       negative: evaluate_treatment_phase
+      fusion: route_to_targeted_therapy_review
       rearranged: route_to_targeted_therapy_review
       pending: insufficient_information
       unknown: insufficient_information

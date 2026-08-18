@@ -91,10 +91,9 @@ variables:
 
   ret_status:
     description: >
-      Estado de reordenamiento de RET. Biomarcador ESCAT I-A que debe
-      testearse junto con EGFR y ALK antes de definir la secuencia
-      sistémica en NSCLC resecable estadio II-III. Los pacientes con
-      reordenamiento de RET quedan excluidos de la vía de quimioterapia-ICI.
+      Estado de alteraciones de RET (fusiones). Testeo molecular recomendado
+      [ESCAT I-A] en NSCLC resecable estadio IB (>3 cm o alto riesgo)-IIIA
+      para identificar candidatos a selpercatinib adyuvante.
     type: categorical
     allowed_values: [negative, rearranged, pending, unknown]
 
@@ -111,8 +110,10 @@ variables:
 
   biomarker_testing_complete:
     description: >
-      Indica si EGFR, ALK, RET y PD-L1 están disponibles para definir la
-      secuencia sistémica recomendada por el equipo multidisciplinario.
+      Indica si EGFR, ALK, PD-L1 y, cuando corresponde al estadio resecable
+      pertinente de la ruta perioperatoria/adyuvante, RET están disponibles
+      para definir la secuencia sistémica recomendada por el equipo
+      multidisciplinario.
     type: categorical
     allowed_values: ["yes", "no", "unknown"]
 
@@ -204,6 +205,23 @@ variables:
       - patient_choice
       - other
       - unknown
+
+  ctdna_status:
+    description: >
+      Resultado de detección o aclaramiento de ctDNA después de tratamiento
+      con intención curativa. No se recomienda utilizar este resultado para
+      guiar escalamiento o desescalamiento de tratamiento fuera de ensayos
+      clínicos [IV, E].
+    type: categorical
+    allowed_values: [detected, cleared, not_tested, pending, unknown]
+
+  ctdna_guided_treatment_change:
+    description: >
+      Indica si una decisión de escalamiento o desescalamiento de tratamiento
+      fue guiada por el resultado de ctDNA fuera de un ensayo clínico. Este
+      uso no está recomendado [IV, E].
+    type: categorical
+    allowed_values: ["yes", "no", "unknown"]
 
   prescribed_antineoplastic_drugs:
     type: list

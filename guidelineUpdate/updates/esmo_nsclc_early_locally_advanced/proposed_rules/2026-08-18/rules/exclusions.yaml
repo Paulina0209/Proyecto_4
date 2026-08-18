@@ -133,9 +133,8 @@ rules:
     section: Management of unresectable stage III NSCLC
     source_locator: pp. 1255-1256
   interpretation_note: 'La guía describe quimiorradioterapia seguida por osimertinib
-    en EGFR mutado, o por durvalumab o sugemalimab en EGFR wild-type sin alteraciones
-    genómicas de ALK o ROS1. No formula una recomendación específica de pembrolizumab
-    en este contexto.
+    en EGFR mutado o durvalumab en EGFR wild-type. No formula una recomendación específica
+    de pembrolizumab en este contexto.
 
     '
 - id: ESMO-NSCLC-ELA-EXC-004
@@ -420,11 +419,6 @@ rules:
     guideline_id: esmo_nsclc_early_locally_advanced_2025
     section: Management of resectable stage I-III NSCLC - systemic therapy
     source_locator: p. 1253
-  interpretation_note: 'La secuencia óptima de terapia sistémica (neoadyuvante, perioperatoria
-    o adyuvante) debe definirse tras un panel multidisciplinario, con evaluación
-    de biomarcadores que incluya como mínimo EGFR, ALK, RET y PD-L1.
-
-    '
 - id: ESMO-NSCLC-ELA-EXC-011
   name: PD-L1 no evaluado antes de definir la estrategia perioperatoria
   rule_origin: clinical_guideline
@@ -498,44 +492,3 @@ rules:
     guideline_id: esmo_nsclc_early_locally_advanced_2025
     section: Management of resectable stage I-III NSCLC
     source_locator: p. 1253
-- id: ESMO-NSCLC-ELA-EXC-013
-  name: Rearreglo de RET fuera de la ruta perioperatoria de pembrolizumab
-  rule_origin: clinical_guideline
-  conditions:
-    all:
-    - field: guideline_temporal_applicability
-      operator: equals
-      value: applicable
-    - field: ret_status
-      operator: equals
-      value: rearranged
-    - field: prescribed_antineoplastic_drugs
-      operator: contains
-      value: pembrolizumab
-    - field: treatment_phase
-      operator: in
-      value:
-      - neoadjuvant
-      - adjuvant
-  conclusion:
-    action: flag_for_expert_review
-    recommendation_type: molecular_exclusion_from_pembrolizumab_pathway
-    audit_effect: requires_clinical_review
-  evidence:
-    organization: ESMO
-    statement_scope: eligibility_restriction
-    native:
-      evidence_level: I
-      recommendation_grade: A
-      mcbs: null
-    explicit_grade_reported: true
-  source:
-    guideline_id: esmo_nsclc_early_locally_advanced_2025
-    section: Management of resectable stage I-III NSCLC - systemic therapy
-    source_locator: p. 1253
-  interpretation_note: 'La guía recomienda testeo molecular de RET [ESCAT I-A] en
-    estadio IB (>3 cm o alto riesgo)-IIIA para identificar pacientes candidatos a
-    selpercatinib adyuvante. Los pacientes con reordenamiento de RET quedan fuera
-    de la ruta ChT-ICI con pembrolizumab, de forma análoga a EGFR mutado y ALK reordenado.
-
-    '
