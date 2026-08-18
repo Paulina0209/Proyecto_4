@@ -3,15 +3,13 @@ from pathlib import Path
 import pytest
 import yaml
 
-from cdss.core.engine import evaluate_rule_set
+from core.engine import evaluate_rule_set
 
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 
 MODULE = (
     ROOT
-    / "src"
-    / "cdss"
     / "guidelines"
     / "nsclc_metastatic_oncogene_addicted"
 )
@@ -21,7 +19,6 @@ RULES = MODULE / "rules"
 CASES = (
     ROOT
     / "tests"
-    / "unit"
     / "guidelines"
     / "cases"
     / "esmo"

@@ -1,0 +1,41 @@
+{
+  "patients": [
+    {
+      "patient_id": "PSEUDO-001",
+      "data": [
+        {
+          "concept": "ca-125",
+          "value": 48,
+          "unit": "U/mL",
+          "observed_at": "2026-05-14T08:30:00",
+          "source": "Laboratorio institucional",
+          "source_id": "LAB-2026-001"
+        },
+        {
+          "concept": "ca-125",
+          "value": 31,
+          "unit": "U/mL",
+          "observed_at": "2026-07-22T09:10:00",
+          "source": "Laboratorio institucional",
+          "source_id": "LAB-2026-019"
+        },
+        {
+          "concept": "hemoglobina",
+          "value": 11.8,
+          "unit": "g/dL",
+          "observed_at": "2026-07-22T09:10:00",
+          "source": "Hemograma",
+          "source_id": "HEM-2026-019"
+        },
+        {
+          "concept": "creatinina",
+          "value": 0.84,
+          "unit": "mg/dL",
+          "observed_at": "2026-07-22T09:10:00",
+          "source": "Química sanguínea",
+          "source_id": "QS-2026-019"
+        }
+      ]
+    }
+  ]
+}

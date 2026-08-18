@@ -12,7 +12,7 @@ from ia_clinica.notes.formats import NoteFormatSpec, NoteSectionSpec, SOAP_FORMA
 from ia_clinica.notes.generator import ClinicalNoteGenerator, GenerationError
 from ia_clinica.notes.models import MISSING_INFO_MARKER, ClinicalContext, SourceSpan
 
-from _llm_test_doubles import ScriptedLLMClient, section
+from ._llm_test_doubles import ScriptedLLMClient, section
 
 
 # ---------------------------------------------------------------------------

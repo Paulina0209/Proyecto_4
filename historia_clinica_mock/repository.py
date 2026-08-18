@@ -82,6 +82,12 @@ class HallazgoClinico:
     fecha: str
 
 
+def listar_pacientes(conn: sqlite3.Connection) -> List[Paciente]:
+    """Lista los pacientes sintéticos disponibles para demos y pruebas."""
+    rows = conn.execute("SELECT * FROM pacientes ORDER BY id").fetchall()
+    return [_fila_a_paciente(row) for row in rows]
+
+
 def obtener_paciente(conn: sqlite3.Connection, paciente_id: int) -> Optional[Paciente]:
     row = conn.execute("SELECT * FROM pacientes WHERE id = ?", (paciente_id,)).fetchone()
     return _fila_a_paciente(row) if row else None

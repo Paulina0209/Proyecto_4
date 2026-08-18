@@ -8,14 +8,12 @@ from typing import Any
 import pytest
 import yaml
 
-from cdss.core.engine import evaluate_rule_set
+from core.engine import evaluate_rule_set
 
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 MODULE = (
     ROOT
-    / "src"
-    / "cdss"
     / "guidelines"
     / "renal_cell_carcinoma_localized_adjuvant"
 )

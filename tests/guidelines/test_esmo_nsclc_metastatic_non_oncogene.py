@@ -1,13 +1,11 @@
 from pathlib import Path
 
-from cdss.core.engine import evaluate_rule_set
+from core.engine import evaluate_rule_set
 
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 RULES = (
     ROOT
-    / "src"
-    / "cdss"
     / "guidelines"
     / "nsclc_metastatic_non_oncogene"
     / "rules"
