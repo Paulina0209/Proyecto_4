@@ -139,3 +139,11 @@ def evaluate_rule_set(rule_file: str | Path, facts: dict[str, Any]) -> list[Rule
         )
 
     return evaluations
+
+def evaluate_rule_set_hypothetical(
+    rule_file: str | Path,
+    base_facts: dict[str, Any],
+    fact_overrides: dict[str, Any],
+) -> list[RuleEvaluation]:
+    merged_facts = {**base_facts, **fact_overrides}
+    return evaluate_rule_set(rule_file, merged_facts)

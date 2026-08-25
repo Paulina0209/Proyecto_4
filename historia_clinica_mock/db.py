@@ -8,7 +8,7 @@ from pathlib import Path
 _SCHEMA_PATH = Path(__file__).resolve().parent / "schema.sql"
 
 
-def crear_conexion(ruta: str = ":memory:") -> sqlite3.Connection:
+def crear_conexion(ruta: str = ":memory:", *, check_same_thread: bool = True) -> sqlite3.Connection:
     """Crea una conexión SQLite con el esquema ya inicializado.
 
     Por defecto usa una base de datos en memoria (``:memory:``), ideal
@@ -16,7 +16,7 @@ def crear_conexion(ruta: str = ":memory:") -> sqlite3.Connection:
     una ruta de archivo si se quiere conservar entre ejecuciones.
     """
 
-    conn = sqlite3.connect(ruta)
+    conn = sqlite3.connect(ruta, check_same_thread=check_same_thread)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     inicializar_esquema(conn)
