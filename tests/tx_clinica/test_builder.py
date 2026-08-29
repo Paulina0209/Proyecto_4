@@ -19,6 +19,8 @@ durante el desarrollo:
   - regimens.yaml como lista Y como diccionario keyed por id
   - matching por prescribed_regimen_id en vez de prescribed_antineoplastic_drugs
   - formato de régimen no reconocido (debe excluirse, no adivinarse)
+
+Corre con:  python -m pytest tx_clinica/tests -v
 """
 
 from __future__ import annotations
@@ -148,6 +150,7 @@ def guidelines_root(tmp_path: Path) -> Path:
                 "conditions": {"all": [
                     {"field": "treatment_line", "operator": "equals", "value": 1},
                     {"field": "pdl1_tps", "operator": "greater_than_or_equal", "value": 50},
+                    {"field": "immunotherapy_contraindication", "operator": "equals", "value": "no"},
                 ]},
                 "conclusion": {"action": "support_regimen", "regimen_id": "pembro_monotherapy", "audit_effect": "supports_prescription"},
                 "evidence": {"organization": "ESMO", "native": {"evidence_level": "I", "recommendation_grade": "A", "mcbs": {"score": 5}}, "explicit_grade_reported": True},
@@ -193,7 +196,7 @@ def guidelines_root(tmp_path: Path) -> Path:
                 "conditions": {"all": [
                     {"field": "treatment_line", "operator": "equals", "value": 1},
                     {"field": "pdl1_tps", "operator": "less_than", "value": 50},
-                    {"field": "prescribed_antineoplastic_drugs", "operator": "exact_set", "value": ["pembrolizumab"]},
+                    {"field": "prescribed_regimen_id", "operator": "equals", "value": "pembro_monotherapy"},
                 ]},
                 "conclusion": {"action": "flag_potential_deviation", "audit_effect": "opposes_prescription"},
                 "evidence": {"organization": "ESMO", "native": {"evidence_level": "I", "recommendation_grade": "D"}, "explicit_grade_reported": True},
@@ -356,7 +359,7 @@ class TestFormatoDeRegimenDesconocido:
 # ---------------------------------------------------------------------------
 class TestClasificacionDeAuditEffect:
     def test_contraindicacion_explicita_excluye_el_regimen_por_completo(self, guidelines_root):
-        """PD-L1 <50 + monoterapia exacta -> ESMO-NSCLC-M-EXC-001 da
+        """PD-L1 <50 + monoterapia -> ESMO-NSCLC-M-EXC-001 da
         opposes_prescription -- pembro_monotherapy NO debe aparecer,
         aunque otra regla (FL-001) no lo haya evaluado todavía."""
         facts = {
@@ -400,6 +403,85 @@ class TestClasificacionDeAuditEffect:
 # ---------------------------------------------------------------------------
 # AC3 — sin guía aplicable, no se fuerza una sugerencia genérica.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# AC2 — Dado que el paciente tiene una comorbilidad que contraindica una
+# opción de primera línea, esa opción no se presenta como primera línea,
+# o se presenta con la advertencia correspondiente.
+# ---------------------------------------------------------------------------
+class TestComorbilidadConAdvertencia:
+    def test_sin_comorbilidad_el_regimen_es_primera_linea_normal(self, guidelines_root):
+        facts = {
+            "cancer_type": "NSCLC", "molecular_pathway_status": "non_oncogene_addicted",
+            "treatment_line": 1, "pdl1_tps": 70, "histology": "non_squamous",
+            "immunotherapy_contraindication": "no",
+        }
+        resultado = construir_recomendaciones_tratamiento(1, facts, guidelines_root)
+
+        positivo = next(c for c in resultado.candidatos if c.regimen_id == "pembro_monotherapy")
+        assert positivo.audit_effect == "supports_prescription"
+        assert positivo.advertencia_comorbilidad is None
+        assert positivo.es_primera_opcion is True
+
+    def test_con_comorbilidad_el_regimen_no_es_primera_linea_pero_trae_advertencia(self, guidelines_root):
+        """Mismo paciente que el test anterior, pero con
+        immunotherapy_contraindication='yes' -- el régimen que antes era
+        supports_prescription ahora debe pasar a requires_clinical_review
+        CON una advertencia explícita, nunca desaparecer en silencio."""
+        facts = {
+            "cancer_type": "NSCLC", "molecular_pathway_status": "non_oncogene_addicted",
+            "treatment_line": 1, "pdl1_tps": 70, "histology": "non_squamous",
+            "immunotherapy_contraindication": "yes",
+        }
+        resultado = construir_recomendaciones_tratamiento(1, facts, guidelines_root)
+
+        regimenes = {c.regimen_id: c for c in resultado.candidatos}
+        assert "pembro_monotherapy" in regimenes, "el régimen no debe desaparecer en silencio"
+
+        candidato = regimenes["pembro_monotherapy"]
+        assert candidato.audit_effect == "requires_clinical_review"
+        assert candidato.es_primera_opcion is False
+        assert candidato.advertencia_comorbilidad is not None
+        assert "immunotherapy_contraindication" in candidato.advertencia_comorbilidad
+        assert "yes" in candidato.advertencia_comorbilidad
+
+    def test_advertencia_cita_el_valor_real_no_uno_inventado(self, guidelines_root):
+        facts = {
+            "cancer_type": "NSCLC", "molecular_pathway_status": "non_oncogene_addicted",
+            "treatment_line": 1, "pdl1_tps": 70, "histology": "non_squamous",
+            "immunotherapy_contraindication": "yes",
+        }
+        resultado = construir_recomendaciones_tratamiento(1, facts, guidelines_root)
+        candidato = next(c for c in resultado.candidatos if c.regimen_id == "pembro_monotherapy")
+        assert facts["immunotherapy_contraindication"] in candidato.advertencia_comorbilidad
+
+    def test_regimen_que_no_calificaria_ni_siquiera_sin_comorbilidad_no_se_fuerza(self, guidelines_root):
+        """Si el régimen no calificaría de todas formas (ej. PD-L1 bajo),
+        la comorbilidad no debe "rescatarlo"."""
+        facts = {
+            "cancer_type": "NSCLC", "molecular_pathway_status": "non_oncogene_addicted",
+            "treatment_line": 1, "pdl1_tps": 20,
+            "histology": "non_squamous", "immunotherapy_contraindication": "yes",
+        }
+        resultado = construir_recomendaciones_tratamiento(1, facts, guidelines_root)
+        regimenes_via_fl001 = [
+            c for c in resultado.candidatos
+            if c.regimen_id == "pembro_monotherapy" and c.advertencia_comorbilidad is not None
+        ]
+        assert regimenes_via_fl001 == []
+
+    def test_contraindicacion_explicita_de_otra_regla_no_se_convierte_en_advertencia(self, guidelines_root):
+        """Un régimen excluido por opposes_prescription es distinto a la
+        comorbilidad -- no debe reaparecer con advertencia."""
+        facts = {
+            "cancer_type": "NSCLC", "molecular_pathway_status": "non_oncogene_addicted",
+            "treatment_line": 1, "pdl1_tps": 20,
+            "histology": "non_squamous",
+        }
+        resultado = construir_recomendaciones_tratamiento(1, facts, guidelines_root)
+        regimenes = {c.regimen_id for c in resultado.candidatos}
+        assert "pembro_monotherapy" not in regimenes
+
+
 class TestSinGuiaAplicable:
     def test_diagnostico_que_no_calza_con_ningun_modulo(self, guidelines_root):
         facts = {"cancer_type": "unknown_cancer_type"}

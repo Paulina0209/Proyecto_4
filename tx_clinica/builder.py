@@ -58,19 +58,30 @@ deliberadamente conservador: más vale omitir un régimen que presentarlo
 como sugerencia cuando la propia guía dice lo contrario en otra de sus
 reglas.
 
-Alcance actualmente confirmado: la advertencia explícita de
-"contraindicado con warning visible" para COMORBILIDADES (distinto de
-las contraindicaciones explícitas de arriba, que sí vienen de reglas
-propias) queda PENDIENTE para una iteración posterior — ver
-README_TX01_TX02.md. Hoy, si una comorbilidad hace que una condición de
-entrada de una regla positiva no se cumpla (sin que exista una regla de
-exclusión separada para ese caso), el régimen simplemente no aparece
-como candidato, sin aviso adicional. Es una limitación conocida y
-documentada, no un comportamiento oculto.
+--------------------------------------------------------------------
+Advertencia de comorbilidad (criterio de aceptación #2 de TX-01)
+--------------------------------------------------------------------
+Cuando una comorbilidad hace que una condición de ENTRADA de una regla
+positiva no se cumpla (ej. major_comorbidity_precluding_ici="yes"), esa
+regla da not_applicable como cualquier otra condición no cumplida — el
+régimen simplemente no calificaría. En vez de dejarlo desaparecer en
+silencio, se evalúa una segunda vez, CONTRAFACTUALMENTE: los mismos
+facts, pero con la(s) variable(s) de contraindicación de inmunoterapia
+puestas en su valor "sin contraindicación". Si con eso el régimen SÍ
+calificaría como primera línea, se presenta igual, marcado con
+audit_effect="requires_clinical_review" y una advertencia explícita que
+cita la variable y el valor REAL del paciente que causó la exclusión —
+nunca un motivo inventado.
+
+Esto NO se aplica cuando el régimen fue descartado por una
+contraindicación EXPLÍCITA de otra regla (opposes_prescription/
+potential_deviation) — esas son decisiones ya explícitas de la guía, no
+el caso de "desaparece en silencio" que este mecanismo corrige.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -93,6 +104,28 @@ _EFECTOS_REVISION = {"requires_clinical_review"}
 _EFECTOS_NO_EVALUABLE = {"not_evaluable"}
 # advisory, none, outside_scope: deliberadamente no clasificados; no
 # participan en si un régimen es o no un candidato de tratamiento.
+
+#: Variables que, en al menos un módulo real, representan contraindicación
+#: de inmunoterapia (ICI) por comorbilidad/toxicidad -- confirmadas contra
+#: las 9 guías reales. El valor es el que representa "SIN contraindicación"
+#: para esa variable (las escalas no son uniformes: unas son yes/no, otras
+#: excessive/not_excessive, otra tiene 5 valores categóricos).
+_VARIABLES_CONTRAINDICACION_ICI: dict[str, str] = {
+    "major_comorbidity_precluding_ici": "no",
+    "immunotherapy_contraindication": "no",
+    "immune_checkpoint_inhibitor_contraindication": "no",
+    "immune_checkpoint_inhibitor_toxicity_risk": "not_excessive",
+    "ici_suitability": "eligible",
+}
+
+
+@dataclass(frozen=True)
+class _ResultadoEvaluacion:
+    """Resultado interno de probar un régimen contra un rule-set completo."""
+
+    tipo: str  # "positivo" | "revision" | "no_evaluable" | "negativo" | "ninguno"
+    evaluacion: Optional[RuleEvaluation] = None
+    archivo: Optional[str] = None
 
 
 def _leer_yaml(path: Path) -> Optional[dict[str, Any]]:
@@ -186,7 +219,6 @@ def _iterar_regimenes(payload: dict[str, Any]):
 # Evaluación hipotética de un régimen contra todo el rule-set del módulo
 # ---------------------------------------------------------------------
 
-
 #: Llaves de conclusion.* que nombran explícitamente uno o más régimenes
 #: concretos. Algunas reglas de secuencia usan más de una (inducción +
 #: mantenimiento) -- una regla puede referenciar varios régimenes
@@ -216,6 +248,152 @@ def _evaluaciones_para_archivo(
     return evaluate_rule_set_hypothetical(module_folder / archivo, facts_paciente, overrides)
 
 
+def _buscar_mejor_evaluacion(
+    module_folder: Path,
+    archivos_regla: list[str],
+    facts_paciente: dict[str, Any],
+    overrides: dict[str, Any],
+    regimen_id: str,
+) -> _ResultadoEvaluacion:
+    """Corre el régimen (vía overrides) contra TODOS los rule-sets del
+    módulo y clasifica el mejor resultado encontrado. No decide todavía
+    si hay que armar un RegimenCandidato -- eso lo hace quien llama, para
+    poder reusar esta función tanto en la corrida normal como en la
+    contrafactual de comorbilidad.
+    """
+    mejor_positivo: Optional[tuple[RuleEvaluation, str]] = None
+    mejor_revision: Optional[tuple[RuleEvaluation, str]] = None
+    mejor_no_evaluable: Optional[tuple[RuleEvaluation, str]] = None
+
+    for archivo in archivos_regla:
+        evaluaciones = _evaluaciones_para_archivo(module_folder, archivo, facts_paciente, overrides)
+        for evaluacion in evaluaciones:
+            if evaluacion.status != "applicable":
+                continue
+            conclusion = evaluacion.conclusion or {}
+            audit_effect = conclusion.get("audit_effect")
+
+            regimenes_referenciados = _regimenes_referenciados_en_conclusion(conclusion)
+            if regimenes_referenciados and regimen_id not in regimenes_referenciados:
+                continue
+
+            if audit_effect in _EFECTOS_NEGATIVOS_EXPLICITOS:
+                return _ResultadoEvaluacion(tipo="negativo")
+            if audit_effect in _EFECTOS_POSITIVOS and mejor_positivo is None:
+                mejor_positivo = (evaluacion, archivo)
+            elif audit_effect in _EFECTOS_REVISION and mejor_revision is None:
+                mejor_revision = (evaluacion, archivo)
+            elif audit_effect in _EFECTOS_NO_EVALUABLE and mejor_no_evaluable is None:
+                mejor_no_evaluable = (evaluacion, archivo)
+
+    if mejor_positivo is not None:
+        evaluacion, archivo = mejor_positivo
+        return _ResultadoEvaluacion(tipo="positivo", evaluacion=evaluacion, archivo=archivo)
+    if mejor_revision is not None:
+        evaluacion, archivo = mejor_revision
+        return _ResultadoEvaluacion(tipo="revision", evaluacion=evaluacion, archivo=archivo)
+    if mejor_no_evaluable is not None:
+        evaluacion, archivo = mejor_no_evaluable
+        return _ResultadoEvaluacion(tipo="no_evaluable", evaluacion=evaluacion, archivo=archivo)
+    return _ResultadoEvaluacion(tipo="ninguno")
+
+
+def _detectar_comorbilidad_bloqueante(facts_paciente: dict[str, Any]) -> Optional[tuple[str, Any]]:
+    """Devuelve (variable, valor_real) de la PRIMERA variable de
+    contraindicación de ICI presente en los facts reales del paciente
+    con un valor que SÍ representa contraindicación. None si no hay
+    ninguna."""
+    todas = _comorbilidades_bloqueantes(facts_paciente)
+    return todas[0] if todas else None
+
+
+def _comorbilidades_bloqueantes(facts_paciente: dict[str, Any]) -> list[tuple[str, Any]]:
+    """Todas las variables de contraindicación de ICI presentes en los
+    facts reales con un valor que representa contraindicación (no solo
+    la primera) -- necesario para el chequeo de "¿la regla que califica
+    a este régimen revisó ESTA variable en particular?", porque un
+    paciente puede tener varias comorbilidades activas y la regla puede
+    cubrir solo algunas."""
+    resultado = []
+    for variable, valor_sin_contraindicacion in _VARIABLES_CONTRAINDICACION_ICI.items():
+        valor_real = facts_paciente.get(variable)
+        if valor_real is not None and valor_real != valor_sin_contraindicacion:
+            resultado.append((variable, valor_real))
+    return resultado
+
+
+def _campos_de_condicion(condition: dict[str, Any]) -> set[str]:
+    """Recorre recursivamente un árbol de condiciones (all/any/not/field)
+    y devuelve todos los nombres de campo que la regla realmente revisa.
+    Mismo árbol que evalúa core.engine, pero aquí solo se extraen los
+    nombres de campo, no se evalúa nada."""
+    campos: set[str] = set()
+    if "all" in condition:
+        for hijo in condition["all"]:
+            campos |= _campos_de_condicion(hijo)
+    elif "any" in condition:
+        for hijo in condition["any"]:
+            campos |= _campos_de_condicion(hijo)
+    elif "not" in condition:
+        campos |= _campos_de_condicion(condition["not"])
+    elif "field" in condition:
+        campos.add(condition["field"])
+    return campos
+
+
+def _campos_referenciados_por_regla(module_folder: Path, archivo: str, rule_id: str) -> set[str]:
+    """Qué variables revisa realmente una regla concreta, leyendo el
+    árbol de condiciones crudo del YAML. Se usa para distinguir "la
+    regla revisó esta comorbilidad y decidió que no importa" (nada que
+    hacer) de "la regla nunca preguntó por esta comorbilidad en
+    absoluto" (silencio, no una decisión -- amerita advertencia)."""
+    payload = _leer_yaml(module_folder / archivo) or {}
+    for regla in payload.get("rules", []):
+        if regla.get("id") == rule_id:
+            return _campos_de_condicion(regla.get("conditions") or {})
+    return set()
+
+
+def _comorbilidad_no_evaluada_por_regla(
+    facts_paciente: dict[str, Any], campos_regla: set[str]
+) -> Optional[tuple[str, Any]]:
+    """De todas las comorbilidades bloqueantes del paciente, la primera
+    que la regla ganadora NUNCA menciona en sus condiciones -- es decir,
+    una contraindicación real que nadie verificó, no una que la regla ya
+    revisó y descartó."""
+    for variable, valor_real in _comorbilidades_bloqueantes(facts_paciente):
+        if variable not in campos_regla:
+            return variable, valor_real
+    return None
+
+
+def _construir_candidato(
+    module_folder: Path,
+    regimen_id: str,
+    fase: Optional[str],
+    farmacos: list[str],
+    facts_paciente: dict[str, Any],
+    resultado: _ResultadoEvaluacion,
+    audit_effect_final: str,
+    advertencia_comorbilidad: Optional[str] = None,
+) -> RegimenCandidato:
+    evidencia = obtener_evidencia_regla(module_folder, resultado.archivo, resultado.evaluacion.rule_id)
+    return RegimenCandidato(
+        regimen_id=regimen_id,
+        fase=str(fase or ""),
+        farmacos=tuple(farmacos),
+        rule_id_disparada=resultado.evaluacion.rule_id,
+        archivo_regla=resultado.archivo,
+        audit_effect=audit_effect_final,
+        field_ids_usados=tuple(
+            k for k in facts_paciente
+            if k not in ("prescribed_antineoplastic_drugs", "prescribed_regimen_id", "treatment_phase", "treatment_line")
+        ),
+        evidencia=evidencia,
+        advertencia_comorbilidad=advertencia_comorbilidad,
+    )
+
+
 def _evaluar_regimen_hipotetico(
     module_folder: Path,
     archivos_regla: list[str],
@@ -224,10 +402,10 @@ def _evaluar_regimen_hipotetico(
 ) -> Optional[RegimenCandidato]:
     """Evalúa un régimen hipotético contra TODOS los rule-sets del módulo.
 
-    Revisa cada regla aplicable (no se detiene en la primera positiva),
-    porque una regla de exclusión en otro archivo puede contradecir una
-    regla positiva de otro. Cualquier audit_effect negativo explícito
-    descarta el régimen por completo.
+    Si el régimen no calificaría por una comorbilidad de contraindicación
+    de ICI (y no por una contraindicación explícita de otra regla),
+    reintenta contrafactualmente sin esa comorbilidad -- ver docstring
+    del módulo, sección "Advertencia de comorbilidad".
     """
     farmacos = _extraer_farmacos(regimen)
     if farmacos is None:
@@ -246,67 +424,70 @@ def _evaluar_regimen_hipotetico(
     if "treatment_line" in regimen:
         overrides["treatment_line"] = regimen["treatment_line"]
 
-    mejor_positivo: Optional[tuple[RuleEvaluation, str]] = None
-    mejor_revision: Optional[tuple[RuleEvaluation, str]] = None
-    mejor_no_evaluable: Optional[tuple[RuleEvaluation, str]] = None
+    resultado = _buscar_mejor_evaluacion(module_folder, archivos_regla, facts_paciente, overrides, regimen_id)
 
-    for archivo in archivos_regla:
-        evaluaciones = _evaluaciones_para_archivo(module_folder, archivo, facts_paciente, overrides)
-        for evaluacion in evaluaciones:
-            if evaluacion.status != "applicable":
-                continue
-            conclusion = evaluacion.conclusion or {}
-            audit_effect = conclusion.get("audit_effect")
+    if resultado.tipo == "negativo":
+        return None
+    if resultado.tipo == "positivo":
+        # Antes de darlo por bueno como primera línea sin más: ¿la regla
+        # que lo respalda revisó TODAS las comorbilidades bloqueantes
+        # que el paciente tiene? Si el paciente tiene una contraindicación
+        # de ICI que esta regla en particular nunca menciona en sus
+        # condiciones, el silencio de la regla sobre esa variable no es
+        # una decisión clínica -- es que nadie la verificó. Se degrada
+        # con advertencia en vez de presentarlo como primera línea sin
+        # reservas (caso real confirmado: ESMO-NSCLC-M-FL-001 no revisa
+        # major_comorbidity_precluding_ici, solo immunotherapy_contraindication).
+        campos_regla = _campos_referenciados_por_regla(module_folder, resultado.archivo, resultado.evaluacion.rule_id)
+        comorbilidad_ignorada = _comorbilidad_no_evaluada_por_regla(facts_paciente, campos_regla)
+        if comorbilidad_ignorada is not None:
+            variable, valor_real = comorbilidad_ignorada
+            advertencia = (
+                f"El paciente tiene {variable}={valor_real!r} (comorbilidad que contraindica "
+                f"inmunoterapia), pero la regla {resultado.evaluacion.rule_id} que respalda este "
+                f"régimen no evalúa esa variable en sus condiciones -- nadie la verificó. "
+                f"Requiere revisión clínica antes de presentarse como primera línea."
+            )
+            return _construir_candidato(
+                module_folder, regimen_id, fase, farmacos, facts_paciente,
+                resultado, "requires_clinical_review", advertencia_comorbilidad=advertencia,
+            )
+        return _construir_candidato(module_folder, regimen_id, fase, farmacos, facts_paciente, resultado, "supports_prescription")
+    if resultado.tipo == "revision":
+        return _construir_candidato(module_folder, regimen_id, fase, farmacos, facts_paciente, resultado, "requires_clinical_review")
+    if resultado.tipo == "no_evaluable":
+        return _construir_candidato(module_folder, regimen_id, fase, farmacos, facts_paciente, resultado, "not_evaluable")
 
-            # Si la regla nombra explícitamente un régimen concreto en su
-            # conclusión, esa es la respuesta autoritativa -- si no
-            # coincide con el régimen que estamos probando ahora, esta
-            # regla NO es sobre este régimen (aunque sus demás
-            # condiciones -- estadio, fase, elegibilidad -- sí se
-            # cumplan). Evita atribuir candidatos falsos cuando la regla
-            # no condiciona sobre fármacos en absoluto.
-            regimenes_referenciados = _regimenes_referenciados_en_conclusion(conclusion)
-            if regimenes_referenciados and regimen_id not in regimenes_referenciados:
-                continue
-
-            if audit_effect in _EFECTOS_NEGATIVOS_EXPLICITOS:
-                # Contraindicación explícita en cualquier archivo del
-                # módulo: el régimen se descarta por completo, sin
-                # importar qué más haya dicho otra regla.
-                return None
-            if audit_effect in _EFECTOS_POSITIVOS and mejor_positivo is None:
-                mejor_positivo = (evaluacion, archivo)
-            elif audit_effect in _EFECTOS_REVISION and mejor_revision is None:
-                mejor_revision = (evaluacion, archivo)
-            elif audit_effect in _EFECTOS_NO_EVALUABLE and mejor_no_evaluable is None:
-                mejor_no_evaluable = (evaluacion, archivo)
-
-    elegido, archivo_elegido, audit_effect_final = None, None, None
-    if mejor_positivo is not None:
-        elegido, archivo_elegido = mejor_positivo
-        audit_effect_final = "supports_prescription"
-    elif mejor_revision is not None:
-        elegido, archivo_elegido = mejor_revision
-        audit_effect_final = "requires_clinical_review"
-    elif mejor_no_evaluable is not None:
-        elegido, archivo_elegido = mejor_no_evaluable
-        audit_effect_final = "not_evaluable"
-    else:
+    # resultado.tipo == "ninguno": el régimen no calificó con los facts
+    # reales. Antes de descartarlo, revisar si la causa es una
+    # comorbilidad de contraindicación de ICI -- si sin ella SÍ
+    # calificaría como primera línea, se presenta con advertencia en vez
+    # de desaparecer en silencio (criterio de aceptación #2 de TX-01).
+    comorbilidad = _detectar_comorbilidad_bloqueante(facts_paciente)
+    if comorbilidad is None:
         return None
 
-    evidencia = obtener_evidencia_regla(module_folder, archivo_elegido, elegido.rule_id)
-    return RegimenCandidato(
-        regimen_id=regimen_id,
-        fase=str(fase or ""),
-        farmacos=tuple(farmacos),
-        rule_id_disparada=elegido.rule_id,
-        archivo_regla=archivo_elegido,
-        audit_effect=audit_effect_final,
-        field_ids_usados=tuple(
-            k for k in facts_paciente
-            if k not in ("prescribed_antineoplastic_drugs", "prescribed_regimen_id", "treatment_phase", "treatment_line")
-        ),
-        evidencia=evidencia,
+    variable, valor_real = comorbilidad
+    valor_sin_contraindicacion = _VARIABLES_CONTRAINDICACION_ICI[variable]
+    facts_sin_comorbilidad = {**facts_paciente, variable: valor_sin_contraindicacion}
+
+    resultado_contrafactual = _buscar_mejor_evaluacion(
+        module_folder, archivos_regla, facts_sin_comorbilidad, overrides, regimen_id
+    )
+    if resultado_contrafactual.tipo != "positivo":
+        # Ni siquiera sin la comorbilidad calificaría -- no es un caso de
+        # "comorbilidad bloqueó primera línea", es que el régimen
+        # genuinamente no aplica por otras razones. No se fuerza nada.
+        return None
+
+    advertencia = (
+        f"Este régimen calificaría como primera línea, pero el paciente tiene "
+        f"{variable}={valor_real!r}, lo que contraindica inmunoterapia según la guía. "
+        f"Requiere revisión clínica antes de presentarse como primera línea."
+    )
+    return _construir_candidato(
+        module_folder, regimen_id, fase, farmacos, facts_paciente,
+        resultado_contrafactual, "requires_clinical_review", advertencia_comorbilidad=advertencia,
     )
 
 
@@ -344,9 +525,9 @@ def construir_recomendaciones_tratamiento(
             candidatos.append(candidato)
 
     # Orden explicable: primero las que sí se respaldan como primera
-    # línea; luego las que requieren revisión; luego las no evaluables.
-    # Dentro de cada grupo, se conserva el orden de regimens.yaml (que ya
-    # refleja el orden clínico del módulo). Nunca se ordena por un score
+    # línea; luego las que requieren revisión (incluye las de
+    # comorbilidad); luego las no evaluables. Dentro de cada grupo, se
+    # conserva el orden de regimens.yaml. Nunca se ordena por un score
     # inventado.
     orden_prioridad = {"supports_prescription": 0, "requires_clinical_review": 1, "not_evaluable": 2}
     candidatos.sort(key=lambda c: orden_prioridad.get(c.audit_effect, 3))

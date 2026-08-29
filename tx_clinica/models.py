@@ -75,10 +75,17 @@ class RegimenCandidato:
     audit_effect: str  # "supports_prescription" | "requires_clinical_review" | ...
     field_ids_usados: Tuple[str, ...]  # facts reales del paciente usados en la evaluación
     evidencia: Optional[TreatmentEvidenceReference]
+    #: Distinto de None cuando este candidato solo aparece porque, SIN la
+    #: comorbilidad registrada, calificaría como primera línea -- criterio
+    #: de aceptación #2 de TX-01: "no se presenta como primera línea, O SE
+    #: PRESENTA CON LA ADVERTENCIA CORRESPONDIENTE". El texto cita la
+    #: variable y el valor real del paciente que causó la exclusión, nunca
+    #: uno inventado.
+    advertencia_comorbilidad: Optional[str] = None
 
     @property
     def es_primera_opcion(self) -> bool:
-        return self.audit_effect == "supports_prescription"
+        return self.audit_effect == "supports_prescription" and self.advertencia_comorbilidad is None
 
 
 @dataclass(frozen=True)

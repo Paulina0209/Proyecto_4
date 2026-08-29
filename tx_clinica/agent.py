@@ -105,6 +105,7 @@ def _construir_respuesta_recomendaciones(patient_id: int, facts: dict[str, Any])
                     "audit_effect": c.audit_effect,
                     "rule_id_disparada": c.rule_id_disparada,
                     "evidencia": c.evidencia.resumen_citable() if c.evidencia else None,
+                    "advertencia_comorbilidad": c.advertencia_comorbilidad,
                 }
                 for c in resultado.candidatos
             ],
@@ -333,10 +334,21 @@ estructura los facts y usa obtener_recomendaciones_tratamiento_con_datos.
 - SIEMPRE debes llamar una de las tools de recomendación antes de sugerir \
 cualquier tratamiento -- nunca respondas con conocimiento propio sobre qué \
 régimen es apropiado.
+- CADA VEZ que el oncólogo describa un caso clínico y pida una recomendación, \
+así se parezca a un caso anterior de esta misma conversación, DEBES volver a \
+llamar la tool con los datos de ESTE mensaje -- PROHIBIDO reutilizar, copiar \
+o parafrasear el resultado de una tool de un turno anterior para responder a \
+un caso nuevo. Cada paciente/caso descrito es una llamada nueva, sin \
+excepción, incluso si los regímenes terminan siendo los mismos.
 - Si la tool indica sin_guia_aplicable=true, dilo explícitamente en vez de \
 sugerir algo genérico. Si no hay candidatos, dilo explícitamente.
 - Cita únicamente los regimen_id, fases y evidencia que la tool haya \
 devuelto -- nunca menciones un régimen que no esté en la respuesta de la tool.
+- Si un candidato trae advertencia_comorbilidad distinta de null, SIEMPRE \
+menciónala explícitamente en tu respuesta y deja claro que ese régimen NO \
+se presenta como primera línea sin revisión -- nunca omitas esa advertencia \
+ni la presentes como si el régimen fuera una recomendación de primera línea \
+normal.
 - Deja siempre claro que esto es apoyo a la decisión clínica, no una \
 prescripción."""
 
