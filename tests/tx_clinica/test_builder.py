@@ -19,8 +19,6 @@ durante el desarrollo:
   - regimens.yaml como lista Y como diccionario keyed por id
   - matching por prescribed_regimen_id en vez de prescribed_antineoplastic_drugs
   - formato de régimen no reconocido (debe excluirse, no adivinarse)
-
-Corre con:  python -m pytest tx_clinica/tests -v
 """
 
 from __future__ import annotations

@@ -1,58 +1,13 @@
-"""Agente conversacional (LangChain + Ollama local) para TX-01.
-
-Diseño acordado explícitamente con el curso (se exige agente/tool-calling
-para esta historia): el agente SIEMPRE pasa por las tools deterministas
-para obtener datos del paciente y candidatos de tratamiento -- nunca lee
-ni interpreta directamente el YAML de guidelines/ ni decide un régimen
-por su cuenta. Las tools son wrappers delgados sobre
-tx_clinica.builder/tx_clinica.patient_facts (deterministas) y devuelven
-JSON estructurado; el LLM solo:
-  1. decide qué paciente corresponde (por id, si el oncólogo lo da) o
-     construye los facts a partir de lo que el oncólogo describió en el
-     chat (si no hay un paciente registrado),
-  2. llama las tools en el orden correcto,
-  3. redacta una respuesta en lenguaje natural a partir de lo que las
-     tools devolvieron.
-
-Tres tools:
-  - obtener_datos_paciente: lee la base de datos mock y devuelve los
-    facts estructurados de un paciente ya registrado (para que el
-    oncólogo pueda preguntar "¿qué datos tiene el paciente 3?").
-  - obtener_recomendaciones_tratamiento_por_id: recomendación para un
-    paciente YA REGISTRADO en la base de datos (busca sus facts solo,
-    sin que el oncólogo tenga que repetirlos).
-  - obtener_recomendaciones_tratamiento_con_datos: recomendación para un
-    caso descrito directamente en el chat (sin ID de paciente, sin base
-    de datos) -- el oncólogo escribe los datos clínicos y el agente los
-    estructura como el objeto de facts (dict) que la tool espera.
-
-Validación post-respuesta: cualquier regimen_id que el agente mencione en
-su respuesta final debe existir en el resultado de la tool que llamó en
-este turno. Si no, se descarta la respuesta (mismo principio que
-generator.py de IA-02 validando source_span_ids).
-
-NOTA DE MIGRACIÓN (langchain 1.x):
-  Esta versión usa `create_agent`, la API vigente en langchain>=1.0
-  (AgentExecutor y create_tool_calling_agent quedaron en el paquete
-  legacy). Cambia también cómo se invoca el agente resultante:
-
-    agente = construir_agente()
-    resultado = agente.invoke({"messages": [{"role": "user", "content": pregunta}]})
-    respuesta_texto = resultado["messages"][-1].content
-
-  En vez de `agente.invoke({"input": pregunta})["output"]` como con
-  AgentExecutor. Si demo_tx.py todavía usa la forma vieja, hay que
-  actualizarlo también.
-"""
-
 from __future__ import annotations
 
 import json
 import sqlite3
 import threading
+import unicodedata
 from pathlib import Path
 from typing import Any, Optional
 
+import yaml
 from langchain.agents import create_agent
 from langchain_core.tools import tool
 from langchain_ollama import ChatOllama
@@ -61,6 +16,8 @@ from historia_clinica_mock.db import crear_conexion
 from historia_clinica_mock.repository import obtener_paciente
 from historia_clinica_mock.seed import sembrar_datos_sinteticos
 from tx_clinica.builder import construir_recomendaciones_tratamiento
+from tx_clinica.models import SIN_GUIA_APLICABLE
+from tx_clinica.module_selector import MODULOS_FUERA_DE_ALCANCE
 from tx_clinica.patient_facts import construir_facts_paciente
 
 GUIDELINES_ROOT = Path("guidelines")  # ajustar a la raíz real del repo
@@ -129,7 +86,12 @@ def _construir_respuesta_recomendaciones(patient_id: int, facts: dict[str, Any])
     resultado = construir_recomendaciones_tratamiento(patient_id, facts, GUIDELINES_ROOT)
 
     if resultado.sin_guia_aplicable:
-        return json.dumps({"sin_guia_aplicable": True, "mensaje": resultado.disclaimer}, ensure_ascii=False)
+        # SIN_GUIA_APLICABLE (mensaje específico: "no hay módulo de guía
+        # que aplique a este caso") es DISTINTO de resultado.disclaimer
+        # (mensaje genérico: "esto es apoyo, no prescripción"). Usar el
+        # genérico aquí producía respuestas contradictorias del agente
+        # ("no hay opción específica" + "estas son las opciones sugeridas").
+        return json.dumps({"sin_guia_aplicable": True, "mensaje": SIN_GUIA_APLICABLE}, ensure_ascii=False)
 
     return json.dumps(
         {
@@ -179,10 +141,166 @@ def obtener_recomendaciones_tratamiento_con_datos(facts_paciente: dict[str, Any]
     ECOG, etc.), usando el vocabulario de variables.yaml del módulo que
     aplique. Usa esta tool cuando el oncólogo describa un caso hipotético
     o un paciente que no está en la base de datos. No completes ni
-    inventes variables que el oncólogo no mencionó -- pásalas tal cual
-    las dio; si falta un dato, la tool ya maneja eso mostrando el
-    régimen como no evaluable en vez de asumir un valor."""
+    inventes variables que el oncólogo no mencionó -- si no sabes qué
+    campos pedir, usa primero listar_variables_requeridas."""
     return _construir_respuesta_recomendaciones(-1, facts_paciente)
+
+
+def _normalizar(texto: str) -> str:
+    texto = unicodedata.normalize("NFKD", texto)
+    texto = "".join(c for c in texto if not unicodedata.combining(c))
+    texto = texto.casefold()
+    # Unifica separadores (espacio, guión, guión bajo) para que
+    # "NSCLC metastatic non-oncogene" (lenguaje natural) sí compare
+    # igual que "nsclc_metastatic_non_oncogene" (nombre real de carpeta).
+    for separador in ("-", "_"):
+        texto = texto.replace(separador, " ")
+    return " ".join(texto.split())
+
+
+def _leer_yaml(path: Path) -> Optional[dict[str, Any]]:
+    if not path.exists():
+        return None
+    with path.open("r", encoding="utf-8-sig") as f:
+        return yaml.safe_load(f)
+
+
+@tool
+def listar_variables_requeridas(cancer_type_o_modulo: str) -> str:
+    """Devuelve, en JSON, la lista de variables clínicas (nombre y
+    valores permitidos) que un módulo de guía necesita para poder
+    evaluar tratamiento. Usa esta tool SIEMPRE que el oncólogo pida una
+    recomendación de tratamiento sin haber dado datos clínicos
+    suficientes todavía, o pregunte explícitamente qué información
+    necesitas -- nunca inventes ni asumas qué campos pedir, esta tool te
+    da los reales.
+
+    cancer_type_o_modulo puede ser el tipo de cáncer en lenguaje natural
+    (ej. 'cáncer de pulmón', 'melanoma') o el nombre EXACTO de la carpeta
+    del módulo si ya lo conoces (ej. 'nsclc_metastatic_non_oncogene').
+
+    IMPORTANTE: si varios módulos de guía coinciden con lo que
+    escribiste (ej. 'NSCLC' coincide con 3 módulos distintos: temprano,
+    metastásico sin oncogén, y metastásico con oncogén conductor), esta
+    tool NO elige uno por ti -- te devuelve
+    necesita_desambiguacion=true con la lista de módulos posibles y su
+    alcance clínico. En ese caso, pregúntale al oncólogo cuál aplica
+    (o vuelve a llamar esta tool con el nombre EXACTO de carpeta del
+    módulo correcto una vez lo sepas) -- nunca asumas cuál es el
+    correcto ni mezcles variables de un módulo con otro."""
+    consulta = _normalizar(cancer_type_o_modulo)
+
+    if not GUIDELINES_ROOT.exists():
+        return json.dumps({"error": "No se encontró la carpeta guidelines/."})
+
+    modulos_activos = [
+        p for p in sorted(GUIDELINES_ROOT.iterdir())
+        if p.is_dir() and p.name not in MODULOS_FUERA_DE_ALCANCE
+    ]
+
+    # Coincidencia EXACTA de nombre de carpeta: nunca es ambigua, se usa
+    # directo aunque el texto también matchee otros módulos por substring.
+    coincidencia_exacta = next((p for p in modulos_activos if _normalizar(p.name) == consulta), None)
+    if coincidencia_exacta is not None:
+        return _variables_de_modulo(coincidencia_exacta)
+
+    candidatos = []
+    for carpeta in modulos_activos:
+        if consulta in _normalizar(carpeta.name) or _normalizar(carpeta.name) in consulta:
+            candidatos.append(carpeta)
+            continue
+        metadata = _leer_yaml(carpeta / "metadata.yaml") or {}
+        texto_metadata = _normalizar(
+            str(metadata.get("name", "")) + " " + str(metadata.get("clinical_scope", ""))
+        )
+        if consulta and consulta in texto_metadata:
+            candidatos.append(carpeta)
+
+    if not candidatos:
+        return json.dumps({
+            "error": f"No se encontró ningún módulo de guía que coincida con '{cancer_type_o_modulo}'.",
+            "modulos_disponibles": [p.name for p in modulos_activos],
+        }, ensure_ascii=False)
+
+    if len(candidatos) > 1:
+        # Ambigüedad real: varios módulos coinciden (ej. "NSCLC" matchea
+        # temprano/metastásico-sin-oncogén/metastásico-con-oncogén). No
+        # se adivina cuál -- se listan todos con su alcance clínico Y un
+        # resumen de evidencia (organización, año, validación, cantidad
+        # de reglas positivas) para que el ONCÓLOGO decida cuál aplica,
+        # o vuelva a llamar esta tool con el nombre exacto de carpeta
+        # una vez lo sepa.
+        opciones = []
+        for carpeta in candidatos:
+            metadata = _leer_yaml(carpeta / "metadata.yaml") or {}
+            opciones.append({
+                "modulo": carpeta.name,
+                "nombre": metadata.get("name"),
+                "alcance_clinico": metadata.get("clinical_scope"),
+                "evidencia_del_modulo": _resumen_evidencia_modulo(carpeta, metadata),
+            })
+        return json.dumps({
+            "necesita_desambiguacion": True,
+            "modulos_posibles": opciones,
+        }, ensure_ascii=False)
+
+    return _variables_de_modulo(candidatos[0])
+
+
+def _resumen_evidencia_modulo(carpeta: Path, metadata: dict[str, Any]) -> dict[str, Any]:
+    """Resumen de evidencia a nivel de módulo -- no decide nada por el
+    oncólogo, solo le da contexto real (cuántas reglas hay, con qué
+    respaldo) para que él elija entre módulos ambiguos con más
+    información que solo el nombre."""
+    source = metadata.get("source") or {}
+    validation = metadata.get("validation") or {}
+
+    total_reglas = 0
+    reglas_con_soporte_positivo = 0
+    niveles_evidencia_presentes: set[str] = set()
+
+    rules_dir = carpeta / "rules"
+    if rules_dir.exists():
+        for archivo in sorted(rules_dir.glob("*.yaml")):
+            payload = _leer_yaml(archivo) or {}
+            for regla in payload.get("rules", []):
+                total_reglas += 1
+                conclusion = regla.get("conclusion") or {}
+                if conclusion.get("audit_effect") == "supports_prescription":
+                    reglas_con_soporte_positivo += 1
+                nivel = ((regla.get("evidence") or {}).get("native") or {}).get("evidence_level")
+                if nivel:
+                    niveles_evidencia_presentes.add(str(nivel))
+
+    return {
+        "organizacion": metadata.get("organization"),
+        "titulo_fuente": source.get("title"),
+        "anio_publicacion": source.get("publication_year"),
+        "doi": source.get("doi"),
+        "estado_validacion_clinica": validation.get("clinical_validation_status"),
+        "total_reglas_en_el_modulo": total_reglas,
+        "reglas_con_recomendacion_positiva": reglas_con_soporte_positivo,
+        "niveles_de_evidencia_presentes": sorted(niveles_evidencia_presentes),
+    }
+
+
+def _variables_de_modulo(carpeta: Path) -> str:
+    variables_payload = _leer_yaml(carpeta / "variables.yaml") or {}
+    variables = variables_payload.get("variables", {})
+
+    resumen = {}
+    for nombre, definicion in variables.items():
+        if not isinstance(definicion, dict):
+            continue
+        entrada: dict[str, Any] = {"tipo": definicion.get("type")}
+        if "allowed_values" in definicion:
+            entrada["valores_permitidos"] = definicion["allowed_values"]
+        resumen[nombre] = entrada
+
+    return json.dumps(
+        {"necesita_desambiguacion": False, "modulo": carpeta.name, "variables_disponibles": resumen},
+        ensure_ascii=False,
+    )
 
 
 _SYSTEM_PROMPT = """Eres un asistente que ayuda a un oncólogo a consultar datos de \
@@ -193,9 +311,25 @@ Reglas obligatorias:
 registrado, usa obtener_datos_paciente y/o obtener_recomendaciones_tratamiento_por_id \
 -- nunca le pidas que repita datos que ya están en la base de datos.
 - Si el oncólogo describe un caso clínico directamente en el chat (sin \
-referirse a un paciente registrado), estructura lo que dijo como JSON y \
-usa obtener_recomendaciones_tratamiento_con_datos. No inventes valores \
-para datos que el oncólogo no mencionó.
+referirse a un paciente registrado) y pide una recomendación de tratamiento, \
+llama primero listar_variables_requeridas para saber el vocabulario exacto \
+del módulo correspondiente. Si necesita_desambiguacion=true, pregúntale al \
+oncólogo cuál de los módulos posibles aplica (usando el alcance clínico y la \
+evidencia de cada uno que la tool te dio) -- nunca elijas uno por tu cuenta.
+- Después de tener la lista de variables del módulo correcto, extrae DE LO \
+QUE EL ONCÓLOGO YA ESCRIBIÓ todos los valores que puedas mapear directamente \
+-- no le pidas que repita datos que ya dio en su mensaje original.
+- PROHIBIDO inventar, adivinar o asumir un valor por defecto para CUALQUIER \
+variable que el oncólogo no haya mencionado explícitamente (ej. no asumas \
+histology=non_squamous, ecog_ps=0, ni ningún otro valor "típico" o "más \
+común"). Si una variable relevante falta, pregúntala explícitamente por su \
+nombre real y sus valores permitidos -- nunca la incluyas en el JSON de \
+facts como si el oncólogo la hubiera dado.
+- No le pidas al oncólogo que "confirme" datos que ya te dio con claridad en \
+su mensaje original -- eso genera fricción innecesaria. Solo pregunta por \
+las variables genuinamente ausentes.
+- Solo cuando tengas datos suficientes (sin haber inventado ninguno), \
+estructura los facts y usa obtener_recomendaciones_tratamiento_con_datos.
 - SIEMPRE debes llamar una de las tools de recomendación antes de sugerir \
 cualquier tratamiento -- nunca respondas con conocimiento propio sobre qué \
 régimen es apropiado.
@@ -225,5 +359,6 @@ def construir_agente(model: str = "qwen2.5:14b-instruct-q4_K_M"):
         obtener_datos_paciente,
         obtener_recomendaciones_tratamiento_por_id,
         obtener_recomendaciones_tratamiento_con_datos,
+        listar_variables_requeridas,
     ]
     return create_agent(model=llm, tools=tools, system_prompt=_SYSTEM_PROMPT)
