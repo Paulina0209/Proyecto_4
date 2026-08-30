@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass(frozen=True)
@@ -215,3 +215,71 @@ def _fila_a_biomarcador(row: sqlite3.Row) -> Biomarcador:
         biomarcador=row["biomarcador"],
         resultado=row["resultado"],
     )
+
+@dataclass(frozen=True)
+class DatoClinicoEstructurado:
+    id: int
+    paciente_id: int
+    consulta_id: Optional[int]
+    fecha: str
+    variable: str
+    valor: str
+ 
+ 
+@dataclass(frozen=True)
+class Comorbilidad:
+    id: int
+    paciente_id: int
+    consulta_id: Optional[int]
+    fecha_registro: str
+    condicion: str
+    severidad: Optional[str]
+    tipo_contraindicacion_ici: Optional[str]  # 'immediate' | 'absolute' | None
+ 
+ 
+def datos_clinicos_estructurados_de_paciente(
+    conn: sqlite3.Connection, paciente_id: int
+) -> List[DatoClinicoEstructurado]:
+    rows = conn.execute(
+        "SELECT * FROM datos_clinicos_estructurados WHERE paciente_id = ? ORDER BY fecha",
+        (paciente_id,),
+    ).fetchall()
+    return [
+        DatoClinicoEstructurado(
+            id=row["id"],
+            paciente_id=row["paciente_id"],
+            consulta_id=row["consulta_id"],
+            fecha=row["fecha"],
+            variable=row["variable"],
+            valor=row["valor"],
+        )
+        for row in rows
+    ]
+ 
+ 
+def comorbilidades_de_paciente(conn: sqlite3.Connection, paciente_id: int) -> List[Comorbilidad]:
+    rows = conn.execute(
+        "SELECT * FROM comorbilidades WHERE paciente_id = ? ORDER BY fecha_registro",
+        (paciente_id,),
+    ).fetchall()
+    return [
+        Comorbilidad(
+            id=row["id"],
+            paciente_id=row["paciente_id"],
+            consulta_id=row["consulta_id"],
+            fecha_registro=row["fecha_registro"],
+            condicion=row["condicion"],
+            severidad=row["severidad"],
+            tipo_contraindicacion_ici=row["tipo_contraindicacion_ici"],
+        )
+        for row in rows
+    ]
+ 
+ 
+def facts_estructurados_de_paciente(conn: sqlite3.Connection, paciente_id: int) -> Dict[str, str]:
+    ultimo_por_variable: Dict[str, DatoClinicoEstructurado] = {}
+    for dato in datos_clinicos_estructurados_de_paciente(conn, paciente_id):
+        actual = ultimo_por_variable.get(dato.variable)
+        if actual is None or dato.fecha >= actual.fecha:
+            ultimo_por_variable[dato.variable] = dato
+    return {variable: dato.valor for variable, dato in ultimo_por_variable.items()}

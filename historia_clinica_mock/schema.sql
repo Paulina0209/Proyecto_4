@@ -55,3 +55,22 @@ CREATE TABLE IF NOT EXISTS biomarcadores (
     biomarcador TEXT NOT NULL,
     resultado TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS datos_clinicos_estructurados (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    paciente_id INTEGER NOT NULL REFERENCES pacientes(id),
+    consulta_id INTEGER REFERENCES consultas(id),
+    fecha TEXT NOT NULL,
+    variable TEXT NOT NULL,
+    valor TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS comorbilidades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    paciente_id INTEGER NOT NULL REFERENCES pacientes(id),
+    consulta_id INTEGER REFERENCES consultas(id),
+    fecha_registro TEXT NOT NULL,
+    condicion TEXT NOT NULL,
+    severidad TEXT,
+    tipo_contraindicacion_ici TEXT
+);

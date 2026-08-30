@@ -11,6 +11,18 @@ from langgraph.graph import StateGraph, END
 from langgraph.types import Send
 
 
+def _build_anthropic_client(api_key: str):
+    """Cliente de Anthropic con mas reintentos que el default (2) sobre
+    errores transitorios (529 overloaded, 500, timeouts) -- el SDK ya hace
+    backoff exponencial solo, esto amplia el margen antes de que un pico de
+    demanda tire abajo la corrida completa de un modulo."""
+    import anthropic
+
+    return anthropic.Anthropic(api_key=api_key, max_retries=6, timeout=120.0)
+
+
+
+
 # ---------------------------------------------------------------------------
 # 1. Estado del grafo
 # ---------------------------------------------------------------------------
@@ -33,6 +45,9 @@ class GraphState(TypedDict):
     module_id: str
     api_key: str
     model: str
+    # modelo (mas barato, opcional) para el paso de clasificacion de
+    # cambios; por defecto es igual a 'model' -- ver rule_agent.py
+    detection_model: str
 
     # entrada, con la misma forma que recibe LLMClient.draft_rule_change
     current_rules_text: str
@@ -185,8 +200,10 @@ def _build_shared_context_block(state: GraphState) -> dict:
     )
 
     # cache_control marca este bloque para prompt caching: si hay varias
-    # tandas de imagenes, este texto (que puede ser grande) se repaga
-    # solo la primera vez y las siguientes llamadas leen del cache.
+    # tandas de imagenes, este texto (que puede ser grande) se paga completo
+    # solo la primera vez (1.25x el precio base de input) y las siguientes
+    # tandas leen del cache a 0.1x el precio base -- une ahorro real cuando
+    # un modulo tiene mas de _MAX_IMAGES_PER_BATCH slides.
     return {"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}
 
 
@@ -227,18 +244,23 @@ def _call_detect_batch(
         )
 
     response = client.messages.create(
-        model=state["model"],
+        model=state["detection_model"],
         max_tokens=16000,
-        system=_DETECT_SYSTEM_PROMPT,
+        # System tambien con cache_control: se repite identico en cada
+        # tanda y en cada modulo procesado en la misma corrida -- es chico
+        # (unos cientos de tokens) pero cachearlo es gratis.
+        system=[
+            {
+                "type": "text",
+                "text": _DETECT_SYSTEM_PROMPT,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ],
         messages=[{"role": "user", "content": content}],
     )
     raw = "".join(block.text for block in response.content if block.type == "text")
 
     if response.stop_reason == "max_tokens":
-        # Corte explicito por limite de tokens -- se deja constancia como
-        # tal en vez de mandarlo a _parse_changes_json, que lo hubiera
-        # reportado como "no se pudo parsear" (JSON mal formado) sin
-        # aclarar que la causa fue el limite y no el modelo.
         return [
             {
                 "description": (
@@ -257,9 +279,7 @@ def _call_detect_batch(
 
 
 def detect_and_classify_changes_node(state: GraphState) -> dict:
-    import anthropic
-
-    client = anthropic.Anthropic(api_key=state["api_key"])
+    client = _build_anthropic_client(state["api_key"])
     shared_block = _build_shared_context_block(state)
     images = state["new_document_images"]
 
@@ -372,9 +392,7 @@ def _strip_yaml_fence(raw):
 
 
 def generate_file_proposal_node(state: FileProposalState) -> dict:
-    import anthropic
-
-    client = anthropic.Anthropic(api_key=state["api_key"])
+    client = _build_anthropic_client(state["api_key"])
 
     user_text = (
         f"Archivo: {state['target_file']}\n\n"
@@ -387,7 +405,13 @@ def generate_file_proposal_node(state: FileProposalState) -> dict:
         response = client.messages.create(
             model=state["model"],
             max_tokens=8000,
-            system=_GENERATE_FILE_SYSTEM_PROMPT,
+            system=[
+                {
+                    "type": "text",
+                    "text": _GENERATE_FILE_SYSTEM_PROMPT,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
             messages=[{"role": "user", "content": user_text}],
         )
         raw = "".join(block.text for block in response.content if block.type == "text").strip()

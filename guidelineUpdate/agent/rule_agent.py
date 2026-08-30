@@ -4,6 +4,7 @@ import datetime
 import re
 import shutil
 
+
 from . import pptx_text
 
                                                           
@@ -190,9 +191,17 @@ class RuleBasedLLMClient(LLMClient):
 
 class LangGraphLLMClient(LLMClient):
     
-    def __init__(self, api_key, model="claude-sonnet-5"):
+
+    def __init__(self, api_key, model="claude-sonnet-5", detection_model=None):
         self.api_key = api_key
         self.model = model
+        # Paso de deteccion/clasificacion de cambios: es una tarea de
+        # clasificacion estructurada contra una tabla ya verificada, no la
+        # redaccion final de la regla clinica -- si se quiere usar un modelo
+        # mas economico (p.ej. "claude-haiku-4-5-20251001") solo para ese
+        # paso, se puede pasar aca. Por defecto usa el mismo modelo que la
+        # generacion (sin cambio de comportamiento si no se especifica).
+        self.detection_model = detection_model or model
         self._app = None
 
     def draft_rule_change(self, current_rules_text, new_document_text, module_id,
@@ -218,6 +227,7 @@ class LangGraphLLMClient(LLMClient):
             "module_id": module_id,
             "api_key": self.api_key,
             "model": self.model,
+            "detection_model": self.detection_model,
             "current_rules_text": current_rules_text,
             "new_document_text": new_document_text,
             "new_document_images": new_document_images or [],
