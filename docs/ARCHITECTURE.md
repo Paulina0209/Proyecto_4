@@ -24,6 +24,8 @@ El conocimiento clínico permanecerá en módulos independientes bajo `guideline
 Contiene modelos, operadores, motor de inferencia, normalización de evidencia,
 auditoría y derivación controlada de prioridad de alertas.
 
+Se extendió con evaluate_rule_set_hypothetical: evalúa un rule-set contra los facts reales de un paciente fusionados con overrides explícitos, para poder responder "¿esta regla aplicaría SI estos valores adicionales fueran ciertos?" sin que el motor necesite saber para qué se usa esa pregunta. Usado por tx_clinica para TX-01.
+
 ### standards
 
 Contiene los cruces entre sistemas de gradación de organizaciones y las
@@ -50,6 +52,7 @@ laboratorios, imagenología, biomarcadores), usada para probar `ia_clinica`
 y `dx_clinica` de forma end-to-end. No implementa HC-01 a HC-06
 (integración real con sistemas externos); es una herramienta de
 prueba/demo. Ver `docs/historia_clinica_mock.md`.
+Se extendió con dos tablas para TX-01: datos_clinicos_estructurados (variable/valor genérico, para el vocabulario categórico que cada módulo de guidelines/ necesita — estadio TNM, biomarcadores, ECOG, etc., que no existía en ninguna tabla de texto libre previa) y comorbilidades (registro clínico de condiciones del paciente, con una columna separada tipo_contraindicacion_ici para el juicio explícito del oncólogo sobre si esa condición contraindica inmunoterapia).
 
 ### dx_clinica
 
@@ -60,6 +63,9 @@ explícito y con evidencia leída de `guidelines/*/metadata.yaml` (una
 implementación mínima de lo que después será IA-04). No usa las reglas de
 tratamiento del motor `core`/`guidelines`; solo lee sus metadatos como
 fuente de evidencia citable. Ver `docs/dx_clinica.md`.
+
+### tx_clinica
+Contiene las capacidades de la épica Tratamientos (TX-01, TX-02...). Implementa TX-01 — recomendación de tratamiento: evalúa cada régimen conocido de guidelines/<módulo>/regimens.yaml de forma hipotética contra las reglas del módulo aplicable, para generar sugerencias desde estadio/biomarcadores en vez de solo auditar concordancia (que es para lo que esas reglas fueron escritas originalmente). Implementa también TX-02 — nivel de evidencia por recomendación, leyendo evidence.native.* y source/module_version directamente de la regla y el módulo reales. No reescribe ninguna regla existente. 
 
 ### docs
 
