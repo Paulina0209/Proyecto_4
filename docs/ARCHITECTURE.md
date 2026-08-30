@@ -43,6 +43,19 @@ implementa como un submódulo propio (por ejemplo, `ia_clinica/notes` para
 IA-02 — generación automática de notas clínicas). Ver
 `docs/ia_clinica_notas.md` para el detalle de IA-02.
 
+`ia_clinica/notes` ya conecta un proveedor de LLM real
+(`llm_client.OllamaLLMClient`), que reutiliza el mismo modelo local
+servido por Ollama que usa `tx_clinica` para TX-01, además del cliente de
+referencia sin proveedor externo (`RuleBasedLLMClient`) usado por
+defecto en pruebas.
+
+`ia_clinica/review` implementa **IA-03 — revisión y aprobación de la nota
+clínica generada**: recibe el borrador de IA-02 y agrega el ciclo de vida
+de edición/aprobación (estados explícitos `DRAFT`/`APPROVED`, persistido
+en su propia tabla SQLite para que sobreviva a cerrar sesión). Ninguna
+nota adquiere estado oficial sin una acción explícita de aprobación con
+un identificador de médico autorizado. Ver `docs/ia_clinica_revision.md`.
+
 ### historia_clinica_mock
 
 Base de datos SQLite pequeña con datos sintéticos (pacientes, consultas,
@@ -60,6 +73,15 @@ explícito y con evidencia leída de `guidelines/*/metadata.yaml` (una
 implementación mínima de lo que después será IA-04). No usa las reglas de
 tratamiento del motor `core`/`guidelines`; solo lee sus metadatos como
 fuente de evidencia citable. Ver `docs/dx_clinica.md`.
+
+También implementa DX-03 — manejo de la incertidumbre diagnóstica y
+juicio clínico (`dx_clinica.incertidumbre` y `dx_clinica.juicio_clinico`):
+analiza el resultado de DX-02 para comunicar explícitamente cuándo una
+priorización no es confiable (información faltante, alternativas
+empatadas, o un perfil inherentemente poco específico), sin forzar nunca
+una priorización artificial; y permite registrar el juicio diagnóstico
+del médico, que prevalece siempre sobre la sugerencia del sistema. Ver
+`docs/dx_clinica_incertidumbre.md`.
 
 ### docs
 

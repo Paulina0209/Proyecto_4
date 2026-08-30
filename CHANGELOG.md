@@ -45,6 +45,60 @@
   conteo de criterios sustentados. Ver `docs/dx_clinica.md`.
 - Pruebas en `tests/dx_clinica/` (matcher/negación, catálogo de
   evidencia, y los cinco criterios de aceptación de DX-02).
+- `ia_clinica.notes.llm_client.OllamaLLMClient`: nuevo cliente `LLMClient`
+  que conecta el generador de notas de IA-02 con el modelo local ya
+  configurado con Ollama en este proyecto (el mismo servidor que usa
+  `tx_clinica` para TX-01), siguiendo el mismo contrato JSON que
+  `RuleBasedLLMClient` — `ClinicalNoteGenerator` no requirió ningún
+  cambio. Incluye `esta_disponible()` (chequeo de salud sin generar
+  texto) para poder usar `RuleBasedLLMClient` como respaldo automático si
+  no hay servidor Ollama corriendo. Pruebas en
+  `tests/ia_clinica/notes/test_ollama_llm_client.py` (sin depender de un
+  servidor Ollama real: se simula `requests`).
+- Nuevo componente `ia_clinica/review/` que implementa **IA-03 —
+  Revisión y aprobación de la nota clínica generada**: ciclo de vida
+  explícito de una nota en revisión (estados `DRAFT`/`APPROVED`,
+  persistidos en SQLite propio — no en memoria — para sostener el
+  criterio de "sigue como borrador no confirmado aunque cierre sesión"),
+  edición manual de secciones con historial completo de cambios, y una
+  única función de aprobación (`aprobar_nota`) que exige un identificador
+  no vacío del médico autorizado y que es la única forma de llegar al
+  estado oficial. Una vez aprobada, la nota deja de aceptar ediciones
+  desde este flujo de borrador. Ver `docs/ia_clinica_revision.md`.
+- Pruebas en `tests/ia_clinica/review/` cubriendo los cinco criterios de
+  aceptación de IA-03, incluyendo un caso que cierra y reabre la conexión
+  SQLite (archivo real, no `:memory:`) para simular "cerrar sesión y
+  volver a entrar".
+- Nuevo `ia_clinica.notes.llm_client.OllamaLLMClient`: cliente `LLMClient`
+  que conecta el generador de notas de IA-02 con el modelo local ya
+  configurado con Ollama en el proyecto (el mismo servidor que usa
+  `tx_clinica` para TX-01), con `esta_disponible()` como chequeo de salud
+  sin generar texto. Usa `base_url="http://127.0.0.1:11434"` (en vez de
+  `localhost`, que en algunas máquinas Windows resuelve primero a `::1`
+  y puede fallar aunque el servidor esté corriendo) y `"format": "json"`
+  por defecto (restringe la decodificación a una gramática JSON válida;
+  se puede desactivar con `usar_formato_json=False` si resulta muy lento
+  en una máquina concreta, a costa de arriesgar una respuesta con un
+  error de sintaxis a mitad de generación). Pruebas en
+  `tests/ia_clinica/notes/test_ollama_llm_client.py` (sin depender de un
+  servidor Ollama real).
+- `dx_clinica/incertidumbre.py`: implementa **DX-03 — Manejo de la
+  incertidumbre diagnóstica y juicio clínico** (parte 1 de 2). Analiza el
+  `ResultadoDiagnosticoDiferencial` de DX-02 sin modificarlo y distingue
+  tres tipos de incertidumbre (información faltante, ambigüedad entre
+  alternativas empatadas, e incertidumbre inherente a un perfil poco
+  específico), con sugerencias de información adicional explícitamente
+  rotuladas como no vinculantes (nunca como órdenes clínicas automáticas).
+- `dx_clinica/juicio_clinico.py` + `schema_juicio_clinico.sql`:
+  implementa DX-03 (parte 2 de 2). Persiste en SQLite (tabla de
+  solo-inserción) el juicio diagnóstico que registra el médico, que
+  siempre prevalece sobre la sugerencia del sistema
+  (`obtener_decision_diagnostica_vigente`) sin ninguna validación de
+  concordancia — el sistema nunca bloquea ni sobreescribe ese juicio.
+- Pruebas en `tests/dx_clinica/test_incertidumbre.py` y
+  `tests/dx_clinica/test_juicio_clinico.py` cubriendo los cinco criterios
+  de aceptación de DX-03. Demo en `dx_clinica/demo_incertidumbre.py`. Ver
+  `docs/dx_clinica_incertidumbre.md`.
 
 ### Notas
 

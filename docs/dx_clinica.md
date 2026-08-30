@@ -102,3 +102,16 @@ aparece para María (por la negación en su hallazgo de imagen) y el caso
 donde "proceso infeccioso respiratorio" aparece para Carlos pero sin
 evidencia externa asociada (porque ninguna guía del repositorio cubre ese
 escenario).
+
+## Continúa en DX-03
+
+`dx_clinica.incertidumbre` (nuevo, ver `docs/dx_clinica_incertidumbre.md`)
+analiza el `ResultadoDiagnosticoDiferencial` que produce este módulo para
+detectar cuándo la priorización no es lo suficientemente confiable como
+para presentarse sin una advertencia explícita de incertidumbre —
+distinguiendo información faltante, ambigüedad entre alternativas
+empatadas, e incertidumbre inherente a un perfil poco específico.
+`dx_clinica.juicio_clinico` permite que el médico registre su propio
+juicio diagnóstico, que prevalece sobre esta priorización sin que el
+sistema pueda bloquearlo ni sobreescribirlo. Ninguno de los dos módulos
+modifica `construir_diagnosticos_diferenciales`.

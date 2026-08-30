@@ -81,23 +81,43 @@ más fina, a nivel de oración en vez de a nivel de párrafo completo.
 - `llm_client.py`: interfaz `LLMClient`; `RuleBasedLLMClient` (implementación
   de referencia sin proveedor externo, usada por defecto en desarrollo y
   pruebas); `AnthropicLLMClient` (adaptador opcional, no instanciado por
-  defecto).
+  defecto); `OllamaLLMClient` (adaptador para el modelo local ya
+  configurado con Ollama en este proyecto — usado a partir de IA-03; ver
+  `docs/ia_clinica_revision.md`).
 - `generator.py`: `ClinicalNoteGenerator`, `GenerationError`.
+
+## Actualización (IA-03): ya hay un proveedor de LLM real conectado
+
+Lo que la sección anterior llamaba "decisión pendiente para producción"
+ya está resuelto parcialmente: `llm_client.OllamaLLMClient` conecta este
+generador con el modelo local que el proyecto ya tiene corriendo con
+Ollama (el mismo servidor que usa `tx_clinica` para TX-01). Sigue el
+mismo contrato `LLMClient` que `RuleBasedLLMClient`, así que
+`ClinicalNoteGenerator` no cambió en absoluto: toda la validación
+anti-alucinación de esta sección (citas a `source_span_ids` reales,
+descarte de contenido sin fuente verificable, `MISSING_INFO_MARKER`)
+sigue aplicándose exactamente igual, sea cual sea el cliente. De hecho
+es *más* importante con `OllamaLLMClient`: a diferencia del cliente de
+referencia (que solo copia texto existente y por lo tanto nunca puede
+"alucinar"), un modelo de lenguaje real sí puede redactar contenido que
+no provenga literalmente de un fragmento — es este generador, no el
+cliente, quien sigue garantizando que eso nunca llegue al borrador
+final sin una cita válida.
+
+`RuleBasedLLMClient` se conserva como valor por defecto seguro para
+pruebas y para cuando no hay un servidor Ollama disponible (no depende
+de red ni de que el modelo esté descargado).
 
 ## Decisión pendiente para producción
 
-Este repositorio no tiene todavía una llave de API de ningún proveedor de
-LLM configurada. `RuleBasedLLMClient` es un valor por defecto seguro
-(nunca alucina porque solo copia fragmentos reales), pero **no es un LLM**:
-solo agrupa fragmentos por palabras clave. Antes de usar esta historia en
-un entorno real hace falta:
-
-1. Decidir el proveedor de LLM (Anthropic, OpenAI, modelo propio de la
-   institución, etc.) e implementar su `LLMClient` correspondiente
-   (`AnthropicLLMClient` ya deja la integración lista si se elige Anthropic).
-2. Validar clínicamente el prompt del sistema (`build_system_prompt`) con
-   el equipo médico antes de exponerlo a oncólogos reales.
-3. Definir en qué punto del flujo clínico se conecta este módulo con el
+1. Validar clínicamente el prompt del sistema (`build_system_prompt`) con
+   el equipo médico antes de exponerlo a oncólogos reales, incluso usando
+   ya un modelo real.
+2. Definir en qué punto del flujo clínico se conecta este módulo con el
    registro de la consulta (dictado/transcripción) — hoy el
    `ClinicalContext` se construye manualmente porque esa integración de
    captura de consulta no existe aún en el repositorio.
+3. Evaluar si el modelo local (`qwen2.5:14b-instruct-q4_K_M` vía Ollama)
+   es suficiente para producción o si conviene un proveedor gestionado
+   (`AnthropicLLMClient` ya deja esa integración lista si se elige esa
+   ruta más adelante).
