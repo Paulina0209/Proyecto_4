@@ -9,8 +9,10 @@ from pathlib import Path
 from historia_clinica_mock.repository import (
     biomarcadores_de_paciente,
     laboratorios_de_paciente,
+    listar_pacientes,
 )
 
+from .ambiguity import PacienteRef
 from .models import ClinicalDatum, ClinicalRecord
 from .normalizer import normalize_text
 
@@ -21,6 +23,14 @@ class ClinicalRepository(ABC):
     @abstractmethod
     def find_by_concept(self, patient_id: str, concept: str) -> list[ClinicalDatum]:
         raise NotImplementedError
+
+    def directorio_pacientes(self) -> list[PacienteRef]:
+        """Identidades de los pacientes conocidos, para desambiguar (IA-06).
+
+        Por defecto vacío: solo el adaptador sobre la base real lo implementa.
+        """
+
+        return []
 
 
 class JsonClinicalRepository(ClinicalRepository):
@@ -95,6 +105,7 @@ class MockSQLiteClinicalRepository(ClinicalRepository):
                         observed_at=datetime.fromisoformat(lab.fecha),
                         source=f"Laboratorio: {lab.prueba}",
                         source_id=f"lab-{lab.id}",
+                        episode_id=f"consulta-{lab.consulta_id}" if lab.consulta_id else None,
                     )
                 )
 
@@ -108,7 +119,14 @@ class MockSQLiteClinicalRepository(ClinicalRepository):
                         observed_at=datetime.fromisoformat(biomarker.fecha),
                         source=f"Biomarcador: {biomarker.biomarcador}",
                         source_id=f"biomarcador-{biomarker.id}",
+                        episode_id=f"consulta-{biomarker.consulta_id}" if biomarker.consulta_id else None,
                     )
                 )
 
         return data
+
+    def directorio_pacientes(self) -> list[PacienteRef]:
+        return [
+            PacienteRef(id=str(p.id), nombre=p.nombre, identificacion=p.identificacion)
+            for p in listar_pacientes(self.conn)
+        ]

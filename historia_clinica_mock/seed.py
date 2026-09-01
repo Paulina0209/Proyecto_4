@@ -166,6 +166,7 @@ def sembrar_datos_sinteticos(conn: sqlite3.Connection) -> Dict[str, int]:
         "clinical_stage": "II",
         "clinical_t_category": "cT2",
         "clinical_n_status": "N0",
+        "clinical_m_status": "cM0",
         "immune_checkpoint_inhibitor_toxicity_risk": "not_excessive",
         "guideline_temporal_applicability": "applicable",
         "neoadjuvant_chemotherapy_given": "yes",
@@ -313,6 +314,9 @@ def sembrar_datos_sinteticos(conn: sqlite3.Connection) -> Dict[str, int]:
         "smoking_status": "former_smoker",
         "immunotherapy_contraindication": "no",
         "histology": "non_squamous",
+        "clinical_t_category": "cT2",
+        "clinical_n_status": "N1",
+        "clinical_m_status": "cM1",
     }
     for variable, valor in facts_roberto.items():
         cur.execute(
@@ -386,5 +390,85 @@ def sembrar_datos_sinteticos(conn: sqlite3.Connection) -> Dict[str, int]:
         "VALUES (?, ?, ?, ?, ?, ?)",
         (ids["paciente_patricia"], ids["consulta_patricia_1"], "2026-05-12", "ninguna_registrada", None, None),
     )
+
+    # =====================================================================
+    # Paciente 6: NSCLC temprano, en seguimiento con laboratorios seriados
+    # =====================================================================
+    # Diseñado para dos historias:
+    #   - IA-06: la misma prueba (hemoglobina) registrada en dos consultas
+    #     distintas, para poder detectar ambigüedad de episodio.
+    #   - EST-01: T/N/M clínico completo (cT1 N0 M0) para proponer un estadio.
+    cur.execute(
+        "INSERT INTO pacientes (nombre, fecha_nacimiento, sexo, identificacion, "
+        "diagnostico_principal, estadio) VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            "Diana Sofía Restrepo (sintético)",
+            "1969-08-25",
+            "femenino",
+            "SINT-0006",
+            "Cáncer de pulmón no microcítico, estadio temprano",
+            "I",
+        ),
+    )
+    ids["paciente_diana"] = cur.lastrowid
+
+    cur.execute(
+        "INSERT INTO consultas (paciente_id, fecha, motivo, notas_libres) VALUES (?, ?, ?, ?)",
+        (
+            ids["paciente_diana"],
+            "2026-02-18",
+            "Evaluación inicial tras hallazgo de nódulo pulmonar",
+            (
+                "Paciente con nódulo pulmonar periférico resecable, sin compromiso "
+                "ganglionar ni metástasis a distancia en la estadificación por imágenes. "
+                "Se solicita hemograma de base previo a cirugía."
+            ),
+        ),
+    )
+    ids["consulta_diana_1"] = cur.lastrowid
+
+    cur.execute(
+        "INSERT INTO laboratorios (paciente_id, consulta_id, fecha, prueba, valor, unidad, rango_referencia, alterado) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (ids["paciente_diana"], ids["consulta_diana_1"], "2026-02-18", "Hemograma - hemoglobina", "13.1", "g/dL", "12.0-16.0", 0),
+    )
+    ids["lab_diana_hb_1"] = cur.lastrowid
+
+    cur.execute(
+        "INSERT INTO consultas (paciente_id, fecha, motivo, notas_libres) VALUES (?, ?, ?, ?)",
+        (
+            ids["paciente_diana"],
+            "2026-05-06",
+            "Control post-operatorio a ocho semanas",
+            (
+                "Paciente en buena evolución tras lobectomía. "
+                "Se repite hemograma de control."
+            ),
+        ),
+    )
+    ids["consulta_diana_2"] = cur.lastrowid
+
+    cur.execute(
+        "INSERT INTO laboratorios (paciente_id, consulta_id, fecha, prueba, valor, unidad, rango_referencia, alterado) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (ids["paciente_diana"], ids["consulta_diana_2"], "2026-05-06", "Hemograma - hemoglobina", "11.6", "g/dL", "12.0-16.0", 1),
+    )
+    ids["lab_diana_hb_2"] = cur.lastrowid
+
+    facts_diana = {
+        "cancer_type": "NSCLC",
+        "disease_setting": "early",
+        "histology": "non_squamous",
+        "clinical_t_category": "cT1",
+        "clinical_n_status": "N0",
+        "clinical_m_status": "cM0",
+    }
+    for variable, valor in facts_diana.items():
+        cur.execute(
+            "INSERT INTO datos_clinicos_estructurados "
+            "(paciente_id, consulta_id, fecha, variable, valor) VALUES (?, ?, ?, ?, ?)",
+            (ids["paciente_diana"], ids["consulta_diana_1"], "2026-02-18", variable, valor),
+        )
+
     conn.commit()
     return ids

@@ -100,6 +100,39 @@
   de aceptación de DX-03. Demo en `dx_clinica/demo_incertidumbre.py`. Ver
   `docs/dx_clinica_incertidumbre.md`.
 
+- `clinical_query/ambiguity.py` + cambios en `service.py`/`normalizer.py`/`models.py`:
+  implementan **IA-06 — Manejo de consultas clínicas ambiguas**. Antes de
+  construir la respuesta, el servicio detecta tres tipos de ambigüedad
+  (paciente distinto al activo, más de un dato clínico posible, o dato presente
+  en más de un episodio) y devuelve una solicitud de aclaración
+  (`QueryResponse.needs_clarification`) con opciones concretas, en vez de elegir
+  una interpretación en silencio como hacía IA-01. La recuperación sigue
+  acotada siempre al paciente activo; la conversación se reanuda pasando un
+  `Clarification` junto con la misma pregunta (servicio sin estado). Nuevo
+  `detect_concepts` (lista todos los conceptos posibles; `detect_concept` se
+  conserva). Pruebas en `tests/clinical_query/test_ia06_ambiguous_queries.py`;
+  `demo_ia01.py` muestra el ciclo de aclaración. Ver
+  `docs/clinical_query_ambiguedad.md`.
+- Nuevo componente `estadificacion/` que implementa **EST-01 — Estadificación
+  automática asistida**: `proponer_estadificacion` propone componentes T/N/M y un
+  grupo de estadio a partir de las variables estructuradas del expediente
+  (`historia_clinica_mock`), usando un catálogo versionado de sistemas de
+  estadificación (`estadificacion/staging_systems.py`, subconjunto ilustrativo de
+  AJCC 8ª, no validado clínicamente). Cada propuesta conserva el sistema y la
+  versión aplicados, el criterio de cada componente y la trazabilidad hasta la
+  fila `dato-<id>` de origen; solo se leen variables del sistema seleccionado y
+  los componentes ausentes se reportan como faltantes sin inventar valores. Es
+  apoyo a la decisión (`DISCLAIMER`). Pruebas en `tests/estadificacion/`; demo en
+  `estadificacion/demo.py`. Ver `docs/estadificacion.md`.
+- `historia_clinica_mock/seed.py`: nuevo paciente sintético 6
+  (`Diana Sofía Restrepo`, NSCLC temprano) con hemoglobina en dos consultas
+  (para IA-06) y T/N/M clínico completo (para EST-01); variables `clinical_m_status`
+  añadidas a María y T/N/M a Roberto. Solo son filas nuevas: no se modificó
+  ningún registro sintético existente. Se actualizaron dos aserciones de
+  `tests/historia_clinica_mock/test_db_y_seed.py` que fijaban el número exacto de
+  pacientes/consultas del seed (ya desactualizadas en `main`) para fijar el
+  mínimo y las invariantes en su lugar.
+
 ### Notas
 
 - No se modificó ni se movió ningún archivo existente de `guidelines/`,

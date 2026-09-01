@@ -7,7 +7,12 @@ Comandos:
 - ``salir``: termina la demo.
 """
 
-from clinical_query import MockSQLiteClinicalRepository, NaturalLanguageClinicalQueryService
+from clinical_query import (
+    AmbiguityKind,
+    Clarification,
+    MockSQLiteClinicalRepository,
+    NaturalLanguageClinicalQueryService,
+)
 from historia_clinica_mock.adapters import obtener_hallazgos_de_paciente
 from historia_clinica_mock.db import crear_conexion
 from historia_clinica_mock.repository import listar_pacientes
@@ -169,6 +174,32 @@ def mostrar_evidencia(conn, paciente, evidence_service, query: str = "") -> None
     print("\nNota: este MVP muestra metadatos y referencias, no reproduce el contenido íntegro")
     print("de journals o guías con posibles restricciones de licenciamiento.")
 
+def resolver_consulta_con_aclaracion(query_service, patient_id, question):
+    """IA-06: si la consulta es ambigua, pide una aclaración y reintenta con ella.
+
+    El servicio es sin estado: se reenvía la misma pregunta original junto con
+    la ``Clarification`` construida a partir de lo que responde el oncólogo.
+    """
+
+    response = query_service.ask(str(patient_id), question)
+    while response.needs_clarification:
+        finding = response.ambiguities[0]
+        print(f"Asistente > {response.answer}")
+        respuesta = input("  Aclaración > ").strip()
+        if not respuesta:
+            return response
+
+        if finding.kind is AmbiguityKind.PATIENT:
+            clarification = Clarification(confirm_active_patient=True)
+        elif finding.kind is AmbiguityKind.DATA_POINT:
+            clarification = Clarification(concept=respuesta.casefold())
+        else:  # EPISODE
+            clarification = Clarification(episode_id=respuesta)
+
+        response = query_service.ask(str(patient_id), question, clarification=clarification)
+    return response
+
+
 def main() -> None:
     conn = crear_conexion()
     sembrar_datos_sinteticos(conn)
@@ -217,7 +248,7 @@ def main() -> None:
         if not question:
             continue
 
-        response = query_service.ask(str(patient_id), question)
+        response = resolver_consulta_con_aclaracion(query_service, patient_id, question)
         print(f"Asistente > {response.answer}")
         mostrar_trazabilidad_consulta(patient_id, response)
 

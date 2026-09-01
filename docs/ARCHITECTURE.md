@@ -58,6 +58,30 @@ en su propia tabla SQLite para que sobreviva a cerrar sesión). Ninguna
 nota adquiere estado oficial sin una acción explícita de aprobación con
 un identificador de médico autorizado. Ver `docs/ia_clinica_revision.md`.
 
+### clinical_query
+
+Implementa **IA-01 — consulta en lenguaje natural sobre el paciente** y
+**IA-06 — manejo de consultas clínicas ambiguas**. IA-06 no es un componente
+aparte: es una capa de detección previa a la respuesta dentro del mismo
+servicio (`clinical_query/ambiguity.py`), que distingue ambigüedad de paciente,
+de dato clínico o de episodio y devuelve una solicitud de aclaración
+(`QueryResponse.needs_clarification`) en vez de elegir una interpretación en
+silencio. La recuperación siempre se acota al paciente activo. Ver
+`docs/clinical_query_ambiguedad.md`.
+
+### estadificacion
+
+Contiene las capacidades de la épica Estadificación. Implementa **EST-01 —
+estadificación automática asistida**: propone componentes T/N/M y un grupo de
+estadio usando un catálogo versionado de sistemas de estadificación
+(`estadificacion/staging_systems.py`, hoy un subconjunto ilustrativo de AJCC 8ª),
+seleccionado según el tipo de cáncer del paciente. Cada propuesta conserva el
+sistema y la versión aplicados, el criterio usado para cada componente y la
+trazabilidad hasta la fila exacta de `datos_clinicos_estructurados` en
+`historia_clinica_mock`. Es apoyo a la decisión: no reemplaza el juicio del
+profesional y solo aplica criterios del sistema seleccionado. Ver
+`docs/estadificacion.md`.
+
 ### historia_clinica_mock
 
 Base de datos SQLite pequeña con datos sintéticos (pacientes, consultas,

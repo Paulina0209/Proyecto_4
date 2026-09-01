@@ -29,19 +29,36 @@ CONCEPT_ALIASES: dict[str, tuple[str, ...]] = {
 }
 
 
-def detect_concept(question: str) -> str | None:
+def detect_concepts(question: str) -> list[str]:
+    """Todos los conceptos clínicos distintos que la pregunta podría estar pidiendo.
+
+    A diferencia de :func:`detect_concept`, no colapsa el resultado a uno solo:
+    devuelve cada concepto que aparece mencionado, ordenado por la longitud de
+    su mejor alias coincidente (el más específico primero). IA-06 necesita ver
+    *todas* las interpretaciones posibles para poder pedir aclaración en vez de
+    elegir una en silencio.
+    """
+
     normalized = normalize_text(question)
     padded = f" {normalized} "
-    matches: list[tuple[int, str]] = []
+    mejor_por_concepto: dict[str, int] = {}
 
     for concept, aliases in CONCEPT_ALIASES.items():
         for alias in aliases:
             normalized_alias = normalize_text(alias)
             if f" {normalized_alias} " in padded:
-                matches.append((len(normalized_alias), concept))
+                largo = len(normalized_alias)
+                if largo > mejor_por_concepto.get(concept, 0):
+                    mejor_por_concepto[concept] = largo
 
-    if not matches:
-        return None
+    return [
+        concept
+        for concept, _ in sorted(
+            mejor_por_concepto.items(), key=lambda item: item[1], reverse=True
+        )
+    ]
 
-    matches.sort(reverse=True)
-    return matches[0][1]
+
+def detect_concept(question: str) -> str | None:
+    conceptos = detect_concepts(question)
+    return conceptos[0] if conceptos else None

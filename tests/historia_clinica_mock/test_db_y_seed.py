@@ -6,17 +6,21 @@ def test_esquema_crea_todas_las_tablas(conn):
     assert {"pacientes", "consultas", "laboratorios", "imagenologia", "biomarcadores"} <= tablas
 
 
-def test_seed_inserta_dos_pacientes(conn_sembrada):
+def test_seed_inserta_los_pacientes_base(conn_sembrada):
     conn, ids = conn_sembrada
     total = conn.execute("SELECT COUNT(*) AS n FROM pacientes").fetchone()["n"]
-    assert total == 2
+    # El seed ha crecido con el proyecto; se fija el mínimo y las invariantes,
+    # no un número exacto que hay que editar en cada historia nueva.
+    assert total >= 2
     assert ids["paciente_maria"] != ids["paciente_carlos"]
 
 
-def test_seed_inserta_tres_consultas(conn_sembrada):
+def test_maria_tiene_dos_consultas(conn_sembrada):
     conn, ids = conn_sembrada
-    total = conn.execute("SELECT COUNT(*) AS n FROM consultas").fetchone()["n"]
-    assert total == 3
+    total = conn.execute(
+        "SELECT COUNT(*) AS n FROM consultas WHERE paciente_id = ?", (ids["paciente_maria"],)
+    ).fetchone()["n"]
+    assert total == 2
 
 
 def test_segunda_consulta_de_maria_no_tiene_labs_ni_imagenes_vinculados(conn_sembrada):
