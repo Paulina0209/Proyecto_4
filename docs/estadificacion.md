@@ -98,9 +98,40 @@ componentes indeterminados quedan marcados como tales.
   confirmado.
 - Patricia (RCC): sin ningún T/N/M → los tres componentes indeterminados.
 
+## EST-02 — Ajuste manual de estadificación
+
+`estadificacion/confirmacion.py` implementa el registro del estadio final que
+confirma el médico, con exactamente el mismo diseño que
+`dx_clinica/juicio_clinico.py` para DX-03: tabla propia de solo-inserción
+(`confirmaciones_estadificacion`, en una conexión SQLite separada de
+`historia_clinica_mock`), "vigente" = la fila más reciente, y ninguna
+validación de concordancia — `confirmar_estadificacion` nunca compara
+`estadio_confirmado` contra la propuesta de EST-01 para aceptarla o
+rechazarla, solo para calcular `difiere_de_sugerencia` (comparación
+insensible a mayúsculas/espacios) como snapshot de auditoría.
+
+- `confirmar_estadificacion(conn, paciente_id, estadio_confirmado, autor, propuesta_sistema=None, componentes_confirmados=None, justificacion=None)`
+  — registra la confirmación. Guarda el snapshot de lo que sugería el sistema
+  (`estadio_sugerido_por_sistema`, `sistema_id`, `sistema_version`) y si
+  `sugerencia_disponible` (había una propuesta con estadio) para poder
+  distinguir "confirmó igual a la sugerencia" de "no había sugerencia con la
+  que comparar". Rechaza estadio o autor vacíos (`ConfirmacionInvalidaError`),
+  igual que `JuicioClinicoInvalidoError` en DX-03.
+- `obtener_estadificacion_vigente(conn, paciente_id, propuesta_sistema)` — si
+  existe una confirmación, esa es siempre el estadio vigente
+  (`fuente="confirmacion_medica"`), sin importar qué tan distinta sea de la
+  propuesta; si no existe ninguna, cae a la propuesta del sistema, rotulada
+  explícitamente como apoyo (`fuente="apoyo_sistema"`).
+- El campo `difiere_de_sugerencia` es el insumo directo para **AUD-02 —
+  trazabilidad de recomendaciones de IA** (todavía no implementada como
+  componente propio): cuando exista, puede leer esta tabla igual que
+  `dx_clinica.evidence` lee `guidelines/*/metadata.yaml`.
+
 ## Pruebas y demo
 
-- `tests/estadificacion/test_staging_systems.py`, `test_builder.py` y
-  `test_incompleta.py`: cubren los criterios de aceptación de EST-01 y EST-03 y
-  la regla de "solo criterios del sistema seleccionado".
-- `python -m estadificacion.demo`.
+- `tests/estadificacion/test_staging_systems.py`, `test_builder.py`,
+  `test_incompleta.py` y `test_confirmacion.py`: cubren los criterios de
+  aceptación de EST-01, EST-02 y EST-03.
+- `python -m estadificacion.demo` — incluye, para cada paciente, la propuesta
+  de EST-01, el análisis de completitud de EST-03, y una confirmación manual
+  de EST-02 (una que coincide con la sugerencia, dos que la ajustan).

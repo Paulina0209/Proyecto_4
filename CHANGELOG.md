@@ -138,6 +138,19 @@
   `tests/estadificacion/test_incompleta.py` (los cinco criterios de aceptación de
   EST-03); paciente sintético Laura ampliado con `pT3 N0` y M pendiente. Ver
   `docs/estadificacion.md`.
+- `estadificacion/confirmacion.py` + `schema_confirmacion_estadio.sql`:
+  implementa **EST-02 — Ajuste manual de estadificación**. Mismo diseño que
+  `dx_clinica/juicio_clinico.py` para DX-03: tabla propia de solo-inserción
+  (`confirmaciones_estadificacion`, conexión SQLite separada de
+  `historia_clinica_mock`), "vigente" = la confirmación más reciente, y
+  ninguna validación de concordancia — `confirmar_estadificacion` nunca
+  compara el estadio del médico contra la propuesta de EST-01 para aceptarla o
+  rechazarla, solo para calcular `difiere_de_sugerencia` (insumo directo de
+  AUD-02) y dejar un snapshot de auditoría de qué sugería el sistema.
+  `obtener_estadificacion_vigente` resuelve qué mostrar: la confirmación del
+  médico si existe, o la propuesta del sistema rotulada como apoyo si no.
+  Pruebas en `tests/estadificacion/test_confirmacion.py`; demo ampliada en
+  `estadificacion/demo.py`. Ver `docs/estadificacion.md`.
 - `historia_clinica_mock/seed.py`: nuevo paciente sintético 6
   (`Diana Sofía Restrepo`, NSCLC temprano) con hemoglobina en dos consultas
   (para IA-06) y T/N/M clínico completo (para EST-01); variables `clinical_m_status`

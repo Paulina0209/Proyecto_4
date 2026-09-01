@@ -8,6 +8,15 @@ profesional.
 """
 
 from estadificacion.builder import proponer_estadificacion
+from estadificacion.confirmacion import (
+    ConfirmacionEstadio,
+    ConfirmacionInvalidaError,
+    EstadioVigente,
+    confirmar_estadificacion,
+    obtener_confirmacion_vigente,
+    obtener_estadificacion_vigente,
+    obtener_historial_confirmaciones,
+)
 from estadificacion.incompleta import (
     AnalisisEstadificacionIncompleta,
     ComponenteIndeterminado,
@@ -31,6 +40,13 @@ from estadificacion.staging_systems import (
 
 __all__ = [
     "proponer_estadificacion",
+    "confirmar_estadificacion",
+    "obtener_confirmacion_vigente",
+    "obtener_historial_confirmaciones",
+    "obtener_estadificacion_vigente",
+    "ConfirmacionEstadio",
+    "ConfirmacionInvalidaError",
+    "EstadioVigente",
     "analizar_estadificacion_incompleta",
     "AnalisisEstadificacionIncompleta",
     "ComponenteIndeterminado",

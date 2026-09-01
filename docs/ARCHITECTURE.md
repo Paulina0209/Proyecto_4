@@ -84,7 +84,14 @@ profesional y solo aplica criterios del sistema seleccionado.
 incompleta**: una capa de lectura sobre la propuesta de EST-01 que identifica
 explícitamente los componentes indeterminados, indica qué información falta para
 cada uno y comunica el rango de estadios posibles sin asumir valores ni presentar
-un estadio definitivo cuando la información es insuficiente. Ver
+un estadio definitivo cuando la información es insuficiente.
+`estadificacion/confirmacion.py` añade **EST-02 — ajuste manual de
+estadificación**: registra en su propia tabla SQLite de solo-inserción
+(`confirmaciones_estadificacion`, mismo diseño que
+`dx_clinica/juicio_clinico.py` para DX-03) el estadio que el médico confirma o
+ajusta; ese siempre prevalece como el estadio vigente sobre la propuesta de
+EST-01, sin ninguna validación de concordancia, y deja registrado si difirió de
+la sugerencia (insumo directo de AUD-02, todavía no implementada). Ver
 `docs/estadificacion.md`.
 
 ### historia_clinica_mock
