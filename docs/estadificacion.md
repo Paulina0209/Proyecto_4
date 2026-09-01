@@ -64,9 +64,43 @@ honestidad que `dx_clinica/knowledge_base.py`.
 - Patricia (RCC): sin T/N/M estructurado → propuesta con los tres componentes
   como datos faltantes, sin estadio global.
 
+## EST-03 — Manejo de la estadificación incompleta
+
+`estadificacion/incompleta.py` es una **capa de lectura** sobre la
+`PropuestaEstadificacion` de EST-01 (mismo patrón que `dx_clinica/incertidumbre.py`
+respecto a DX-02): no la modifica ni asume valores.
+
+`analizar_estadificacion_incompleta(propuesta)` devuelve un
+`AnalisisEstadificacionIncompleta` con:
+
+- `componentes_determinados` / `componentes_indeterminados` — cada
+  `ComponenteIndeterminado` identifica explícitamente el componente (T/N/M), su
+  variable, el motivo (sin dato vs. valor no interpretable) y la
+  `informacion_requerida` para poder determinarlo (texto que vive en
+  `ComponenteDef`, por lo que depende del sistema/versión).
+- `estadios_posibles` — se obtiene con `estadios_candidatos`, que explora los
+  valores que podrían tomar los componentes pendientes y recoge los grupos
+  distintos que resultan. **Nunca asume un valor**: si la información conocida ya
+  fija un único grupo (p. ej. `M1` → IV por comodín), la tupla trae un elemento.
+- `rango_legible` — "entre X y Y (alternativas: …)" cuando hay más de un estadio
+  posible; se comunica el rango sin elegir uno.
+- `estadio_confirmado` — `True` solo si hay un único estadio posible **y** ningún
+  componente pendiente. Si falta información, nunca se presenta un estadio
+  definitivo como confirmado.
+
+Regla de negocio: el sistema no asume valores de T/N/M cuando faltan; los
+componentes indeterminados quedan marcados como tales.
+
+## Datos de prueba (EST-03)
+
+- Laura (melanoma): `pT3 N0` documentados, `clinical_m_status` pendiente →
+  estadios posibles `II` (M0) o `IV` (M1), rango comunicado, sin estadio
+  confirmado.
+- Patricia (RCC): sin ningún T/N/M → los tres componentes indeterminados.
+
 ## Pruebas y demo
 
-- `tests/estadificacion/test_staging_systems.py` y `test_builder.py`: cubren los
-  cinco criterios de aceptación y la regla de "solo criterios del sistema
-  seleccionado".
+- `tests/estadificacion/test_staging_systems.py`, `test_builder.py` y
+  `test_incompleta.py`: cubren los criterios de aceptación de EST-01 y EST-03 y
+  la regla de "solo criterios del sistema seleccionado".
 - `python -m estadificacion.demo`.

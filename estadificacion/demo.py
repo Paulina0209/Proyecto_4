@@ -15,6 +15,7 @@ from historia_clinica_mock.repository import obtener_paciente
 from historia_clinica_mock.seed import sembrar_datos_sinteticos
 
 from estadificacion.builder import proponer_estadificacion
+from estadificacion.incompleta import analizar_estadificacion_incompleta
 
 
 def _mostrar_propuesta(titulo: str, conn, paciente_id: int) -> None:
@@ -56,6 +57,23 @@ def _mostrar_propuesta(titulo: str, conn, paciente_id: int) -> None:
 
     print(f"Estadio global propuesto: {propuesta.estadio_global or 'no determinado'}")
     print(f"Fundamento: {propuesta.fundamento_global}")
+
+    analisis = analizar_estadificacion_incompleta(propuesta)
+    print()
+    print("--- EST-03: análisis de completitud ---")
+    print(f"Estadificación completa: {'sí' if analisis.estadificacion_completa else 'no'}")
+    print(f"Estadio confirmado: {'sí' if analisis.estadio_confirmado else 'no'}")
+    print(f"Componentes determinados: {', '.join(analisis.componentes_determinados) or 'ninguno'}")
+    if analisis.componentes_indeterminados:
+        print("Componentes indeterminados:")
+        for comp in analisis.componentes_indeterminados:
+            print(f"  {comp.codigo} ({comp.motivo})")
+            print(f"      información requerida: {comp.informacion_requerida}")
+    if analisis.estadios_posibles:
+        print(f"Estadios posibles: {', '.join(analisis.estadios_posibles)}")
+    if analisis.rango_legible:
+        print(f"Rango: {analisis.rango_legible}")
+    print(f"Mensaje: {analisis.mensaje}")
     print()
 
 
@@ -82,6 +100,11 @@ def main() -> None:
         "DEMO D: Patricia (RCC) — sin T/N/M estructurado en el expediente",
         conn,
         ids["paciente_patricia"],
+    )
+    _mostrar_propuesta(
+        "DEMO E: Laura (melanoma) — T y N documentados, estudio de extensión (M) pendiente",
+        conn,
+        ids["paciente_laura"],
     )
 
     conn.close()

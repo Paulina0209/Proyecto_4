@@ -124,6 +124,20 @@
   los componentes ausentes se reportan como faltantes sin inventar valores. Es
   apoyo a la decisión (`DISCLAIMER`). Pruebas en `tests/estadificacion/`; demo en
   `estadificacion/demo.py`. Ver `docs/estadificacion.md`.
+- `estadificacion/incompleta.py`: implementa **EST-03 — Manejo de la
+  estadificación incompleta**. Capa de lectura sobre la `PropuestaEstadificacion`
+  de EST-01 (mismo patrón que `dx_clinica/incertidumbre.py` respecto a DX-02):
+  `analizar_estadificacion_incompleta` identifica explícitamente los componentes
+  T/N/M que no se pueden determinar, el motivo y la información clínica requerida
+  para cada uno (texto versionado por sistema en `ComponenteDef`), y calcula el
+  rango de estadios posibles (`estadios_candidatos`) explorando los valores que
+  podrían tomar los componentes pendientes — sin asumir ninguno. `estadio_confirmado`
+  solo es `True` con un único estadio posible y sin componentes pendientes.
+  `ComponenteEstadio.familia` y `PropuestaEstadificacion.cancer_type` son campos
+  nuevos (con default) para soportar el análisis. Pruebas en
+  `tests/estadificacion/test_incompleta.py` (los cinco criterios de aceptación de
+  EST-03); paciente sintético Laura ampliado con `pT3 N0` y M pendiente. Ver
+  `docs/estadificacion.md`.
 - `historia_clinica_mock/seed.py`: nuevo paciente sintético 6
   (`Diana Sofía Restrepo`, NSCLC temprano) con hemoglobina en dos consultas
   (para IA-06) y T/N/M clínico completo (para EST-01); variables `clinical_m_status`

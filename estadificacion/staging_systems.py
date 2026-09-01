@@ -43,6 +43,22 @@ class ComponenteDef:
     variable_expediente: str
     descripcion_criterio: str
     valores_reconocidos: Tuple[str, ...]
+    #: Qué información clínica hace falta para poder determinar este componente
+    #: (EST-03). Depende del sistema/versión, por eso vive aquí y no en el motor.
+    informacion_requerida: str = ""
+
+    def familias_para_enumerar(self) -> Tuple[str, ...]:
+        """Familias posibles de este componente, para explorar estadios candidatos.
+
+        Cada valor reconocido se normaliza a su familia (``"cT2"`` -> ``"T2"``);
+        los que no se pueden normalizar (``"Tis"``) se conservan tal cual, que es
+        como aparecen en ``tabla_grupos``.
+        """
+
+        vistas: dict[str, None] = {}
+        for valor in self.valores_reconocidos:
+            vistas.setdefault(familia_de_valor(valor) or valor, None)
+        return tuple(vistas)
 
 
 @dataclass(frozen=True)
@@ -90,39 +106,55 @@ def familia_de_valor(valor: str) -> Optional[str]:
     return f"{match.group(1).upper()}{match.group(2)}"
 
 
+_INFO_T = (
+    "Evaluación de la extensión del tumor primario (tamaño e invasión local) por "
+    "examen físico, imágenes diagnósticas y/o estudio anatomopatológico."
+)
+_INFO_N = (
+    "Evaluación de los ganglios linfáticos regionales por imágenes, biopsia de "
+    "ganglio centinela o disección ganglionar."
+)
+_INFO_M = (
+    "Estudios de extensión (imágenes de tórax/abdomen/pelvis, u otros según el "
+    "cuadro) para confirmar o descartar metástasis a distancia."
+)
+
 _TNM_BREAST = (
     ComponenteDef(
         "T",
         "clinical_t_category",
         "Extensión del tumor primario (categoría T clínica).",
         ("T0", "Tis", "T1", "T2", "T3", "T4"),
+        _INFO_T,
     ),
     ComponenteDef(
         "N",
         "clinical_n_status",
         "Compromiso de ganglios linfáticos regionales (categoría N clínica).",
         ("N0", "N1", "N2", "N3"),
+        _INFO_N,
     ),
     ComponenteDef(
         "M",
         "clinical_m_status",
         "Presencia de metástasis a distancia (categoría M).",
         ("M0", "M1"),
+        _INFO_M,
     ),
 )
 
 _TNM_GENERICO = (
     ComponenteDef(
         "T", "clinical_t_category", "Extensión del tumor primario (categoría T).",
-        ("T0", "T1", "T2", "T3", "T4"),
+        ("T0", "T1", "T2", "T3", "T4"), _INFO_T,
     ),
     ComponenteDef(
         "N", "clinical_n_status", "Compromiso ganglionar regional (categoría N).",
-        ("N0", "N1", "N2", "N3"),
+        ("N0", "N1", "N2", "N3"), _INFO_N,
     ),
     ComponenteDef(
         "M", "clinical_m_status", "Metástasis a distancia (categoría M).",
-        ("M0", "M1"),
+        ("M0", "M1"), _INFO_M,
     ),
 )
 
@@ -265,3 +297,55 @@ def agrupar_estadio(
         ):
             return grupo
     return None
+
+
+def estadios_candidatos(
+    sistema: SistemaEstadificacion,
+    familias_conocidas: dict,
+) -> Tuple[str, ...]:
+    """Estadios posibles cuando solo se conocen algunos componentes (EST-03).
+
+    ``familias_conocidas`` mapea código de componente ("T"/"N"/"M") a su familia
+    determinada. Los componentes ausentes se exploran sobre todos sus valores
+    reconocidos y se recogen los grupos distintos que resultan, ordenados de
+    menor a mayor. No se asume ningún valor: si la información conocida ya
+    determina un único grupo, la tupla trae un solo elemento.
+    """
+
+    from itertools import product
+
+    ejes: list[list[str]] = []
+    codigos: list[str] = []
+    for comp in sistema.componentes:
+        codigos.append(comp.codigo)
+        conocida = familias_conocidas.get(comp.codigo)
+        if conocida:
+            ejes.append([conocida])
+        else:
+            ejes.append(list(comp.familias_para_enumerar()))
+
+    grupos: dict = {}
+    for combinacion in product(*ejes):
+        asignacion = dict(zip(codigos, combinacion))
+        grupo = agrupar_estadio(
+            sistema, asignacion.get("T"), asignacion.get("N"), asignacion.get("M")
+        )
+        if grupo is not None:
+            grupos.setdefault(grupo, None)
+
+    return tuple(sorted(grupos, key=orden_estadio))
+
+
+_ORDEN_ROMANO = {"0": 0, "I": 1, "II": 2, "III": 3, "IV": 4}
+_ESTADIO_RE = re.compile(r"^(0|IV|III|II|I)([A-D]?)")
+
+
+def orden_estadio(grupo: str) -> tuple:
+    """Clave de orden para un grupo de estadio ("IIA" < "IIB" < "III")."""
+
+    match = _ESTADIO_RE.match(grupo.strip())
+    if not match:
+        return (99, 99)
+    base = _ORDEN_ROMANO.get(match.group(1), 99)
+    sub = ord(match.group(2)) - ord("A") + 1 if match.group(2) else 0
+    return (base, sub)

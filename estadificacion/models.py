@@ -26,6 +26,7 @@ class ComponenteEstadio:
     criterio_aplicado: str  # descripción del criterio del sistema usado
     fundamento: str  # de qué registro salió y con qué fecha
     fuente_ids: Tuple[str, ...]  # ids trazables a filas del expediente (p. ej. "dato-7")
+    familia: Optional[str] = None  # familia normalizada ("cT2" -> "T2"), o None si no se pudo
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,7 @@ class PropuestaEstadificacion:
 
     paciente_id: int
     generado_en: datetime
+    cancer_type: Optional[str]
     sistema_id: Optional[str]
     sistema_version: Optional[str]
     sistema_nombre: Optional[str]

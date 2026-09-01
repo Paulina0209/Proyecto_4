@@ -255,6 +255,10 @@ def sembrar_datos_sinteticos(conn: sqlite3.Connection) -> Dict[str, int]:
         "age_years": "47",
         "ici_suitability": "eligible",
         "weeks_since_complete_resection": "4",
+        # T y N documentados; el estudio de extensión (M) queda pendiente, a
+        # propósito, para ejercitar EST-03 (estadificación incompleta).
+        "clinical_t_category": "pT3",
+        "clinical_n_status": "N0",
     }
     for variable, valor in facts_laura.items():
         cur.execute(

@@ -54,10 +54,12 @@ def _propuesta_vacia(
     sistema: Optional[SistemaEstadificacion],
     fundamento_global: str,
     datos_faltantes: tuple[str, ...],
+    cancer_type: Optional[str] = None,
 ) -> PropuestaEstadificacion:
     return PropuestaEstadificacion(
         paciente_id=paciente_id,
         generado_en=ahora,
+        cancer_type=cancer_type,
         sistema_id=sistema.id if sistema else None,
         sistema_version=sistema.version if sistema else None,
         sistema_nombre=sistema.nombre if sistema else None,
@@ -102,6 +104,7 @@ def proponer_estadificacion(
             "No hay un tipo de cáncer registrado en el expediente estructurado, "
             "así que no se puede seleccionar un sistema de estadificación.",
             (_VARIABLE_TIPO_CANCER,),
+            cancer_type=None,
         )
 
     sistema = sistema_para_cancer(tipo_cancer)
@@ -114,6 +117,7 @@ def proponer_estadificacion(
             f"cáncer '{tipo_cancer}'. No se propone un estadio para no aplicar "
             "criterios que no corresponden.",
             (),
+            cancer_type=tipo_cancer,
         )
 
     componentes: list[ComponenteEstadio] = []
@@ -145,6 +149,7 @@ def proponer_estadificacion(
                     f"dato-{registro.id} ({consulta_ref}, {registro.fecha})."
                 ),
                 fuente_ids=(f"dato-{registro.id}",),
+                familia=familia,
             )
         )
 
@@ -173,6 +178,7 @@ def proponer_estadificacion(
     return PropuestaEstadificacion(
         paciente_id=paciente_id,
         generado_en=ahora,
+        cancer_type=tipo_cancer,
         sistema_id=sistema.id,
         sistema_version=sistema.version,
         sistema_nombre=sistema.nombre,

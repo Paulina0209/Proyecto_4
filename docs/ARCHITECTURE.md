@@ -79,7 +79,12 @@ seleccionado según el tipo de cáncer del paciente. Cada propuesta conserva el
 sistema y la versión aplicados, el criterio usado para cada componente y la
 trazabilidad hasta la fila exacta de `datos_clinicos_estructurados` en
 `historia_clinica_mock`. Es apoyo a la decisión: no reemplaza el juicio del
-profesional y solo aplica criterios del sistema seleccionado. Ver
+profesional y solo aplica criterios del sistema seleccionado.
+`estadificacion/incompleta.py` añade **EST-03 — manejo de la estadificación
+incompleta**: una capa de lectura sobre la propuesta de EST-01 que identifica
+explícitamente los componentes indeterminados, indica qué información falta para
+cada uno y comunica el rango de estadios posibles sin asumir valores ni presentar
+un estadio definitivo cuando la información es insuficiente. Ver
 `docs/estadificacion.md`.
 
 ### historia_clinica_mock
