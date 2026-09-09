@@ -21,6 +21,12 @@ def inicializar_schema(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+def buscar_por_id(conn: sqlite3.Connection, paciente_id: int) -> Optional[Paciente]:
+    cur = conn.execute("SELECT * FROM pacientes_identidad WHERE id = ?", (paciente_id,))
+    fila = cur.fetchone()
+    return _fila_a_paciente(fila) if fila else None
+
+
 def buscar_por_identificacion(
     conn: sqlite3.Connection,
     tipo_identificacion: TipoIdentificacion,

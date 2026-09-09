@@ -4,9 +4,8 @@ import sqlite3
 import uuid
 
 from .models import Paciente, ResultadoRegistroPaciente, TipoIdentificacion
-from .validacion import validar_campos_obligatorios
+from .validacion import validar_paciente
 from .repository import buscar_por_identificacion, guardar_paciente
-
 
 def generar_identificador_temporal() -> str:
     return f"TEMP-{uuid.uuid4().hex[:10].upper()}"
@@ -16,7 +15,7 @@ def registrar_paciente(
     conn: sqlite3.Connection,
     paciente: Paciente,
 ) -> ResultadoRegistroPaciente:
-    errores = validar_campos_obligatorios(paciente)
+    errores = errores = validar_paciente(paciente)
     if errores:
         return ResultadoRegistroPaciente(exito=False, errores=errores)
 

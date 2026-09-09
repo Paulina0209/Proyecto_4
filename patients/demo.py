@@ -1,25 +1,17 @@
-"""
-Demo interactivo de registro de pacientes (HC-01).
 
-Formulario corto por consola, pensado para probar los tres criterios
-de aceptación de la historia: registro exitoso, validación de campos
-obligatorios y alerta de posible duplicado.
-
-Ejecutar: python demo_registro_paciente.py
-"""
 from __future__ import annotations
 
 import sqlite3
 
-from patients.models import (
+from .models import (
     Paciente,
     Sexo,
     TipoIdentificacion,
     DatosContacto,
     AntecedentesMedicos,
 )
-from patients.registro import registrar_paciente, generar_identificador_temporal
-from patients.repository import inicializar_schema
+from .registro import registrar_paciente, generar_identificador_temporal
+from .repository import inicializar_schema
 
 
 def pedir(msg: str, obligatorio: bool = False) -> str:
