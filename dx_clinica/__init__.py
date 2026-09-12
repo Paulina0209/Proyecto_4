@@ -35,5 +35,11 @@ Componentes:
     - ``matcher``: emparejamiento de hallazgos contra criterios, con
       detección de negación.
     - ``builder``: ``construir_diagnosticos_diferenciales``, el punto de
-      entrada de la historia.
+      entrada de DX-02.
+    - ``incertidumbre`` / ``juicio_clinico``: manejo de la incertidumbre
+      diagnóstica y registro del juicio clínico del médico (**DX-03**).
+    - ``catalogo_estudios`` / ``recomendacion_estudios``: recomendación de
+      estudios necesarios según la sospecha diagnóstica, evitando
+      sugerir estudios redundantes con lo ya reciente en el expediente
+      (**DX-01**). Ver ``docs/dx_clinica_recomendacion_estudios.md``.
 """

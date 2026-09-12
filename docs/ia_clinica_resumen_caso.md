@@ -1,4 +1,4 @@
-# IA-04 — Resumen clínico de caso para junta médica / interconsulta
+ IA-04 — Resumen clínico de caso para junta médica / interconsulta
 
 ## Alcance de esta implementación
 

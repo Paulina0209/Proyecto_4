@@ -124,6 +124,29 @@
   `tests/historia_clinica_mock/test_adapters.py` para el nuevo adaptador.
   Demo en `ia_clinica/summary/demo.py`.
 
+- Nuevo `dx_clinica/catalogo_estudios.py` + `dx_clinica/recomendacion_estudios.py`:
+  implementan **DX-01 — Recomendación de estudios necesarios**. Dada una
+  sospecha diagnóstica (texto) y el expediente completo de un paciente
+  (`obtener_hallazgos_de_paciente`, mismo alcance que DX-02), sugiere una
+  lista priorizada de estudios (laboratorio, imagenología o biomarcador),
+  cada uno con su justificación clínica explícita. Antes de sugerir un
+  estudio, se cruza contra los hallazgos ya registrados del mismo tipo:
+  si ya existe uno equivalente **reciente** (dentro de una ventana de
+  días configurable, 90 por defecto), no se vuelve a sugerir — pero uno
+  antiguo (fuera de la ventana) sí se sugiere de nuevo, porque un
+  resultado desactualizado no descarta la necesidad clínica de
+  repetirlo. Si la sospecha diagnóstica no coincide con ningún perfil
+  del catálogo, no se inventa una lista genérica: se devuelve vacía con
+  una advertencia explícita. Reutiliza `dx_clinica.matcher.coincide_sin_negacion`
+  (mismo detector simple de negación que ya usa DX-02) tanto para
+  reconocer la sospecha diagnóstica como para detectar estudios
+  equivalentes. Ver `docs/dx_clinica_recomendacion_estudios.md`.
+- Pruebas en `tests/dx_clinica/test_recomendacion_estudios.py` cubriendo
+  los dos criterios de aceptación de DX-01 (lista priorizada con
+  justificación; no repetir estudios redundantes), la regla de "ventana
+  de recencia" configurable, y una integración con los pacientes
+  sintéticos reales (María, Carlos). Demo en `dx_clinica/demo_estudios.py`.
+
 > Nota de numeración: el documento `backlog_copiloto_oncologico.md`
 > registra **IA-04** como "razonamiento y fuentes de cada recomendación"
 > (ya cubierto por `ia_clinica/explainability/`). La historia de usuario
