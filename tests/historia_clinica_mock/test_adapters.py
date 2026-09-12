@@ -1,6 +1,11 @@
 import pytest
 
-from historia_clinica_mock.adapters import ConsultaNoEncontradaError, construir_contexto_clinico
+from historia_clinica_mock.adapters import (
+    ConsultaNoEncontradaError,
+    PacienteNoEncontradoError,
+    construir_contexto_clinico,
+    construir_contexto_resumen_caso,
+)
 
 
 def test_contexto_incluye_notas_labs_imagenes_y_biomarcadores(conn_sembrada):
@@ -34,3 +39,30 @@ def test_consulta_sin_labs_ni_imagenes_solo_trae_fragmentos_de_notas(conn_sembra
 def test_consulta_inexistente_lanza_error_explicito(conn):
     with pytest.raises(ConsultaNoEncontradaError):
         construir_contexto_clinico(conn, 9999)
+
+
+# ---------------------------------------------------------------------------
+# construir_contexto_resumen_caso (IA-04)
+# ---------------------------------------------------------------------------
+def test_resumen_caso_incluye_diagnostico_estadio_y_hallazgos_de_todo_el_expediente(conn_sembrada):
+    conn, ids = conn_sembrada
+    contexto = construir_contexto_resumen_caso(conn, ids["paciente_maria"])
+
+    assert contexto.patient_ref == f"paciente-{ids['paciente_maria']}"
+    assert contexto.paciente_id == ids["paciente_maria"]
+    assert contexto.diagnostico_principal == "Cáncer de mama triple negativo"
+    assert contexto.estadio == "II"
+
+    ids_segmentos = {s.id for s in contexto.segments}
+    assert f"lab-{ids['lab_maria_1']}" in ids_segmentos
+    assert f"imagen-{ids['imagen_maria_1']}" in ids_segmentos
+    assert f"biomarcador-{ids['biomarcador_maria_1']}" in ids_segmentos
+    # Debe incluir notas de AMBAS consultas de María, no solo la primera
+    # (mismo alcance de "todo el expediente" que ya usa DX-02).
+    assert any(s.id.startswith(f"consulta-{ids['consulta_maria_1']}-nota-") for s in contexto.segments)
+    assert any(s.id.startswith(f"consulta-{ids['consulta_maria_2']}-nota-") for s in contexto.segments)
+
+
+def test_resumen_caso_paciente_inexistente_lanza_error(conn):
+    with pytest.raises(PacienteNoEncontradoError):
+        construir_contexto_resumen_caso(conn, 9999)

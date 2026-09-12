@@ -9,4 +9,8 @@ Principio rector (ver `backlog_copiloto_oncologico.md`):
 Submódulos:
     - ``notes``: generación automática de borradores de notas clínicas
       (historia de usuario **IA-02**).
+    - ``review``: revisión, edición y aprobación explícita de esos
+      borradores (historia de usuario **IA-03**).
+    - ``summary``: resumen clínico de caso para junta médica o
+      interconsulta (historia de usuario **IA-04**).
 """

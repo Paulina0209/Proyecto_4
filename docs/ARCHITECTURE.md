@@ -58,6 +58,27 @@ en su propia tabla SQLite para que sobreviva a cerrar sesión). Ninguna
 nota adquiere estado oficial sin una acción explícita de aprobación con
 un identificador de médico autorizado. Ver `docs/ia_clinica_revision.md`.
 
+`ia_clinica/summary` implementa **IA-04 — resumen clínico de caso para
+junta médica / interconsulta**: a diferencia de `ia_clinica/notes`
+(acotado a una consulta), combina *todo* el expediente disponible del
+paciente (mismo alcance que `dx_clinica`, vía
+`historia_clinica_mock.adapters.construir_contexto_resumen_caso`) en un
+documento de cuatro secciones (diagnóstico, estadio, tratamientos
+previos, estado actual). Diagnóstico y estadio se toman directamente del
+registro estructurado del paciente, sin pasar por ningún LLM; las otras
+dos secciones reutilizan la misma interfaz `LLMClient` (y el mismo
+`OllamaLLMClient`) que IA-02/IA-03, con la misma validación de
+trazabilidad. Cualquier sección sin información suficiente queda marcada
+explícitamente, nunca inventada. Ver `docs/ia_clinica_resumen_caso.md`.
+
+> Nota de numeración: el backlog (`backlog_copiloto_oncologico.md`)
+> registra un **IA-04** distinto ("razonamiento y fuentes de cada
+> recomendación"), ya cubierto por `ia_clinica/explainability/`. Esta
+> historia de "resumen de caso" se recibió esta sesión explícitamente
+> rotulada como IA-04 con otras dependencias (`AI-02, HC-06`); se
+> implementó tal como se pidió, quedando pendiente reconciliar la
+> numeración en el backlog.
+
 ### clinical_query
 
 Implementa **IA-01 — consulta en lenguaje natural sobre el paciente** y
