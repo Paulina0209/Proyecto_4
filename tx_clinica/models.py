@@ -15,10 +15,25 @@ DISCLAIMER = (
 )
 
 #: Texto fijo cuando ningún módulo de guías aplica al caso (criterio de
-#: aceptación #3 de TX-01: no forzar una sugerencia genérica).
+#: aceptación #3 de TX-01: no forzar una sugerencia genérica). Esto es
+#: una negativa REAL -- ningún módulo aplicaría aunque se completaran
+#: todos los datos. Distinto de FALTAN_DATOS_PARA_DETERMINAR_GUIA.
 SIN_GUIA_APLICABLE = (
     "No hay un módulo de guía clínica configurado que aplique claramente a este caso "
     "(enfermedad rara o presentación atípica). No se genera una sugerencia genérica."
+)
+
+#: Texto fijo para la Fase 1 de la recomendación cuando NO se pudo
+#: determinar si hay guía aplicable porque falta al menos un dato clínico
+#: necesario para evaluar la elegibilidad de uno o más módulos candidatos
+#: -- a diferencia de SIN_GUIA_APLICABLE, aquí el sistema no sabe todavía
+#: si hay guía aplicable o no. Nunca se debe reportar sin_guia_aplicable
+#: en este caso: eso implicaría una negativa que el sistema no puede
+#: sostener con los datos que tiene.
+FALTAN_DATOS_PARA_DETERMINAR_GUIA = (
+    "No se puede determinar todavía si hay una guía clínica aplicable a este caso "
+    "porque falta al menos un dato clínico necesario. Complete los datos solicitados "
+    "para que el sistema pueda evaluarlo."
 )
 
 
@@ -73,7 +88,7 @@ class RegimenCandidato:
     rule_id_disparada: str
     archivo_regla: str
     audit_effect: str  # "supports_prescription" | "requires_clinical_review" | ...
-    field_ids_usados: Tuple[str, ...]  # facts reales del paciente usados en la evaluación
+    field_ids_usados: Tuple[str, ...]  # facts REALMENTE evaluados por la regla ganadora
     evidencia: Optional[TreatmentEvidenceReference]
     #: Distinto de None cuando este candidato solo aparece porque, SIN la
     #: comorbilidad registrada, calificaría como primera línea -- criterio
@@ -92,11 +107,21 @@ class RegimenCandidato:
 class ResultadoRecomendacionTratamiento:
     """Resultado completo devuelto al oncólogo para un paciente."""
 
-    patient_id: int
+    #: None cuando el caso se describió en el chat sin paciente
+    #: registrado en la base de datos -- antes se usaba -1 como
+    #: centinela, ambiguo con un id real mal tecleado. None es explícito.
+    patient_id: Optional[int]
     module_id: Optional[str]
     generado_en: datetime
     candidatos: Tuple[RegimenCandidato, ...]
     sin_guia_aplicable: bool = False
+    #: Fase 1: True cuando no se pudo determinar si hay guía aplicable
+    #: por falta de datos (distinto de sin_guia_aplicable=True, que es
+    #: una negativa real). Si esto es True, candidatos siempre está vacío
+    #: y sin_guia_aplicable siempre es False -- son mutuamente excluyentes.
+    faltan_datos_para_determinar_guia: bool = False
+    #: Solo poblado cuando faltan_datos_para_determinar_guia=True.
+    variables_faltantes_por_modulo: dict = field(default_factory=dict)
 
     disclaimer: str = field(default=DISCLAIMER, init=False)
 

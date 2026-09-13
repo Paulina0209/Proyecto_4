@@ -1,0 +1,49 @@
+# EJEMPLO SENCILLO PARA PRUEBAS -- NO validado clínicamente.
+# Módulo: breast_metastatic_tnbc (pembrolizumab + paclitaxel/nab-paclitaxel/carboplatin+gemcitabine)
+rule_set_id: interactions_breast_metastatic_tnbc_demo
+rules:
+  - id: BREAST-INT-001
+    name: Paclitaxel con inductor fuerte de CYP3A4 concomitante
+    conditions:
+      all:
+        - field: prescribed_antineoplastic_drugs
+          operator: contains
+          value: paclitaxel
+        - field: concomitant_strong_cyp3a4_inducer
+          operator: equals
+          value: true
+    conclusion:
+      interaction_id: paclitaxel_cyp3a4_inducer
+      concomitant_drug: "inductor fuerte de CYP3A4 (p. ej. rifampicina, fenitoína, carbamazepina)"
+      severity: major
+      audit_effect: requires_justification
+      description: >
+        Los inductores fuertes de CYP3A4 pueden reducir la exposición
+        plasmática a paclitaxel. (EJEMPLO de prueba, no validado.)
+      recommendation: "Evitar el uso concomitante cuando sea posible."
+      source:
+        titulo: "Ejemplo de prueba -- reemplazar por ficha técnica real antes de usar en producción"
+        anio: 2023
+
+  - id: BREAST-INT-002
+    name: Pembrolizumab con agente prolongador de QT concomitante
+    conditions:
+      all:
+        - field: prescribed_antineoplastic_drugs
+          operator: contains
+          value: pembrolizumab
+        - field: concomitant_qt_prolonging_agent
+          operator: equals
+          value: true
+    conclusion:
+      interaction_id: pembrolizumab_qt_agent
+      concomitant_drug: "agente prolongador del QT (p. ej. amiodarona)"
+      severity: minor
+      audit_effect: informational
+      description: >
+        Sin interacción farmacocinética directa conocida; se documenta
+        como recordatorio de monitoreo. (EJEMPLO de prueba, no validado.)
+      recommendation: "Monitoreo clínico habitual, sin ajuste de dosis."
+      source:
+        titulo: "Ejemplo de prueba -- reemplazar por fuente real antes de usar en producción"
+        anio: 2023

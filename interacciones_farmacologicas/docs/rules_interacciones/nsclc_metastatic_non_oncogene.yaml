@@ -1,0 +1,50 @@
+# EJEMPLO SENCILLO PARA PRUEBAS -- NO validado clínicamente.
+# Módulo: nsclc_metastatic_non_oncogene (pembro_monotherapy,
+# pembro_pemetrexed_platinum_induction, pembro_carboplatin_taxane_induction, pembro_maintenance)
+rule_set_id: interactions_nsclc_metastatic_non_oncogene_demo
+rules:
+  - id: NSCLC-INT-001
+    name: Pembrolizumab con agente prolongador de QT concomitante
+    conditions:
+      all:
+        - field: prescribed_antineoplastic_drugs
+          operator: contains
+          value: pembrolizumab
+        - field: concomitant_qt_prolonging_agent
+          operator: equals
+          value: true
+    conclusion:
+      interaction_id: pembrolizumab_qt_agent_nsclc
+      concomitant_drug: "agente prolongador del QT (p. ej. amiodarona)"
+      severity: minor
+      audit_effect: informational
+      description: >
+        Sin interacción farmacocinética directa conocida; se documenta
+        como recordatorio de monitoreo. (EJEMPLO de prueba, no validado.)
+      recommendation: "Monitoreo clínico habitual, sin ajuste de dosis."
+      source:
+        titulo: "Ejemplo de prueba -- reemplazar por fuente real antes de usar en producción"
+        anio: 2023
+
+  - id: NSCLC-INT-002
+    name: Carboplatino con inductor fuerte de CYP3A4 concomitante
+    conditions:
+      all:
+        - field: prescribed_antineoplastic_drugs
+          operator: contains
+          value: carboplatin
+        - field: concomitant_strong_cyp3a4_inducer
+          operator: equals
+          value: true
+    conclusion:
+      interaction_id: carboplatin_cyp3a4_inducer
+      concomitant_drug: "inductor fuerte de CYP3A4 (p. ej. rifampicina)"
+      severity: major
+      audit_effect: requires_justification
+      description: >
+        Interacción ILUSTRATIVA para pruebas -- verificar contra ficha
+        técnica real antes de usar en producción. (EJEMPLO de prueba, no validado.)
+      recommendation: "Revisar manualmente antes de confirmar el tratamiento."
+      source:
+        titulo: "Ejemplo de prueba -- reemplazar por fuente real antes de usar en producción"
+        anio: 2023
