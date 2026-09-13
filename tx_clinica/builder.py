@@ -55,26 +55,7 @@ def _leer_yaml(path: Path) -> Optional[dict[str, Any]]:
 
 
 def _archivos_rule_set(module_folder: Path) -> list[str]:
-    """Descubre qué YAML del módulo son rule-sets (tienen clave 'rules').
-
-    Confirmado contra la estructura real del repo: las reglas viven en
-    una subcarpeta ``rules/`` dentro de cada módulo (ej.
-    ``guidelines/breast_early_tnbc/rules/adjuvant.yaml``), mientras que
-    ``metadata.yaml``/``regimens.yaml``/``variables.yaml``/``pathway.yaml``
-    están directo en la carpeta del módulo. Se busca ahí en vez de en la
-    raíz del módulo.
-
-    Se descubre por contenido (no se hardcodean nombres) porque cada
-    módulo tiene un conjunto distinto de archivos de reglas
-    (first_line.yaml/subsequent_line.yaml en unos, neoadjuvant.yaml/
-    adjuvant.yaml/perioperative.yaml en otros, routing.yaml/
-    sequencing.yaml en el módulo oncogene-addicted, localized.yaml/
-    metastatic.yaml en uveal melanoma, etc.).
-
-    Devuelve rutas relativas a module_folder (ej. "rules/adjuvant.yaml"),
-    no solo el nombre de archivo, para que el resto del código
-    (module_folder / archivo) siga funcionando sin más cambios.
-    """
+    """Descubre qué YAML del módulo son rule-sets (tienen clave 'rules')."""
     rules_dir = module_folder / "rules"
     if not rules_dir.exists():
         return []
@@ -86,14 +67,6 @@ def _archivos_rule_set(module_folder: Path) -> list[str]:
             archivos.append(f"rules/{path.name}")
     return archivos
 
-
-# ---------------------------------------------------------------------
-# Extractor tolerante de regímenes: normaliza los formatos de
-# regimens.yaml vistos en las 9 guías reales sin interpretar la lógica
-# de matching (esa es para auditoría; aquí solo se necesita saber qué
-# fármacos y qué fase tiene el régimen, para poder inyectarlos como
-# hipótesis).
-# ---------------------------------------------------------------------
 
 _LLAVES_FARMACOS_CONOCIDAS: tuple[Any, ...] = (
     "includes",
@@ -125,7 +98,6 @@ def _extraer_fase(regimen: dict[str, Any]) -> Optional[str]:
 
 
 def _iterar_regimenes(payload: dict[str, Any]):
-    """regimens.yaml es a veces una lista, a veces un dict keyed por id."""
     regimenes = payload.get("regimens", [])
     if isinstance(regimenes, dict):
         for regimen_id, regimen in regimenes.items():
@@ -134,14 +106,6 @@ def _iterar_regimenes(payload: dict[str, Any]):
         yield from regimenes
 
 
-# ---------------------------------------------------------------------
-# Evaluación hipotética de un régimen contra todo el rule-set del módulo
-# ---------------------------------------------------------------------
-
-#: Llaves de conclusion.* que nombran explícitamente uno o más régimenes
-#: concretos. Algunas reglas de secuencia usan más de una (inducción +
-#: mantenimiento) -- una regla puede referenciar varios régimenes
-#: válidos a la vez, no solo uno.
 _LLAVES_REGIMEN_EN_CONCLUSION = (
     "regimen_id",
     "sequence_regimen_id",
@@ -174,12 +138,6 @@ def _buscar_mejor_evaluacion(
     overrides: dict[str, Any],
     regimen_id: str,
 ) -> _ResultadoEvaluacion:
-    """Corre el régimen (vía overrides) contra TODOS los rule-sets del
-    módulo y clasifica el mejor resultado encontrado. No decide todavía
-    si hay que armar un RegimenCandidato -- eso lo hace quien llama, para
-    poder reusar esta función tanto en la corrida normal como en la
-    contrafactual de comorbilidad.
-    """
     mejor_positivo: Optional[tuple[RuleEvaluation, str]] = None
     mejor_revision: Optional[tuple[RuleEvaluation, str]] = None
     mejor_no_evaluable: Optional[tuple[RuleEvaluation, str]] = None
@@ -218,21 +176,11 @@ def _buscar_mejor_evaluacion(
 
 
 def _detectar_comorbilidad_bloqueante(facts_paciente: dict[str, Any]) -> Optional[tuple[str, Any]]:
-    """Devuelve (variable, valor_real) de la PRIMERA variable de
-    contraindicación de ICI presente en los facts reales del paciente
-    con un valor que SÍ representa contraindicación. None si no hay
-    ninguna."""
     todas = _comorbilidades_bloqueantes(facts_paciente)
     return todas[0] if todas else None
 
 
 def _comorbilidades_bloqueantes(facts_paciente: dict[str, Any]) -> list[tuple[str, Any]]:
-    """Todas las variables de contraindicación de ICI presentes en los
-    facts reales con un valor que representa contraindicación (no solo
-    la primera) -- necesario para el chequeo de "¿la regla que califica
-    a este régimen revisó ESTA variable en particular?", porque un
-    paciente puede tener varias comorbilidades activas y la regla puede
-    cubrir solo algunas."""
     resultado = []
     for variable, valor_sin_contraindicacion in _VARIABLES_CONTRAINDICACION_ICI.items():
         valor_real = facts_paciente.get(variable)
@@ -242,10 +190,6 @@ def _comorbilidades_bloqueantes(facts_paciente: dict[str, Any]) -> list[tuple[st
 
 
 def _campos_de_condicion(condition: dict[str, Any]) -> set[str]:
-    """Recorre recursivamente un árbol de condiciones (all/any/not/field)
-    y devuelve todos los nombres de campo que la regla realmente revisa.
-    Mismo árbol que evalúa core.engine, pero aquí solo se extraen los
-    nombres de campo, no se evalúa nada."""
     campos: set[str] = set()
     if "all" in condition:
         for hijo in condition["all"]:
@@ -262,10 +206,9 @@ def _campos_de_condicion(condition: dict[str, Any]) -> set[str]:
 
 def _campos_referenciados_por_regla(module_folder: Path, archivo: str, rule_id: str) -> set[str]:
     """Qué variables revisa realmente una regla concreta, leyendo el
-    árbol de condiciones crudo del YAML. Se usa para distinguir "la
-    regla revisó esta comorbilidad y decidió que no importa" (nada que
-    hacer) de "la regla nunca preguntó por esta comorbilidad en
-    absoluto" (silencio, no una decisión -- amerita advertencia)."""
+    árbol de condiciones crudo del YAML. Se usa tanto para el chequeo de
+    cobertura de comorbilidad como (ahora, tras la revisión) para poblar
+    field_ids_usados con precisión -- ver nota en _construir_candidato."""
     payload = _leer_yaml(module_folder / archivo) or {}
     for regla in payload.get("rules", []):
         if regla.get("id") == rule_id:
@@ -276,10 +219,6 @@ def _campos_referenciados_por_regla(module_folder: Path, archivo: str, rule_id: 
 def _comorbilidad_no_evaluada_por_regla(
     facts_paciente: dict[str, Any], campos_regla: set[str]
 ) -> Optional[tuple[str, Any]]:
-    """De todas las comorbilidades bloqueantes del paciente, la primera
-    que la regla ganadora NUNCA menciona en sus condiciones -- es decir,
-    una contraindicación real que nadie verificó, no una que la regla ya
-    revisó y descartó."""
     for variable, valor_real in _comorbilidades_bloqueantes(facts_paciente):
         if variable not in campos_regla:
             return variable, valor_real
@@ -297,6 +236,21 @@ def _construir_candidato(
     advertencia_comorbilidad: Optional[str] = None,
 ) -> RegimenCandidato:
     evidencia = obtener_evidencia_regla(module_folder, resultado.archivo, resultado.evaluacion.rule_id)
+
+    # CORREGIDO (revisión previa al refactor): antes field_ids_usados era
+    # "todos los facts del paciente salvo 4 llaves fijas" -- en la
+    # práctica, casi todo el diccionario. Ahora es exactamente el
+    # conjunto de campos que la regla GANADORA evaluó en su árbol de
+    # conditions, leído del YAML crudo (mismo mecanismo que ya existía
+    # para el chequeo de cobertura de comorbilidad, solo que antes no se
+    # reutilizaba aquí). Esto es lo que explainability_adapter.py usa
+    # para decidir qué datos del paciente mostrarle al oncólogo como "en
+    # qué se basó la recomendación" -- con el valor viejo, mostraba
+    # prácticamente todos los datos clínicos del paciente como
+    # "considerados", no solo los que la regla realmente miró.
+    campos_regla = _campos_referenciados_por_regla(module_folder, resultado.archivo, resultado.evaluacion.rule_id)
+    field_ids_usados = tuple(k for k in facts_paciente if k in campos_regla)
+
     return RegimenCandidato(
         regimen_id=regimen_id,
         fase=str(fase or ""),
@@ -304,10 +258,7 @@ def _construir_candidato(
         rule_id_disparada=resultado.evaluacion.rule_id,
         archivo_regla=resultado.archivo,
         audit_effect=audit_effect_final,
-        field_ids_usados=tuple(
-            k for k in facts_paciente
-            if k not in ("prescribed_antineoplastic_drugs", "prescribed_regimen_id", "treatment_phase", "treatment_line")
-        ),
+        field_ids_usados=field_ids_usados,
         evidencia=evidencia,
         advertencia_comorbilidad=advertencia_comorbilidad,
     )
@@ -319,16 +270,8 @@ def _evaluar_regimen_hipotetico(
     facts_paciente: dict[str, Any],
     regimen: dict[str, Any],
 ) -> Optional[RegimenCandidato]:
-    """Evalúa un régimen hipotético contra TODOS los rule-sets del módulo.
-
-    Si el régimen no calificaría por una comorbilidad de contraindicación
-    de ICI (y no por una contraindicación explícita de otra regla),
-    reintenta contrafactualmente sin esa comorbilidad -- ver docstring
-    del módulo, sección "Advertencia de comorbilidad".
-    """
     farmacos = _extraer_farmacos(regimen)
     if farmacos is None:
-        # Formato de regimen no reconocido: se excluye, no se adivina.
         return None
 
     regimen_id = regimen.get("id")
@@ -348,15 +291,6 @@ def _evaluar_regimen_hipotetico(
     if resultado.tipo == "negativo":
         return None
     if resultado.tipo == "positivo":
-        # Antes de darlo por bueno como primera línea sin más: ¿la regla
-        # que lo respalda revisó TODAS las comorbilidades bloqueantes
-        # que el paciente tiene? Si el paciente tiene una contraindicación
-        # de ICI que esta regla en particular nunca menciona en sus
-        # condiciones, el silencio de la regla sobre esa variable no es
-        # una decisión clínica -- es que nadie la verificó. Se degrada
-        # con advertencia en vez de presentarlo como primera línea sin
-        # reservas (caso real confirmado: ESMO-NSCLC-M-FL-001 no revisa
-        # major_comorbidity_precluding_ici, solo immunotherapy_contraindication).
         campos_regla = _campos_referenciados_por_regla(module_folder, resultado.archivo, resultado.evaluacion.rule_id)
         comorbilidad_ignorada = _comorbilidad_no_evaluada_por_regla(facts_paciente, campos_regla)
         if comorbilidad_ignorada is not None:
@@ -377,11 +311,6 @@ def _evaluar_regimen_hipotetico(
     if resultado.tipo == "no_evaluable":
         return _construir_candidato(module_folder, regimen_id, fase, farmacos, facts_paciente, resultado, "not_evaluable")
 
-    # resultado.tipo == "ninguno": el régimen no calificó con los facts
-    # reales. Antes de descartarlo, revisar si la causa es una
-    # comorbilidad de contraindicación de ICI -- si sin ella SÍ
-    # calificaría como primera línea, se presenta con advertencia en vez
-    # de desaparecer en silencio (criterio de aceptación #2 de TX-01).
     comorbilidad = _detectar_comorbilidad_bloqueante(facts_paciente)
     if comorbilidad is None:
         return None
@@ -394,9 +323,6 @@ def _evaluar_regimen_hipotetico(
         module_folder, archivos_regla, facts_sin_comorbilidad, overrides, regimen_id
     )
     if resultado_contrafactual.tipo != "positivo":
-        # Ni siquiera sin la comorbilidad calificaría -- no es un caso de
-        # "comorbilidad bloqueó primera línea", es que el régimen
-        # genuinamente no aplica por otras razones. No se fuerza nada.
         return None
 
     advertencia = (
@@ -410,18 +336,35 @@ def _evaluar_regimen_hipotetico(
     )
 
 
+def obtener_farmacos_de_regimen(module_folder: Path, regimen_id: str) -> Optional[list[str]]:
+    """Devuelve la lista de fármacos de un régimen conocido de
+    regimens.yaml, o None si el régimen no existe en ese módulo o su
+    formato no se reconoce. Usado por tools/interaction_tools.py (TX-03)
+    para saber qué fármacos chequear contra la medicación concomitante,
+    sin duplicar el extractor tolerante de regimens.yaml."""
+    payload = _leer_yaml(module_folder / "regimens.yaml") or {}
+    for regimen in _iterar_regimenes(payload):
+        if regimen.get("id") == regimen_id:
+            return _extraer_farmacos(regimen)
+    return None
+
+
 def construir_recomendaciones_tratamiento(
-    patient_id: int,
+    patient_id: Optional[int],
     facts_paciente: dict[str, Any],
     guidelines_root: Path,
     ahora: Optional[datetime] = None,
 ) -> ResultadoRecomendacionTratamiento:
     """Genera las opciones de tratamiento sugeridas para un paciente.
 
-    facts_paciente debe seguir el vocabulario de variables.yaml del
-    módulo aplicable (estadio, biomarcadores, ECOG, etc.) — construido
-    por quien llama (ver tx_clinica/patient_facts.py) a partir de
-    historia_clinica_mock.
+    Nota (post-refactor): esta función sigue resolviendo el módulo con
+    seleccionar_modulo (sin distinguir "no aplica" de "falta un dato"),
+    sin cambios de comportamiento respecto a la versión anterior. Esa
+    distinción (Fase 1 de la recomendación) vive un nivel más arriba, en
+    tx_clinica.tools.recommendation_tools, usando
+    module_selector.seleccionar_modulo_con_diagnostico ANTES de llegar
+    hasta aquí -- para cuando esta función se invoca, ya se confirmó que
+    hay un módulo resuelto con los datos disponibles.
     """
     module_folder_name = seleccionar_modulo(facts_paciente, guidelines_root)
     if module_folder_name is None:
@@ -443,11 +386,6 @@ def construir_recomendaciones_tratamiento(
         if candidato is not None:
             candidatos.append(candidato)
 
-    # Orden explicable: primero las que sí se respaldan como primera
-    # línea; luego las que requieren revisión (incluye las de
-    # comorbilidad); luego las no evaluables. Dentro de cada grupo, se
-    # conserva el orden de regimens.yaml. Nunca se ordena por un score
-    # inventado.
     orden_prioridad = {"supports_prescription": 0, "requires_clinical_review": 1, "not_evaluable": 2}
     candidatos.sort(key=lambda c: orden_prioridad.get(c.audit_effect, 3))
 

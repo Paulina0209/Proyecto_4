@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from ia_clinica.explainability.models import PatientFactTrace
+from ia_clinica.explainability.models import ClinicalExplanation, PatientFactTrace
 from ia_clinica.explainability.service import ExplanationService, EvidenceTrace
 
 from tx_clinica.models import RegimenCandidato
