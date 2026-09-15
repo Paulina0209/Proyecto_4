@@ -1,6 +1,6 @@
 """Puentes entre la base de datos mock y los módulos de IA que la consumen.
 
-Dos adaptadores conviven aquí, porque cada historia necesita un recorte
+Tres adaptadores conviven aquí, porque cada historia necesita un recorte
 distinto del expediente:
 
     - ``construir_contexto_clinico`` (IA-02): arma el ``ClinicalContext``
@@ -12,9 +12,16 @@ distinto del expediente:
       o no vinculados a una consulta concreta), porque el diagnóstico
       diferencial debe poder combinar toda la información clínica
       disponible, no solo la de un encuentro.
+    - ``construir_contexto_resumen_caso`` (IA-04): arma el
+      ``CaseSummaryContext`` de todo el expediente de un paciente (igual
+      alcance que DX-02, porque un resumen para junta médica también
+      necesita el caso completo, no una sola consulta), combinando los
+      dos campos estructurados del paciente (``diagnostico_principal``,
+      ``estadio``) con los mismos hallazgos no estructurados que ya reúne
+      ``obtener_hallazgos_de_paciente``.
 
-En ambos casos cada fragmento conserva el id real de la fila de la base
-de datos que lo originó, para que la trazabilidad llegue hasta el
+En los tres casos cada fragmento conserva el id real de la fila de la
+base de datos que lo originó, para que la trazabilidad llegue hasta el
 registro exacto, no solo a "la consulta" o "el paciente" en general.
 """
 
@@ -24,6 +31,7 @@ import sqlite3
 from typing import List
 
 from ia_clinica.notes.models import ClinicalContext, SourceSpan, split_sentences
+from ia_clinica.summary.models import CaseSummaryContext
 
 from historia_clinica_mock.repository import (
     Biomarcador,
@@ -170,3 +178,40 @@ def obtener_hallazgos_de_paciente(conn: sqlite3.Connection, paciente_id: int) ->
         )
 
     return hallazgos
+
+
+def construir_contexto_resumen_caso(conn: sqlite3.Connection, paciente_id: int) -> CaseSummaryContext:
+    """Construye el ``CaseSummaryContext`` de IA-04 para todo el expediente de un paciente.
+
+    Reutiliza ``obtener_hallazgos_de_paciente`` (mismo alcance de "todo el
+    historial, esté o no vinculado a una consulta puntual" que ya necesita
+    DX-02) y los convierte a ``SourceSpan`` para que
+    ``ia_clinica.summary.generator`` pueda validar la trazabilidad de las
+    secciones derivadas exactamente igual que ``ia_clinica.notes.generator``
+    lo hace con el contexto de una sola consulta.
+
+    ``diagnostico_principal`` y ``estadio`` se toman tal cual están
+    registrados en la fila del paciente (pueden ser ``None`` si aún no se
+    han documentado); el generador de IA-04 es quien decide, a partir de
+    eso, si esas secciones quedan documentadas o marcadas como faltantes.
+
+    Lanza ``PacienteNoEncontradoError`` si el id no existe.
+    """
+
+    paciente = obtener_paciente(conn, paciente_id)
+    if paciente is None:
+        raise PacienteNoEncontradoError(f"No existe ningún paciente con id={paciente_id}.")
+
+    hallazgos = obtener_hallazgos_de_paciente(conn, paciente_id)
+    segments = [
+        SourceSpan(id=hallazgo.id, text=hallazgo.texto, origin=hallazgo.origen, timestamp=hallazgo.fecha)
+        for hallazgo in hallazgos
+    ]
+
+    return CaseSummaryContext(
+        patient_ref=f"paciente-{paciente.id}",
+        paciente_id=paciente.id,
+        diagnostico_principal=paciente.diagnostico_principal,
+        estadio=paciente.estadio,
+        segments=segments,
+    )

@@ -99,6 +99,62 @@
   `tests/dx_clinica/test_juicio_clinico.py` cubriendo los cinco criterios
   de aceptación de DX-03. Demo en `dx_clinica/demo_incertidumbre.py`. Ver
   `docs/dx_clinica_incertidumbre.md`.
+- Nuevo componente `ia_clinica/summary/` que implementa **IA-04 — Resumen
+  clínico de caso para junta médica / interconsulta**: genera un
+  documento estructurado (diagnóstico, estadio, tratamientos previos,
+  estado actual) a partir de *todo* el expediente disponible del
+  paciente, no de una sola consulta (mismo alcance que DX-02). Las
+  secciones "diagnóstico" y "estadio" se toman directamente del registro
+  estructurado del paciente, sin pasar por ningún LLM; "tratamientos
+  previos" y "estado actual" se redactan a partir de los hallazgos no
+  estructurados del expediente reutilizando la misma interfaz
+  `LLMClient` de IA-02/IA-03 (y, por tanto, el mismo `OllamaLLMClient` ya
+  configurado), con la misma validación de trazabilidad y el mismo
+  descarte de contenido sin cita válida. Si alguna sección queda sin
+  información suficiente, el documento la marca explícitamente en vez de
+  inventar contenido, con una advertencia visible al inicio listando qué
+  falta (criterio de aceptación AC2). Ver `docs/ia_clinica_resumen_caso.md`.
+- Nuevo adaptador `historia_clinica_mock.adapters.construir_contexto_resumen_caso`,
+  que combina `diagnostico_principal`/`estadio` del paciente con los
+  mismos hallazgos que ya reúne `obtener_hallazgos_de_paciente` (DX-02)
+  en un `CaseSummaryContext` para IA-04.
+- Pruebas en `tests/ia_clinica/summary/` (modelos, prompts/cliente de
+  referencia, y los dos criterios de aceptación de IA-04 más la regla de
+  no-alucinación), y casos añadidos a
+  `tests/historia_clinica_mock/test_adapters.py` para el nuevo adaptador.
+  Demo en `ia_clinica/summary/demo.py`.
+
+- Nuevo `dx_clinica/catalogo_estudios.py` + `dx_clinica/recomendacion_estudios.py`:
+  implementan **DX-01 — Recomendación de estudios necesarios**. Dada una
+  sospecha diagnóstica (texto) y el expediente completo de un paciente
+  (`obtener_hallazgos_de_paciente`, mismo alcance que DX-02), sugiere una
+  lista priorizada de estudios (laboratorio, imagenología o biomarcador),
+  cada uno con su justificación clínica explícita. Antes de sugerir un
+  estudio, se cruza contra los hallazgos ya registrados del mismo tipo:
+  si ya existe uno equivalente **reciente** (dentro de una ventana de
+  días configurable, 90 por defecto), no se vuelve a sugerir — pero uno
+  antiguo (fuera de la ventana) sí se sugiere de nuevo, porque un
+  resultado desactualizado no descarta la necesidad clínica de
+  repetirlo. Si la sospecha diagnóstica no coincide con ningún perfil
+  del catálogo, no se inventa una lista genérica: se devuelve vacía con
+  una advertencia explícita. Reutiliza `dx_clinica.matcher.coincide_sin_negacion`
+  (mismo detector simple de negación que ya usa DX-02) tanto para
+  reconocer la sospecha diagnóstica como para detectar estudios
+  equivalentes. Ver `docs/dx_clinica_recomendacion_estudios.md`.
+- Pruebas en `tests/dx_clinica/test_recomendacion_estudios.py` cubriendo
+  los dos criterios de aceptación de DX-01 (lista priorizada con
+  justificación; no repetir estudios redundantes), la regla de "ventana
+  de recencia" configurable, y una integración con los pacientes
+  sintéticos reales (María, Carlos). Demo en `dx_clinica/demo_estudios.py`.
+
+> Nota de numeración: el documento `backlog_copiloto_oncologico.md`
+> registra **IA-04** como "razonamiento y fuentes de cada recomendación"
+> (ya cubierto por `ia_clinica/explainability/`). La historia de usuario
+> de "resumen de caso para junta médica / interconsulta" se recibió esta
+> sesión explícitamente rotulada como **IA-04** (con dependencias
+> `AI-02, HC-06`), distinta de la que aparece con ese mismo id en el
+> backlog. Se implementó tal como se pidió; vale la pena reconciliar la
+> numeración en el backlog cuando se tenga oportunidad.
 
 - `clinical_query/ambiguity.py` + cambios en `service.py`/`normalizer.py`/`models.py`:
   implementan **IA-06 — Manejo de consultas clínicas ambiguas**. Antes de

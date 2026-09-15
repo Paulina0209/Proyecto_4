@@ -58,6 +58,27 @@ en su propia tabla SQLite para que sobreviva a cerrar sesión). Ninguna
 nota adquiere estado oficial sin una acción explícita de aprobación con
 un identificador de médico autorizado. Ver `docs/ia_clinica_revision.md`.
 
+`ia_clinica/summary` implementa **IA-04 — resumen clínico de caso para
+junta médica / interconsulta**: a diferencia de `ia_clinica/notes`
+(acotado a una consulta), combina *todo* el expediente disponible del
+paciente (mismo alcance que `dx_clinica`, vía
+`historia_clinica_mock.adapters.construir_contexto_resumen_caso`) en un
+documento de cuatro secciones (diagnóstico, estadio, tratamientos
+previos, estado actual). Diagnóstico y estadio se toman directamente del
+registro estructurado del paciente, sin pasar por ningún LLM; las otras
+dos secciones reutilizan la misma interfaz `LLMClient` (y el mismo
+`OllamaLLMClient`) que IA-02/IA-03, con la misma validación de
+trazabilidad. Cualquier sección sin información suficiente queda marcada
+explícitamente, nunca inventada. Ver `docs/ia_clinica_resumen_caso.md`.
+
+> Nota de numeración: el backlog (`backlog_copiloto_oncologico.md`)
+> registra un **IA-04** distinto ("razonamiento y fuentes de cada
+> recomendación"), ya cubierto por `ia_clinica/explainability/`. Esta
+> historia de "resumen de caso" se recibió esta sesión explícitamente
+> rotulada como IA-04 con otras dependencias (`AI-02, HC-06`); se
+> implementó tal como se pidió, quedando pendiente reconciliar la
+> numeración en el backlog.
+
 ### clinical_query
 
 Implementa **IA-01 — consulta en lenguaje natural sobre el paciente** y
@@ -105,13 +126,31 @@ Se extendió con dos tablas para TX-01: datos_clinicos_estructurados (variable/v
 
 ### dx_clinica
 
-Contiene las capacidades de la épica Diagnóstico (DX-01, DX-02...).
-Implementa DX-02 — apoyo al diagnóstico diferencial: combina los
-hallazgos clínicos de `historia_clinica_mock` con un catálogo diagnóstico
-explícito y con evidencia leída de `guidelines/*/metadata.yaml` (una
-implementación mínima de lo que después será IA-04). No usa las reglas de
+Contiene las capacidades de la épica Diagnóstico. Implementa **DX-02** —
+apoyo al diagnóstico diferencial: combina los hallazgos clínicos de
+`historia_clinica_mock` con un catálogo diagnóstico explícito y con
+evidencia leída de `guidelines/*/metadata.yaml` (una implementación
+mínima de lo que después sería un IA-04 de explicabilidad/trazabilidad de
+evidencia — ver nota de numeración más abajo). No usa las reglas de
 tratamiento del motor `core`/`guidelines`; solo lee sus metadatos como
 fuente de evidencia citable. Ver `docs/dx_clinica.md`.
+
+También implementa **DX-03** — manejo de la incertidumbre diagnóstica y
+juicio clínico: analiza (sin modificarlo) el resultado de DX-02 para
+distinguir información faltante, ambigüedad entre alternativas empatadas
+e incertidumbre inherente a un perfil poco específico, y persiste en
+SQLite (solo-inserción) el juicio diagnóstico del médico, que siempre
+prevalece sobre la sugerencia del sistema. Ver
+`docs/dx_clinica_incertidumbre.md`.
+
+Y **DX-01** — recomendación de estudios necesarios: dada una sospecha
+diagnóstica (texto) y el expediente completo del paciente (mismo
+`obtener_hallazgos_de_paciente` de DX-02), sugiere una lista priorizada
+de estudios de laboratorio/imagenología/biomarcadores con justificación
+explícita, sin repetir un estudio si ya existe uno equivalente **reciente**
+en el expediente (un resultado antiguo, fuera de la ventana de recencia
+configurable, sí se vuelve a sugerir). Ver
+`docs/dx_clinica_recomendacion_estudios.md`.
 
 ### tx_clinica
 Contiene las capacidades de la épica Tratamientos (TX-01, TX-02...). Implementa TX-01 — recomendación de tratamiento: evalúa cada régimen conocido de guidelines/<módulo>/regimens.yaml de forma hipotética contra las reglas del módulo aplicable, para generar sugerencias desde estadio/biomarcadores en vez de solo auditar concordancia (que es para lo que esas reglas fueron escritas originalmente). Implementa también TX-02 — nivel de evidencia por recomendación, leyendo evidence.native.* y source/module_version directamente de la regla y el módulo reales. No reescribe ninguna regla existente. 
