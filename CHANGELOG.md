@@ -216,6 +216,27 @@
   pacientes/consultas del seed (ya desactualizadas en `main`) para fijar el
   mínimo y las invariantes en su lugar.
 
+- Nuevo componente `documentos_clinicos/` que implementa **DOC-02 —
+  Exportación de expediente médico a PDF**: `pdf_export.py` es un
+  renderizador genérico (basado en `reportlab`) que recibe un modelo
+  independiente de fuente (`DocumentoExportable`, con secciones de texto
+  y/o tabla, disclaimer y advertencias opcionales) y produce un PDF con
+  formato profesional (encabezado, pie de página con paginación,
+  callout de disclaimer, tablas con estilo); nunca genera un PDF a
+  partir de un documento sin contenido real (`DocumentoInsuficienteError`).
+  `adaptadores.py` traduce las dos fuentes que permite la historia — el
+  resumen de caso de IA-04 (`resumen_caso_a_documento_exportable`,
+  conservando su disclaimer de IA y exponiendo sus secciones faltantes
+  como advertencia visible) y el expediente clínico completo de un
+  paciente directamente desde `historia_clinica_mock`
+  (`expediente_completo_a_documento_exportable`, sin ningún LLM
+  involucrado) — al modelo genérico.
+- Pruebas en `tests/documentos_clinicos/` (renderizado a PDF y su
+  comportamiento defensivo ante documentos vacíos, y los dos
+  adaptadores) y demo end-to-end en
+  `documentos_clinicos/demo_exportacion.py`. Ver
+  `docs/documentos_clinicos_exportacion.md`.
+
 ### Notas
 
 - No se modificó ni se movió ningún archivo existente de `guidelines/`,
