@@ -19,6 +19,15 @@ from .models import (
 )
 from .registro import registrar_paciente, generar_identificador_temporal
 from .repository import inicializar_schema, listar_pacientes_de_oncologo, buscar_por_id
+from .busqueda import (
+    EstadoTratamiento,
+    FiltrosBusqueda,
+    TAMANO_PAGINA_DEFECTO,
+    TAMANO_PAGINA_MAXIMO,
+    buscar_pacientes,
+    inicializar_schema_busqueda,
+    validar_filtros,
+)
 
 DB_PATH = Path(__file__).parent.parent / "pacientes_api.db"
 
@@ -76,6 +85,29 @@ class ErroresValidacionResponse(BaseModel):
     errores: list[ErrorValidacionSchema]
 
 
+class PacienteResumenSchema(BaseModel):
+    id: int
+    nombre_completo: str
+    fecha_nacimiento: Optional[date]
+    tipo_identificacion: TipoIdentificacion
+    numero_identificacion: str
+    diagnosticos: list[str]
+    estado_tratamiento: Optional[str]
+    fecha_ultima_consulta: Optional[date]
+
+
+class BusquedaPacientesResponse(BaseModel):
+    items: list[PacienteResumenSchema]
+    total: int
+    pagina: int
+    tamano_pagina: int
+    total_paginas: int
+    filtros_aplicados: dict[str, str]
+    # Solo viene lleno cuando total == 0: el frontend lo muestra en lugar
+    # de una lista vacía sin explicación.
+    mensaje: Optional[str] = None
+
+
 class DuplicadoResponse(BaseModel):
     mensaje: str = "Ya existe un paciente registrado con esta identificación."
     posible_duplicado: PacienteResponseSchema
@@ -103,6 +135,7 @@ def get_conn():
 async def _lifespan(app: FastAPI):
     conn = sqlite3.connect(DB_PATH)
     inicializar_schema(conn)
+    inicializar_schema_busqueda(conn)
     conn.close()
     yield
 
@@ -209,6 +242,51 @@ def listar_pacientes(
 
 
 @app.get(
+    "/pacientes/buscar",
+    response_model=BusquedaPacientesResponse,
+    responses={400: {"model": ErroresValidacionResponse, "description": "Filtros inválidos"}},
+    summary="Buscar y filtrar pacientes de un oncólogo",
+)
+def buscar(
+    # TODO(SEC-01): tomar el oncólogo de la identidad autenticada, no de un query param.
+    oncologo_id: int = Query(..., description="ID del oncólogo autenticado (alcance de permisos)"),
+    nombre: Optional[str] = Query(None, description="Nombre parcial; ignora mayúsculas y tildes"),
+    diagnostico: Optional[str] = Query(None, description="Texto parcial del diagnóstico"),
+    estado_tratamiento: Optional[EstadoTratamiento] = Query(None),
+    ultima_consulta_desde: Optional[date] = Query(None, description="Inclusive"),
+    ultima_consulta_hasta: Optional[date] = Query(None, description="Inclusive"),
+    pagina: int = Query(1, ge=1),
+    tamano_pagina: int = Query(TAMANO_PAGINA_DEFECTO, ge=1, le=TAMANO_PAGINA_MAXIMO),
+    conn: sqlite3.Connection = Depends(get_conn),
+):
+    filtros = FiltrosBusqueda(
+        oncologo_id=oncologo_id,
+        nombre=nombre,
+        diagnostico=diagnostico,
+        estado_tratamiento=estado_tratamiento,
+        ultima_consulta_desde=ultima_consulta_desde,
+        ultima_consulta_hasta=ultima_consulta_hasta,
+    )
+    errores = validar_filtros(filtros)
+    if errores:
+        raise HTTPException(
+            status_code=400,
+            detail={"errores": [{"campo": e.campo, "mensaje": e.mensaje} for e in errores]},
+        )
+
+    resultado = buscar_pacientes(conn, filtros, pagina, tamano_pagina)
+    return BusquedaPacientesResponse(
+        items=[PacienteResumenSchema(**vars(item)) for item in resultado.items],
+        total=resultado.total,
+        pagina=resultado.pagina,
+        tamano_pagina=resultado.tamano_pagina,
+        total_paginas=resultado.total_paginas,
+        filtros_aplicados=filtros.aplicados(),
+        mensaje=resultado.mensaje,
+    )
+
+
+@app.get(
     "/pacientes/{paciente_id}",
     response_model=PacienteResponseSchema,
     responses={404: {"description": "No existe un paciente con ese id"}},
@@ -219,11 +297,3 @@ def leer_paciente(paciente_id: int, conn: sqlite3.Connection = Depends(get_conn)
     if paciente is None:
         raise HTTPException(status_code=404, detail=f"No existe un paciente con id {paciente_id}.")
     return _paciente_a_schema(paciente)
-
-
-@app.get(
-    "/identificadores-temporales/nuevo",
-    summary="Generar un identificador temporal (paciente sin documento)",
-)
-def nuevo_identificador_temporal():
-    return {"identificador_temporal": generar_identificador_temporal()}

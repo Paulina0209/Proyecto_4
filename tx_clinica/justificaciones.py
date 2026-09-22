@@ -36,6 +36,22 @@ def inicializar_schema(conn: sqlite3.Connection) -> None:
         )
         """
     )
+    # C4/S5: mismo criterio que decisiones_tratamiento -- append-only
+    # garantizado por trigger, no solo por convención.
+    conn.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS justificaciones_continuacion_no_update
+        BEFORE UPDATE ON justificaciones_continuacion
+        BEGIN SELECT RAISE(ABORT, 'justificaciones_continuacion es append-only'); END
+        """
+    )
+    conn.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS justificaciones_continuacion_no_delete
+        BEFORE DELETE ON justificaciones_continuacion
+        BEGIN SELECT RAISE(ABORT, 'justificaciones_continuacion es append-only'); END
+        """
+    )
     conn.commit()
 
 
@@ -58,7 +74,11 @@ def _registrar_justificacion(
             justificacion.fecha,
         ),
     )
-    conn.commit()
+    # C4: sin commit aquí a propósito -- confirmar_tratamiento() puede
+    # insertar varias justificaciones en un solo llamado, y esas
+    # inserciones deben confirmarse o revertirse JUNTO con la decisión
+    # que las originó (ver registrar_decision_tratamiento en registro.py,
+    # que hace el único commit/rollback de toda la operación).
     justificacion.id = cursor.lastrowid
     return justificacion
 
