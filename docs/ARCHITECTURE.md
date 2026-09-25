@@ -152,6 +152,21 @@ en el expediente (un resultado antiguo, fuera de la ventana de recencia
 configurable, sí se vuelve a sugerir). Ver
 `docs/dx_clinica_recomendacion_estudios.md`.
 
+### documentos_clinicos
+
+Contiene las capacidades de la épica Gestión Documental. Implementa
+**DOC-02** — exportación de expediente médico a PDF: `pdf_export.py` es
+un renderizador genérico que no conoce `ia_clinica`, `dx_clinica` ni
+`historia_clinica_mock` — recibe un `DocumentoExportable` (título,
+referencia de paciente, secciones con bloques de texto o tabla,
+disclaimer y advertencias opcionales) y produce un PDF con formato
+profesional, sin generar nunca un PDF a partir de un documento sin
+contenido real (`DocumentoInsuficienteError`). `adaptadores.py` traduce
+las dos fuentes que permite la historia — el resumen de caso de IA-04 y
+el expediente clínico completo directamente desde
+`historia_clinica_mock` — al modelo genérico, cada una en su propia
+función. Ver `docs/documentos_clinicos_exportacion.md`.
+
 ### tx_clinica
 Contiene las capacidades de la épica Tratamientos (TX-01, TX-02...). Implementa TX-01 — recomendación de tratamiento: evalúa cada régimen conocido de guidelines/<módulo>/regimens.yaml de forma hipotética contra las reglas del módulo aplicable, para generar sugerencias desde estadio/biomarcadores en vez de solo auditar concordancia (que es para lo que esas reglas fueron escritas originalmente). Implementa también TX-02 — nivel de evidencia por recomendación, leyendo evidence.native.* y source/module_version directamente de la regla y el módulo reales. No reescribe ninguna regla existente. 
 
