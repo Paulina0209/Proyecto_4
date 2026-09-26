@@ -216,6 +216,27 @@
   pacientes/consultas del seed (ya desactualizadas en `main`) para fijar el
   mínimo y las invariantes en su lugar.
 
+- Nuevo `documentos_clinicos/carga_documentos.py` que implementa
+  **DOC-01 — Carga de documentos clínicos**: `cargar_documento_clinico`
+  valida que el paciente exista (contra `historia_clinica_mock`, que
+  cumple en la práctica el rol de PAC-01 en este repositorio), que la
+  extensión del archivo esté en el catálogo `FORMATOS_SOPORTADOS`
+  (`.pdf`, `.jpg`/`.jpeg`/`.png`, `.dcm`) y que el contenido real tenga
+  la firma binaria correspondiente a ese formato (nunca confía solo en
+  la extensión), antes de guardar el archivo en disco y su metadato en
+  una tabla propia de solo-inserción
+  (`schema_documentos_clinicos.sql`, mismo diseño que
+  `dx_clinica/juicio_clinico.py` para DX-03). `listar_documentos_de_paciente`
+  es el historial de documentos del paciente (AC1); un formato no
+  reconocido o un contenido que no coincide con el formato declarado se
+  rechazan con mensajes explícitos y distintos
+  (`FormatoNoSoportadoError`, `ContenidoNoCoincideConFormatoError`),
+  listando los formatos aceptados (AC2).
+- Pruebas en `tests/documentos_clinicos/test_carga_documentos.py`
+  cubriendo los dos criterios de aceptación de DOC-01, el rechazo por
+  contenido no coincidente y las validaciones básicas de forma; demo en
+  `documentos_clinicos/demo_carga_documentos.py`. Ver
+  `docs/documentos_clinicos_carga.md`.
 - Nuevo componente `documentos_clinicos/` que implementa **DOC-02 —
   Exportación de expediente médico a PDF**: `pdf_export.py` es un
   renderizador genérico (basado en `reportlab`) que recibe un modelo
