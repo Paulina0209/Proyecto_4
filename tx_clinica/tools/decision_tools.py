@@ -1,20 +1,3 @@
-"""Tool de TX-04 (decisión final del oncólogo).
-
-Reutiliza, sin reimplementar nada:
-  - tx_clinica.tools.recommendation_tools._diagnosticar_y_recomendar
-    (Fase 1 + Fase 2 de TX-01, la misma que ya usan las otras tools de
-    recomendación)
-  - tx_clinica.tools._interaction_shared.resolver_chequeo_interacciones
-    (TX-03, la misma que usa chequear_interacciones_tratamiento)
-  - decision_clinica.registro.registrar_decision_tratamiento (la
-    orquestación de los 3 caminos accept/modify/reject + el gate de
-    AUD-02, ver decision_clinica/registro.py)
-
-Esta tool NO decide nada por el oncólogo -- solo recalcula, de forma
-determinista, lo que hace falta para poder registrar su decisión
-(cuál era el régimen sugerido, si el régimen final que dio es uno de
-los candidatos válidos, si hay interacciones que exigen justificación).
-"""
 
 from __future__ import annotations
 

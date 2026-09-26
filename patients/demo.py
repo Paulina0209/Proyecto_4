@@ -4,13 +4,7 @@ from datetime import date, datetime
 
 import requests
 
-from .models import (
-    Paciente,
-    Sexo,
-    TipoIdentificacion,
-    DatosContacto,
-    AntecedentesMedicos,
-)
+from .models import Sexo, TipoIdentificacion
 
 
 BASE_URL = "http://localhost:8000"
@@ -82,29 +76,6 @@ def elegir_enum(msg: str, enum_cls):
         print("  Opción inválida, intente de nuevo.")
 
 
-def generar_identificador_temporal_api() -> str:
-    """
-    Obtiene un identificador temporal directamente desde la API.
-    """
-
-    try:
-        response = requests.get(
-            f"{BASE_URL}/identificadores-temporales/nuevo",
-            timeout=5,
-        )
-
-        response.raise_for_status()
-
-    except requests.RequestException as e:
-        raise RuntimeError(
-            f"No se pudo conectar con la API: {e}"
-        )
-
-    data = response.json()
-
-    return data["identificador_temporal"]
-
-
 def construir_paciente_desde_formulario() -> dict:
     nombre = pedir(
         "Nombre completo: ",
@@ -124,12 +95,15 @@ def construir_paciente_desde_formulario() -> dict:
     )
 
     if tipo_id == TipoIdentificacion.TEMPORAL:
-
-        numero_id = generar_identificador_temporal_api()
-
+        # D5: antes se pedía un identificador temporal a
+        # GET /identificadores-temporales/nuevo, un endpoint que no
+        # existe en api.py -- esto siempre terminaba en un 404. El
+        # servidor YA genera el identificador solo (crear_paciente, en
+        # api.py) cuando numero_identificacion llega vacío, así que
+        # basta con no mandar nada y dejar que la API lo resuelva.
+        numero_id = None
         print(
-            f"  Identificador temporal generado por la API: "
-            f"{numero_id}"
+            "  (el identificador temporal lo genera el servidor al registrar)"
         )
 
     else:
@@ -329,6 +303,10 @@ def main() -> None:
                 f"\n✔ Paciente registrado mediante la API "
                 f"con id {paciente_id}.\n"
             )
+
+            numero_asignado = data.get("numero_identificacion")
+            if numero_asignado:
+                print(f"  Número de identificación: {numero_asignado}\n")
 
             break
 

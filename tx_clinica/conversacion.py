@@ -1,21 +1,3 @@
-"""Capa fina entre quien use el agente (CLI, demo, API, UI) y el grafo.
-
-Existe para que UN solo lugar sepa:
-  - cómo se invoca el agente con trazas de Langfuse,
-  - cómo detectar que el grafo quedó PAUSADO por aprobación humana
-    (TX-04, ver middleware/human_in_the_loop.py),
-  - cómo reanudarlo con la decisión del oncólogo,
-sin duplicar esa lógica en cada punto de entrada.
-
-Reglas que esta capa hace cumplir:
-  - thread_id estable durante toda la conversación (lo decide el caller).
-  - El `config` (con el callback de Langfuse y el thread_id) se pasa
-    también al REANUDAR; si no, lo que ocurre después de la aprobación
-    no aparece en el trace.
-  - Solo se envía el mensaje NUEVO en cada turno: el checkpointer ya
-    guarda el historial de la conversación por thread_id, no hace falta
-    reenviarlo.
-"""
 
 from __future__ import annotations
 

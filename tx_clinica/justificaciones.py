@@ -1,11 +1,3 @@
-"""Alcance MÍNIMO de AUD-02 — solo lo que la historia de interacciones
-necesita como dependencia (AC2: justificar y registrar la decisión de
-continuar pese a una alerta). AUD-02 como historia completa (auditoría
-general de decisiones clínicas) sigue sin diseñarse.
-
-Patrón: paquete aditivo, tabla nueva, sin tocar nada existente — igual
-que pacientes_clinica y tx_clinica.
-"""
 from __future__ import annotations
 
 import sqlite3

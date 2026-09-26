@@ -1,14 +1,3 @@
-"""Demo interactiva de tx_clinica: carga el paciente de prueba en la base
-en memoria y conversa con el agente, con trazas en Langfuse.
-
-Ejecutar desde la raíz del proyecto (Proyecto_4/):
-
-    python demo_tx_clinica.py
-
-La base de datos es :memory:, o sea que vive SOLO dentro de este proceso:
-el paciente de prueba tiene que cargarse acá, en el mismo proceso que
-usa el agente, cada vez que se corre el script.
-"""
 
 from __future__ import annotations
 
