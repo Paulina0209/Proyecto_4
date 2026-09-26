@@ -155,10 +155,24 @@ configurable, sí se vuelve a sugerir). Ver
 ### documentos_clinicos
 
 Contiene las capacidades de la épica Gestión Documental. Implementa
-**DOC-02** — exportación de expediente médico a PDF: `pdf_export.py` es
-un renderizador genérico que no conoce `ia_clinica`, `dx_clinica` ni
-`historia_clinica_mock` — recibe un `DocumentoExportable` (título,
-referencia de paciente, secciones con bloques de texto o tabla,
+**DOC-01** — carga de documentos clínicos: `carga_documentos.py` recibe
+un archivo (PDF, imagen o DICOM) y lo asocia al expediente de un
+paciente (validado contra `historia_clinica_mock.pacientes`, que cumple
+en la práctica el rol de PAC-01 en este repositorio). Nunca confía solo
+en la extensión del archivo: verifica también la firma binaria real del
+contenido (`%PDF-`, cabecera JPEG/PNG, preámbulo DICOM), rechazando con
+un mensaje explícito tanto un formato no soportado como uno soportado
+cuyo contenido no le corresponde. El contenido binario se guarda en
+disco (bajo un directorio configurable, con un nombre generado); solo
+los metadatos y la ruta resultante se guardan en una tabla propia de
+solo-inserción (mismo diseño que `dx_clinica/juicio_clinico.py` para
+DX-03), de forma que "el historial de documentos del paciente" sea
+simplemente listar sus filas. Ver `docs/documentos_clinicos_carga.md`.
+
+También implementa **DOC-02** — exportación de expediente médico a PDF:
+`pdf_export.py` es un renderizador genérico que no conoce `ia_clinica`,
+`dx_clinica` ni `historia_clinica_mock` — recibe un `DocumentoExportable`
+(título, referencia de paciente, secciones con bloques de texto o tabla,
 disclaimer y advertencias opcionales) y produce un PDF con formato
 profesional, sin generar nunca un PDF a partir de un documento sin
 contenido real (`DocumentoInsuficienteError`). `adaptadores.py` traduce
