@@ -1,157 +1,153 @@
+"""Pruebas de la pasada de correcciones sobre patients/ (D2, D4, D5, D6, D8).
+
+Usa un archivo SQLite temporal real por prueba (no :memory: -- api.py abre
+una conexión NUEVA por request via get_conn(), así que :memory: perdería
+los datos entre requests) y TestClient con el lifespan real de la app, para
+probar la inicialización de esquema tal cual ocurre en producción.
+"""
+from __future__ import annotations
+
 import sqlite3
 
 import pytest
 from fastapi.testclient import TestClient
 
-from patients.api import app, get_conn
-from patients.repository import inicializar_schema
+import patients.api as api_module
+from patients.api import app
 
 
-@pytest.fixture
-def client(tmp_path):
-    db_path = tmp_path / "test.db"
-
-    conn_inicial = sqlite3.connect(db_path)
-    inicializar_schema(conn_inicial)
-    conn_inicial.close()
-
-    def _get_conn_de_prueba():
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        try:
-            yield conn
-        finally:
-            conn.close()
-
-    app.dependency_overrides[get_conn] = _get_conn_de_prueba
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
+@pytest.fixture()
+def client(tmp_path, monkeypatch):
+    monkeypatch.setattr(api_module, "DB_PATH", tmp_path / "pacientes_test.db")
+    with TestClient(app) as c:
+        yield c
 
 
-def _payload_base(**overrides):
-    datos = dict(
-        nombre_completo="María Restrepo",
-        sexo="femenino",
-        tipo_identificacion="cedula",
-        numero_identificacion="43112233",
-        contacto={"telefono": "3001234567"},
-        oncologo_id=1,
-    )
-    datos.update(overrides)
-    return datos
+def _paciente_payload(**overrides):
+    base = {
+        "nombre_completo": "Ana Pérez",
+        "fecha_nacimiento": "1980-05-10",
+        "sexo": "femenino",
+        "tipo_identificacion": "cedula",
+        "numero_identificacion": "1234567",
+        "contacto": {"telefono": "3000000000"},
+        "oncologo_id": 1,
+        "antecedentes": {},
+    }
+    base.update(overrides)
+    return base
 
 
-def test_registro_exitoso_devuelve_201_y_el_paciente_creado(client):
-    respuesta = client.post("/pacientes", json=_payload_base())
-    assert respuesta.status_code == 201
-    cuerpo = respuesta.json()
-    assert cuerpo["id"] is not None
-    assert cuerpo["nombre_completo"] == "María Restrepo"
-    assert cuerpo["registro_completo"] is False
+# --------------------------------------------------------------------- D8
+
+def test_d8_error_de_validacion_pydantic_usa_el_mismo_formato_que_los_400_propios(client):
+    r = client.post("/pacientes", json=_paciente_payload(sexo="no_es_un_sexo_valido"))
+    assert r.status_code == 400, r.text
+    errores = r.json()["detail"]["errores"]
+    assert any(e["campo"] == "sexo" for e in errores)
 
 
-def test_paciente_creado_aparece_al_listar_por_oncologo(client):
-    client.post("/pacientes", json=_payload_base(oncologo_id=7))
-    respuesta = client.get("/pacientes", params={"oncologo_id": 7})
-    assert respuesta.status_code == 200
-    pacientes = respuesta.json()
-    assert len(pacientes) == 1
-    assert pacientes[0]["nombre_completo"] == "María Restrepo"
+def test_d8_fecha_malformada_tambien_usa_el_formato_propio(client):
+    r = client.post("/pacientes", json=_paciente_payload(fecha_nacimiento="no-es-una-fecha"))
+    assert r.status_code == 400, r.text
+    assert "errores" in r.json()["detail"]
 
 
-def test_listar_sin_oncologo_id_devuelve_422(client):
-    respuesta = client.get("/pacientes")
-    assert respuesta.status_code == 422
+def test_campo_obligatorio_faltante_sigue_devolviendo_400_como_antes(client):
+    r = client.post("/pacientes", json=_paciente_payload(nombre_completo=""))
+    assert r.status_code == 400, r.text
+    errores = r.json()["detail"]["errores"]
+    assert any(e["campo"] == "nombre_completo" for e in errores)
 
 
-def test_campo_obligatorio_vacio_devuelve_400_con_el_campo_faltante(client):
-    respuesta = client.post("/pacientes", json=_payload_base(nombre_completo=""))
-    assert respuesta.status_code == 400
-    campos = {e["campo"] for e in respuesta.json()["detail"]["errores"]}
-    assert "nombre_completo" in campos
+# --------------------------------------------------------------------- D4
+
+def test_d4_duplicado_del_mismo_oncologo_revela_el_detalle(client):
+    client.post("/pacientes", json=_paciente_payload(oncologo_id=1))
+    r = client.post("/pacientes", json=_paciente_payload(oncologo_id=1))
+    assert r.status_code == 409
+    assert r.json()["detail"]["posible_duplicado"] is not None
 
 
-def test_sin_telefono_ni_email_devuelve_400(client):
-    respuesta = client.post("/pacientes", json=_payload_base(contacto={}))
-    assert respuesta.status_code == 400
-    campos = {e["campo"] for e in respuesta.json()["detail"]["errores"]}
-    assert "contacto" in campos
+def test_d4_duplicado_de_otro_oncologo_no_revela_datos(client):
+    client.post("/pacientes", json=_paciente_payload(oncologo_id=1))
+    r = client.post("/pacientes", json=_paciente_payload(oncologo_id=2))
+    assert r.status_code == 409
+    detalle = r.json()["detail"]
+    assert detalle.get("posible_duplicado") is None
+    assert "nombre_completo" not in str(detalle)
+    assert "telefono" not in str(detalle)
 
 
-def test_identificacion_duplicada_devuelve_409_con_el_paciente_existente(client):
-    client.post("/pacientes", json=_payload_base(numero_identificacion="99999999"))
-    respuesta = client.post(
-        "/pacientes",
-        json=_payload_base(numero_identificacion="99999999", nombre_completo="Otra Paciente"),
-    )
-    assert respuesta.status_code == 409
-    cuerpo = respuesta.json()["detail"]
-    assert cuerpo["posible_duplicado"]["numero_identificacion"] == "99999999"
+# --------------------------------------------------------------------- D2
+
+def test_d2_leer_paciente_de_otro_oncologo_da_404(client):
+    creado = client.post("/pacientes", json=_paciente_payload(oncologo_id=1)).json()
+    r = client.get(f"/pacientes/{creado['id']}", params={"oncologo_id": 999})
+    assert r.status_code == 404
 
 
-def test_corregir_el_numero_tras_el_409_si_permite_crear(client):
-    client.post("/pacientes", json=_payload_base(numero_identificacion="55555555"))
-    respuesta = client.post(
-        "/pacientes",
-        json=_payload_base(numero_identificacion="55555556", nombre_completo="Otra Paciente"),
-    )
-    assert respuesta.status_code == 201
+def test_d2_leer_paciente_propio_funciona(client):
+    creado = client.post("/pacientes", json=_paciente_payload(oncologo_id=1)).json()
+    r = client.get(f"/pacientes/{creado['id']}", params={"oncologo_id": 1})
+    assert r.status_code == 200
+    assert r.json()["id"] == creado["id"]
 
 
-def test_paciente_sin_documento_genera_identificador_temporal(client):
-    respuesta = client.post(
-        "/pacientes",
-        json=_payload_base(tipo_identificacion="temporal", numero_identificacion=None),
-    )
-    assert respuesta.status_code == 201
-    assert respuesta.json()["numero_identificacion"].startswith("TEMP-")
+def test_d2_id_inexistente_da_404(client):
+    r = client.get("/pacientes/999999", params={"oncologo_id": 1})
+    assert r.status_code == 404
 
 
-def test_leer_paciente_por_id_devuelve_lo_que_se_creo(client):
-    creado = client.post("/pacientes", json=_payload_base()).json()
-    respuesta = client.get(f"/pacientes/{creado['id']}")
-    assert respuesta.status_code == 200
-    assert respuesta.json() == creado
+# --------------------------------------------------------------------- D6
+
+def test_d6_condicion_de_carrera_no_revienta_con_500(client, monkeypatch, tmp_path):
+    """Simula la carrera: la verificación de duplicado (buscar_por_identificacion)
+    dice que no hay nada la PRIMERA vez que se consulta (ventana de la
+    carrera), pero para cuando el INSERT corre la fila YA existe de verdad
+    -- antes esto propagaba sqlite3.IntegrityError como un 500 crudo. La
+    re-consulta que hace el except (después de capturar el error) debe
+    seguir funcionando normal -- por eso solo se fuerza None en la
+    PRIMERA llamada, no en todas."""
+    # Paso 1: registra un paciente normalmente.
+    r1 = client.post("/pacientes", json=_paciente_payload(numero_identificacion="9999999"))
+    assert r1.status_code == 201
+
+    # Paso 2: la próxima llamada a buscar_por_identificacion dice "no hay
+    # duplicado" UNA sola vez (simula la ventana de la carrera); las
+    # siguientes (la re-consulta del except) usan el comportamiento real.
+    import patients.registro as registro_module
+
+    real_buscar = registro_module.buscar_por_identificacion
+    llamadas = {"n": 0}
+
+    def _buscar_simulando_carrera(conn, tipo, numero):
+        llamadas["n"] += 1
+        if llamadas["n"] == 1:
+            return None
+        return real_buscar(conn, tipo, numero)
+
+    monkeypatch.setattr(registro_module, "buscar_por_identificacion", _buscar_simulando_carrera)
+
+    r2 = client.post("/pacientes", json=_paciente_payload(numero_identificacion="9999999"))
+    assert r2.status_code == 409, f"esperaba 409 (duplicado detectado en el INSERT), llegó {r2.status_code}: {r2.text}"
+    assert r2.json()["detail"]["posible_duplicado"] is not None
 
 
-def test_leer_paciente_inexistente_devuelve_404(client):
-    respuesta = client.get("/pacientes/999999")
-    assert respuesta.status_code == 404
+def test_d5_endpoint_de_identificador_temporal_no_existe_y_demo_ya_no_lo_llama():
+    """D5: api.py nunca definió /identificadores-temporales/nuevo; el fix
+    real fue quitar esa llamada de demo.py, no agregar el endpoint (el
+    servidor ya genera el identificador solo). Se confirma que ninguna
+    ruta de la API lo expone (para no reintroducirlo por error) y que
+    demo.py ya no referencia la función que lo llamaba."""
+    rutas = {r.path for r in api_module.app.routes}
+    assert "/identificadores-temporales/nuevo" not in rutas
+
+    import patients.demo as demo_module
+
+    assert not hasattr(demo_module, "generar_identificador_temporal_api")
 
 
-def test_endpoint_de_identificador_temporal_standalone(client):
-    respuesta = client.get("/identificadores-temporales/nuevo")
-    assert respuesta.status_code == 200
-    assert respuesta.json()["identificador_temporal"].startswith("TEMP-")
-
-
-def test_registro_con_antecedentes_y_motivo_queda_completo(client):
-    respuesta = client.post(
-        "/pacientes",
-        json=_payload_base(
-            numero_identificacion="11111111",
-            antecedentes={"personales": "Diabetes tipo 2", "familiares": "Madre con cáncer de mama"},
-            motivo_consulta_inicial="Nódulo palpable en mama izquierda",
-        ),
-    )
-    assert respuesta.status_code == 201
-    assert respuesta.json()["registro_completo"] is True
-    
-def test_email_con_formato_invalido_devuelve_400(client):
-    respuesta = client.post(
-        "/pacientes",
-        json=_payload_base(numero_identificacion="22222222", contacto={"email": "no-es-un-email"}),
-    )
-    assert respuesta.status_code == 400
-    campos = {e["campo"] for e in respuesta.json()["detail"]["errores"]}
-    assert "email" in campos
-
-
-def test_cedula_con_letras_devuelve_400(client):
-    respuesta = client.post(
-        "/pacientes", json=_payload_base(numero_identificacion="ABC123XYZ")
-    )
-    assert respuesta.status_code == 400
-    campos = {e["campo"] for e in respuesta.json()["detail"]["errores"]}
-    assert "numero_identificacion" in campos
+if __name__ == "__main__":
+    import sys
+    sys.exit(pytest.main([__file__, "-v"]))

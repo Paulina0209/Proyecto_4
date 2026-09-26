@@ -38,6 +38,24 @@ def inicializar_schema(conn: sqlite3.Connection) -> None:
         )
         """
     )
+    # C4/S5: decisiones_tratamiento es un registro de auditoría -- estos
+    # triggers son la garantía real de que es append-only (antes solo era
+    # una convención documentada en el docstring de models.py, sin nada
+    # que impidiera un UPDATE o DELETE directo sobre la tabla).
+    conn.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS decisiones_tratamiento_no_update
+        BEFORE UPDATE ON decisiones_tratamiento
+        BEGIN SELECT RAISE(ABORT, 'decisiones_tratamiento es append-only'); END
+        """
+    )
+    conn.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS decisiones_tratamiento_no_delete
+        BEFORE DELETE ON decisiones_tratamiento
+        BEGIN SELECT RAISE(ABORT, 'decisiones_tratamiento es append-only'); END
+        """
+    )
     conn.commit()
 
 
@@ -61,7 +79,10 @@ def _persistir(conn: sqlite3.Connection, decision: DecisionTratamiento) -> Decis
             json.dumps(decision.justificaciones_ids),
         ),
     )
-    conn.commit()
+    # C4: sin commit aquí a propósito -- el commit es responsabilidad de
+    # quien orquesta la transacción completa (registrar_decision_tratamiento,
+    # más abajo), para que una decisión y sus justificaciones (si las hay)
+    # se confirmen o se reviertan juntas, nunca a medias.
     decision.id = cursor.lastrowid
     return decision
 
@@ -99,76 +120,111 @@ def registrar_decision_tratamiento(
             exito=False, motivo_rechazo=f"tipo_decision inválido: {tipo_decision!r}"
         )
 
-    if tipo_decision == "reject":
-        # AC2: no pasa por el gate de interacciones, no bloquea nada.
-        # Solo exige que el motivo no esté vacío.
-        if not (motivo_rechazo or "").strip():
-            return ResultadoRegistroDecision(
-                exito=False, motivo_rechazo="Falta el motivo del rechazo."
+    # C4: todo lo que sigue escribe en la base (la decisión y, si aplica,
+    # sus justificaciones) dentro de UNA sola transacción -- o se
+    # confirman juntas con un único commit al final, o ante cualquier
+    # error se revierte todo con rollback. Antes cada INSERT hacía su
+    # propio commit, así que un fallo a mitad de camino podía dejar
+    # justificaciones guardadas sin la decisión que las originó.
+    try:
+        if tipo_decision == "reject":
+            # AC2: no pasa por el gate de interacciones, no bloquea nada.
+            # Solo exige que el motivo no esté vacío.
+            if not (motivo_rechazo or "").strip():
+                return ResultadoRegistroDecision(
+                    exito=False, motivo_rechazo="Falta el motivo del rechazo."
+                )
+            decision = DecisionTratamiento(
+                paciente_id=paciente_id,
+                oncologo_id=oncologo_id,
+                fecha=ahora,
+                tipo_decision="reject",
+                regimen_sugerido_id=regimen_sugerido_id,
+                motivo_rechazo=motivo_rechazo.strip(),
+                recomendacion_ia_snapshot=recomendacion_ia_snapshot,
             )
+            decision = _persistir(conn, decision)
+            conn.commit()
+            return ResultadoRegistroDecision(exito=True, decision=decision)
+
+        # accept / modify: ambos terminan prescribiendo algo, ambos pasan por
+        # el mismo gate de interacciones (AUD-02).
+        if tipo_decision == "accept":
+            regimen_final_id = regimen_sugerido_id
+            if not regimen_final_id:
+                return ResultadoRegistroDecision(
+                    exito=False,
+                    motivo_rechazo="No hay ningún régimen sugerido por la IA para aceptar.",
+                )
+        else:  # modify
+            if not regimen_final_id:
+                return ResultadoRegistroDecision(
+                    exito=False, motivo_rechazo="Falta el régimen final para 'modify'."
+                )
+            if regimen_final_id not in regimenes_candidatos_ids:
+                return ResultadoRegistroDecision(
+                    exito=False,
+                    motivo_rechazo=(
+                        f"'{regimen_final_id}' no es uno de los regímenes ya evaluados para "
+                        "este paciente. En 'modify' el régimen final debe ser uno de los "
+                        "candidatos de regimens.yaml que el sistema ya evaluó -- no un "
+                        "régimen arbitrario (límite conocido de esta historia)."
+                    ),
+                )
+
+        if chequeo_interacciones is None:
+            return ResultadoRegistroDecision(
+                exito=False,
+                motivo_rechazo=(
+                    "Falta ejecutar chequear_interacciones_tratamiento para el régimen "
+                    "final antes de poder registrar esta decisión."
+                ),
+            )
+
+        # C2: el chequeo de interacciones que se pasa debe corresponder al
+        # MISMO paciente y al MISMO régimen que se va a confirmar -- sin
+        # esto, un chequeo de otro régimen (o de otro paciente) habilitaría
+        # una confirmación que nunca se validó de verdad. Defensa en
+        # profundidad: esto es justo lo que habría frenado el bug real
+        # donde "accept" terminó confirmando un régimen distinto al que el
+        # chequeo de interacciones había evaluado.
+        if (
+            getattr(chequeo_interacciones, "regimen_evaluado", None) != regimen_final_id
+            or getattr(chequeo_interacciones, "paciente_id", paciente_id) != paciente_id
+        ):
+            return ResultadoRegistroDecision(
+                exito=False,
+                motivo_rechazo=(
+                    "El chequeo de interacciones no corresponde al paciente/régimen que se "
+                    "va a confirmar. Vuelve a ejecutar chequear_interacciones_tratamiento "
+                    f"para patient_id={paciente_id} y regimen_id='{regimen_final_id}'."
+                ),
+            )
+
+        resultado_confirmacion = confirmar_tratamiento(
+            conn, chequeo_interacciones, oncologo_id, textos_justificacion
+        )
+        if not resultado_confirmacion.confirmado:
+            conn.rollback()
+            return ResultadoRegistroDecision(
+                exito=False, motivo_rechazo=resultado_confirmacion.motivo_rechazo
+            )
+
         decision = DecisionTratamiento(
             paciente_id=paciente_id,
             oncologo_id=oncologo_id,
             fecha=ahora,
-            tipo_decision="reject",
+            tipo_decision=tipo_decision,
             regimen_sugerido_id=regimen_sugerido_id,
-            motivo_rechazo=motivo_rechazo.strip(),
+            regimen_final_id=regimen_final_id,
             recomendacion_ia_snapshot=recomendacion_ia_snapshot,
+            justificaciones_ids=[
+                j.id for j in (resultado_confirmacion.justificaciones_registradas or []) if j.id is not None
+            ],
         )
-        return ResultadoRegistroDecision(exito=True, decision=_persistir(conn, decision))
-
-    # accept / modify: ambos terminan prescribiendo algo, ambos pasan por
-    # el mismo gate de interacciones (AUD-02).
-    if tipo_decision == "accept":
-        regimen_final_id = regimen_sugerido_id
-        if not regimen_final_id:
-            return ResultadoRegistroDecision(
-                exito=False,
-                motivo_rechazo="No hay ningún régimen sugerido por la IA para aceptar.",
-            )
-    else:  # modify
-        if not regimen_final_id:
-            return ResultadoRegistroDecision(
-                exito=False, motivo_rechazo="Falta el régimen final para 'modify'."
-            )
-        if regimen_final_id not in regimenes_candidatos_ids:
-            return ResultadoRegistroDecision(
-                exito=False,
-                motivo_rechazo=(
-                    f"'{regimen_final_id}' no es uno de los regímenes ya evaluados para "
-                    "este paciente. En 'modify' el régimen final debe ser uno de los "
-                    "candidatos de regimens.yaml que el sistema ya evaluó -- no un "
-                    "régimen arbitrario (límite conocido de esta historia)."
-                ),
-            )
-
-    if chequeo_interacciones is None:
-        return ResultadoRegistroDecision(
-            exito=False,
-            motivo_rechazo=(
-                "Falta ejecutar chequear_interacciones_tratamiento para el régimen "
-                "final antes de poder registrar esta decisión."
-            ),
-        )
-
-    resultado_confirmacion = confirmar_tratamiento(
-        conn, chequeo_interacciones, oncologo_id, textos_justificacion
-    )
-    if not resultado_confirmacion.confirmado:
-        return ResultadoRegistroDecision(
-            exito=False, motivo_rechazo=resultado_confirmacion.motivo_rechazo
-        )
-
-    decision = DecisionTratamiento(
-        paciente_id=paciente_id,
-        oncologo_id=oncologo_id,
-        fecha=ahora,
-        tipo_decision=tipo_decision,
-        regimen_sugerido_id=regimen_sugerido_id,
-        regimen_final_id=regimen_final_id,
-        recomendacion_ia_snapshot=recomendacion_ia_snapshot,
-        justificaciones_ids=[
-            j.id for j in (resultado_confirmacion.justificaciones_registradas or []) if j.id is not None
-        ],
-    )
-    return ResultadoRegistroDecision(exito=True, decision=_persistir(conn, decision))
+        decision = _persistir(conn, decision)
+        conn.commit()
+        return ResultadoRegistroDecision(exito=True, decision=decision)
+    except Exception:
+        conn.rollback()
+        raise

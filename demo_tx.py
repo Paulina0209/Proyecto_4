@@ -1,44 +1,43 @@
-"""Demo interactiva de tx_clinica, actualizada para:
-  - thread_id persistente (lo exige el checkpointer desde que se agregó
-    HumanInTheLoopMiddleware para TX-04)
-  - manejo de interrupciones: cuando el agente llama a
-    registrar_decision_tratamiento, la ejecución se PAUSA y hay que
-    aprobar/editar/rechazar antes de que se ejecute de verdad
 
-Uso: igual que antes (escribe tu mensaje, Enter). Nuevo: cuando aparezca
-"~~~ DECISIÓN PENDIENTE DE APROBACIÓN ~~~", revisa lo que se va a
-registrar y responde con:
-    a  -> aprobar tal cual
-    r  -> rechazar (te pide un motivo, que se lo pasa al modelo como
-          feedback -- el modelo puede reintentar con otros argumentos)
+from __future__ import annotations
 
-NOTA: la forma exacta del payload de interrupción (`__interrupt__`) se
-imprime completa antes de pedir tu decisión, por si tu versión de
-langchain trae una forma distinta a la documentada -- avísame si ves
-algo que no calza con lo que este script espera.
-"""
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
-from langgraph.types import Command
+try:  # lee LANGFUSE_* del .env de la raíz, si python-dotenv está instalado
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
 
 from tx_clinica.agent import construir_agente
-from tx_clinica.tools._db import obtener_conexion
+from tx_clinica.conversacion import RespuestaAgente, enviar_mensaje, reanudar_con_decisiones
+from tx_clinica.observability import vaciar_langfuse
+from tx_clinica.tools._db import conn_lock, obtener_conexion
 
-agente = construir_agente()
+RUTA_SQL_PACIENTE = Path("patients") / "paciente_de_prueba.sql"
+ONCOLOGO_ID = 1
 
-conn = obtener_conexion()  # dispara la creación del esquema + siembra real, si no existía ya
-with open("patients\paciente_de_prueba.sql", encoding="utf-8") as f:
-    conn.executescript(f.read())
-conn.commit()
-historial: list[dict] = []
-
-# Fijo para toda la sesión de esta demo -- el checkpointer necesita un
-# thread_id estable para poder pausar/reanudar la misma conversación.
-config = {"configurable": {"thread_id": "demo-tx-clinica-1"}}
-
-print("Escribe tu mensaje y presiona Enter. Escribe 'salir' para terminar.\n")
+# Estable durante TODA la conversación de esta ejecución (el checkpointer lo
+# necesita para pausar/reanudar). Lleva fecha y hora para que cada corrida
+# del script sea una sesión distinta en Langfuse: el checkpointer es
+# InMemorySaver, así que al reiniciar el proceso la conversación empieza
+# de cero de todos modos.
+THREAD_ID = f"demo-tx-clinica-{datetime.now():%Y%m%d-%H%M%S}"
 
 
-def _imprimir_mensajes_nuevos(mensajes_previos_len: int, mensajes: list) -> None:
+def cargar_paciente_de_prueba() -> None:
+    conn = obtener_conexion()  # dispara la creación del esquema + siembra real, si no existía ya
+    with conn_lock:
+        conn.executescript(RUTA_SQL_PACIENTE.read_text(encoding="utf-8"))
+        conn.commit()
+
+
+def _imprimir_mensajes_nuevos(mensajes_previos_len: int, mensajes: list) -> int:
+    """Imprime los mensajes agregados desde la última vez y devuelve el
+    nuevo total (para llamarla de nuevo en el siguiente turno)."""
     for mensaje in mensajes[mensajes_previos_len:]:
         tipo = type(mensaje).__name__
         print(f"--- {tipo} ---")
@@ -48,56 +47,66 @@ def _imprimir_mensajes_nuevos(mensajes_previos_len: int, mensajes: list) -> None
                 print("  Argumentos:", tc["args"])
         if hasattr(mensaje, "content") and mensaje.content:
             print("  Contenido:", mensaje.content)
+    return len(mensajes)
 
 
-def _manejar_interrupcion(resultado: dict) -> dict:
-    """Si el grafo se pausó (HumanInTheLoopMiddleware), pide la decisión
-    del oncólogo y reanuda. Devuelve el resultado final ya sin
-    interrupciones pendientes."""
-    while "__interrupt__" in resultado and resultado["__interrupt__"]:
-        interrupcion = resultado["__interrupt__"][0]
+def _acciones_pendientes(respuesta: RespuestaAgente) -> list[Any]:
+    """Aplana las interrupciones en una lista de acciones a resolver.
+
+    Nombres de llave defensivos, porque el payload de
+    HumanInTheLoopMiddleware puede variar entre versiones de langchain.
+    """
+    acciones: list[Any] = []
+    for interrupcion in respuesta.pendientes_aprobacion:
         print("\n~~~ DECISIÓN PENDIENTE DE APROBACIÓN ~~~")
         print(interrupcion)  # forma cruda, por si difiere de lo esperado
-
-        # Intenta encontrar cuántas acciones hay que decidir (para armar
-        # una decisión por cada una) -- nombres de llave defensivos,
-        # porque no se pudo confirmar contra un Ollama real desde el
-        # entorno de desarrollo.
         valor = getattr(interrupcion, "value", interrupcion)
-        acciones = (
-            valor.get("action_requests")
-            or valor.get("actionRequests")
-            or [None]
-        )
-
-        decisiones = []
-        for accion in acciones:
-            print("\nAcción propuesta:", accion)
-            respuesta = input("¿Aprobar (a) o rechazar (r)? > ").strip().lower()
-            if respuesta == "r":
-                motivo = input("Motivo del rechazo: ").strip()
-                decisiones.append({"type": "reject", "message": motivo})
-            else:
-                decisiones.append({"type": "approve"})
-
-        resultado = agente.invoke(Command(resume={"decisions": decisiones}), config=config)
-
-    return resultado
+        encontradas = None
+        if isinstance(valor, dict):
+            encontradas = valor.get("action_requests") or valor.get("actionRequests")
+        acciones.extend(encontradas or [valor])
+    return acciones
 
 
-while True:
-    pregunta = input("Oncólogo> ").strip()
-    if not pregunta:
-        continue
-    if pregunta.lower() in {"salir", "exit", "quit"}:
-        break
+def _pedir_decisiones(respuesta: RespuestaAgente) -> list[dict[str, Any]]:
+    decisiones: list[dict[str, Any]] = []
+    for accion in _acciones_pendientes(respuesta):
+        print("\nAcción propuesta:", accion)
+        eleccion = input("¿Aprobar (a) o rechazar (r)? > ").strip().lower()
+        if eleccion == "r":
+            motivo = input("Motivo del rechazo: ").strip()
+            decisiones.append({"type": "reject", "message": motivo or "Rechazado por el oncólogo."})
+        else:
+            decisiones.append({"type": "approve"})
+    return decisiones
 
-    historial.append({"role": "user", "content": pregunta})
 
-    resultado = agente.invoke({"messages": historial}, config=config)
-    resultado = _manejar_interrupcion(resultado)
+def main() -> None:
+    agente = construir_agente()
+    cargar_paciente_de_prueba()
 
-    _imprimir_mensajes_nuevos(len(historial) - 1, resultado["messages"])
+    print(f"thread_id / session Langfuse: {THREAD_ID}")
+    print("Escribe tu mensaje y presiona Enter. Escribe 'salir' para terminar.\n")
 
-    historial = resultado["messages"]
-    print()
+    mensajes_vistos = 0
+    try:
+        while True:
+            pregunta = input("Oncólogo> ").strip()
+            if not pregunta:
+                continue
+            if pregunta.lower() in {"salir", "exit", "quit"}:
+                break
+
+            respuesta = enviar_mensaje(agente, pregunta, THREAD_ID, ONCOLOGO_ID)
+            while respuesta.esta_pausada:
+                decisiones = _pedir_decisiones(respuesta)
+                respuesta = reanudar_con_decisiones(agente, decisiones, THREAD_ID, ONCOLOGO_ID)
+
+            mensajes_vistos = _imprimir_mensajes_nuevos(mensajes_vistos, respuesta.mensajes)
+            print()
+    finally:
+        vaciar_langfuse()  # sin esto, en un script corto pueden perderse traces
+
+
+if __name__ == "__main__":
+    main()

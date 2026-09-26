@@ -1,11 +1,3 @@
-"""Alcance MÍNIMO de AUD-02 — solo lo que la historia de interacciones
-necesita como dependencia (AC2: justificar y registrar la decisión de
-continuar pese a una alerta). AUD-02 como historia completa (auditoría
-general de decisiones clínicas) sigue sin diseñarse.
-
-Patrón: paquete aditivo, tabla nueva, sin tocar nada existente — igual
-que pacientes_clinica y tx_clinica.
-"""
 from __future__ import annotations
 
 import sqlite3
@@ -36,6 +28,22 @@ def inicializar_schema(conn: sqlite3.Connection) -> None:
         )
         """
     )
+    # C4/S5: mismo criterio que decisiones_tratamiento -- append-only
+    # garantizado por trigger, no solo por convención.
+    conn.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS justificaciones_continuacion_no_update
+        BEFORE UPDATE ON justificaciones_continuacion
+        BEGIN SELECT RAISE(ABORT, 'justificaciones_continuacion es append-only'); END
+        """
+    )
+    conn.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS justificaciones_continuacion_no_delete
+        BEFORE DELETE ON justificaciones_continuacion
+        BEGIN SELECT RAISE(ABORT, 'justificaciones_continuacion es append-only'); END
+        """
+    )
     conn.commit()
 
 
@@ -58,7 +66,11 @@ def _registrar_justificacion(
             justificacion.fecha,
         ),
     )
-    conn.commit()
+    # C4: sin commit aquí a propósito -- confirmar_tratamiento() puede
+    # insertar varias justificaciones en un solo llamado, y esas
+    # inserciones deben confirmarse o revertirse JUNTO con la decisión
+    # que las originó (ver registrar_decision_tratamiento en registro.py,
+    # que hace el único commit/rollback de toda la operación).
     justificacion.id = cursor.lastrowid
     return justificacion
 

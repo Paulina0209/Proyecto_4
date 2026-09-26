@@ -1,26 +1,10 @@
-"""Tool de TX-04 (decisión final del oncólogo).
-
-Reutiliza, sin reimplementar nada:
-  - tx_clinica.tools.recommendation_tools._diagnosticar_y_recomendar
-    (Fase 1 + Fase 2 de TX-01, la misma que ya usan las otras tools de
-    recomendación)
-  - tx_clinica.tools._interaction_shared.resolver_chequeo_interacciones
-    (TX-03, la misma que usa chequear_interacciones_tratamiento)
-  - decision_clinica.registro.registrar_decision_tratamiento (la
-    orquestación de los 3 caminos accept/modify/reject + el gate de
-    AUD-02, ver decision_clinica/registro.py)
-
-Esta tool NO decide nada por el oncólogo -- solo recalcula, de forma
-determinista, lo que hace falta para poder registrar su decisión
-(cuál era el régimen sugerido, si el régimen final que dio es uno de
-los candidatos válidos, si hay interacciones que exigen justificación).
-"""
 
 from __future__ import annotations
 
 import json
 from typing import Optional
 
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
 from clinical_decision.registro import registrar_decision_tratamiento as _registrar
@@ -36,17 +20,21 @@ _TIPOS_VALIDOS = ("accept", "modify", "reject")
 @tool
 def registrar_decision_tratamiento(
     patient_id: int,
-    oncologo_id: int,
     tipo_decision: str,
     regimen_final_id: Optional[str] = None,
     motivo_rechazo: Optional[str] = None,
     textos_justificacion: Optional[dict[str, str]] = None,
+    config: RunnableConfig = None,
 ) -> str:
     """Registra la decisión FINAL y OFICIAL del oncólogo sobre el
     tratamiento de un paciente YA REGISTRADO -- deja constancia de que
     la responsabilidad clínica es del médico, no del sistema. Llama esta
     tool solo cuando el oncólogo exprese una decisión explícita, nunca la
     infieras ni la registres tú por iniciativa propia.
+
+    NOTA: esta tool NO recibe el identificador del oncólogo como
+    argumento -- se toma automáticamente de la sesión autenticada. No
+    intentes adivinarlo ni pedírselo al oncólogo.
 
     tipo_decision debe ser exactamente uno de:
       - "accept": acepta el régimen que el sistema sugirió tal cual. No
@@ -79,6 +67,23 @@ def registrar_decision_tratamiento(
     resuelto = obtener_paciente_o_error(patient_id)
     if isinstance(resuelto, ErrorPacienteNoEncontrado):
         return resuelto.a_json()
+
+    # C3: el oncólogo que firma la decisión viene de la sesión autenticada
+    # (inyectado por la capa de conversación/API en config["configurable"]),
+    # nunca de un argumento que el LLM pudiera rellenar por su cuenta.
+    oncologo_id = (config or {}).get("configurable", {}).get("oncologo_id")
+    if not oncologo_id:
+        return json.dumps(
+            {
+                "error": (
+                    "No se pudo determinar el oncólogo autenticado para firmar esta "
+                    "decisión (falta oncologo_id en la sesión). Esto es un problema de "
+                    "configuración, no algo que el oncólogo deba resolver en el chat -- "
+                    "informa que no se puede registrar la decisión en este momento."
+                )
+            },
+            ensure_ascii=False,
+        )
 
     if tipo_decision not in _TIPOS_VALIDOS:
         return json.dumps(
@@ -125,6 +130,32 @@ def registrar_decision_tratamiento(
             "module_id": resultado_recomendacion.module_id,
             "candidatos": [serializar_candidato(c) for c in candidatos],
         }
+
+        # C1: "accept" solo puede confirmar el régimen sugerido. Si el LLM
+        # llama accept con un regimen_final_id que en realidad es otro
+        # candidato, es un "modify" mal etiquetado -- se rechaza aquí en
+        # vez de confirmar en silencio un régimen distinto al que el
+        # oncólogo cree estar aceptando (bug real observado: el oncólogo
+        # eligió un candidato distinto al primero, el LLM llamó accept con
+        # ese regimen_final_id, y como accept lo ignora se confirmó el
+        # sugerido sin que nadie se diera cuenta).
+        if (
+            tipo_decision == "accept"
+            and regimen_final_id
+            and regimen_final_id != regimen_sugerido_id
+        ):
+            return json.dumps(
+                {
+                    "error": (
+                        f"tipo_decision='accept' acepta el régimen sugerido "
+                        f"('{regimen_sugerido_id}'), pero se pasó regimen_final_id="
+                        f"'{regimen_final_id}'. Si el oncólogo eligió un régimen "
+                        "distinto al sugerido, usa tipo_decision='modify' con ese "
+                        "regimen_final_id."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         if tipo_decision in ("accept", "modify"):
             regimen_a_confirmar = regimen_sugerido_id if tipo_decision == "accept" else regimen_final_id

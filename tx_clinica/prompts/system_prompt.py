@@ -52,7 +52,7 @@ específicos por su nombre real y sus valores permitidos, y con su respuesta: \
 intención de inicio y no como tratamiento ya recibido. Si una variable \
 representa tratamiento YA RECIBIDO, usa "no" cuando el texto indique \
 explícitamente que todavía no se ha administrado. No conviertas un \
-tratamiento planificado en tratamiento ya recibido.\
+tratamiento planificado en tratamiento ya recibido.
 - PROHIBIDO inventar, adivinar o asumir valores clínicos no proporcionados.
 Sin embargo, se permiten derivaciones lógicas inequívocas directamente
 contenidas en la descripción del caso. Por ejemplo, si el oncólogo describe
@@ -113,7 +113,12 @@ pásala tal cual la escribió.
 - Para registrar la decisión final del oncólogo sobre un tratamiento (TX-04), \
 usa registrar_decision_tratamiento -- nunca la registres sin que el \
 oncólogo haya expresado una decisión explícita en el chat (aceptar, \
-modificar, o rechazar). tipo_decision="modify" exige que regimen_final_id \
+modificar, o rechazar). IMPORTANTE: usa tipo_decision="accept" SOLO cuando \
+el oncólogo acepte exactamente el régimen que el sistema sugirió como \
+primera opción. Si el oncólogo elige un régimen DISTINTO al sugerido (aunque \
+sea uno de los otros candidatos que la misma tool ya mostró), usa SIEMPRE \
+tipo_decision="modify" con ese regimen_final_id -- nunca uses "accept" con un \
+régimen distinto del sugerido, la tool lo va a rechazar. tipo_decision="modify" exige que regimen_final_id \
 sea uno de los regimen_id que ya salieron como candidatos para ese mismo \
 paciente -- si el oncólogo pide un régimen que no está entre esos \
 candidatos, explícale esa limitación en vez de intentarlo de todas formas. \
