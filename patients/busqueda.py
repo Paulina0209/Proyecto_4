@@ -1,14 +1,28 @@
+"""PAC-02 · Búsqueda y filtros de pacientes.
 
+- Búsqueda por nombre parcial (sin distinguir mayúsculas ni tildes) y
+  filtros combinables por diagnóstico, estado del tratamiento y fecha de
+  la última consulta, con paginación.
+- Sin resultados → mensaje explícito (AC2), nunca una lista vacía sola.
+- Solo pacientes del oncólogo que consulta (regla de negocio, SEC-01).
+- Registro e historial de diagnósticos, tratamientos y consultas: los
+  datos sobre los que filtra la búsqueda (y que lee el resumen 360).
+"""
 from __future__ import annotations
 
 import sqlite3
 import unicodedata
-from dataclasses import dataclass, field
 from datetime import date
-from enum import Enum
 from typing import Optional
 
-from .models import ErrorValidacion, TipoIdentificacion
+from .models import (
+    ErrorValidacion,
+    EstadoTratamiento,
+    FiltrosBusqueda,
+    PacienteResumen,
+    ResultadoBusqueda,
+    TipoIdentificacion,
+)
 
 LONGITUD_MAX_TEXTO_BUSQUEDA = 200
 TAMANO_PAGINA_DEFECTO = 20
@@ -16,102 +30,7 @@ TAMANO_PAGINA_MAXIMO = 100
 
 
 # ---------------------------------------------------------------------------
-# Schema (ver nota de SUPUESTO arriba)
-# ---------------------------------------------------------------------------
-
-def inicializar_schema_busqueda(conn: sqlite3.Connection) -> None:
-    conn.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS diagnosticos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            paciente_id INTEGER NOT NULL,
-            descripcion TEXT NOT NULL,
-            fecha TEXT
-        );
-        CREATE TABLE IF NOT EXISTS tratamientos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            paciente_id INTEGER NOT NULL,
-            estado TEXT NOT NULL,
-            fecha_inicio TEXT
-        );
-        CREATE TABLE IF NOT EXISTS consultas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            paciente_id INTEGER NOT NULL,
-            fecha TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_diagnosticos_paciente ON diagnosticos(paciente_id);
-        CREATE INDEX IF NOT EXISTS idx_tratamientos_paciente ON tratamientos(paciente_id);
-        CREATE INDEX IF NOT EXISTS idx_consultas_paciente ON consultas(paciente_id);
-        CREATE INDEX IF NOT EXISTS idx_pacientes_oncologo ON pacientes_identidad(oncologo_id);
-        """
-    )
-    conn.commit()
-
-
-# ---------------------------------------------------------------------------
-# models
-# ---------------------------------------------------------------------------
-
-class EstadoTratamiento(str, Enum):
-    EN_TRATAMIENTO = "en_tratamiento"
-    EN_SEGUIMIENTO = "en_seguimiento"
-    SUSPENDIDO = "suspendido"
-    FINALIZADO = "finalizado"
-
-
-@dataclass
-class FiltrosBusqueda:
-    oncologo_id: int  # alcance de permisos: solo pacientes de este oncólogo
-    nombre: Optional[str] = None
-    diagnostico: Optional[str] = None
-    estado_tratamiento: Optional[EstadoTratamiento] = None
-    ultima_consulta_desde: Optional[date] = None
-    ultima_consulta_hasta: Optional[date] = None
-
-    def aplicados(self) -> dict[str, str]:
-        """Solo los filtros con valor, ya en texto legible (para el mensaje
-        de 'sin resultados' y para que la UI muestre chips de filtros)."""
-        filtros: dict[str, str] = {}
-        if self.nombre and self.nombre.strip():
-            filtros["nombre"] = self.nombre.strip()
-        if self.diagnostico and self.diagnostico.strip():
-            filtros["diagnostico"] = self.diagnostico.strip()
-        if self.estado_tratamiento:
-            filtros["estado_tratamiento"] = self.estado_tratamiento.value
-        if self.ultima_consulta_desde:
-            filtros["ultima_consulta_desde"] = self.ultima_consulta_desde.isoformat()
-        if self.ultima_consulta_hasta:
-            filtros["ultima_consulta_hasta"] = self.ultima_consulta_hasta.isoformat()
-        return filtros
-
-
-@dataclass
-class PacienteResumen:
-    id: int
-    nombre_completo: str
-    fecha_nacimiento: Optional[date]
-    tipo_identificacion: TipoIdentificacion
-    numero_identificacion: str
-    diagnosticos: list[str] = field(default_factory=list)
-    estado_tratamiento: Optional[str] = None  # estado del tratamiento más reciente
-    fecha_ultima_consulta: Optional[date] = None
-
-
-@dataclass
-class ResultadoBusqueda:
-    items: list[PacienteResumen]
-    total: int
-    pagina: int
-    tamano_pagina: int
-    mensaje: Optional[str] = None  # solo se llena cuando total == 0
-
-    @property
-    def total_paginas(self) -> int:
-        return -(-self.total // self.tamano_pagina) if self.total else 0
-
-
-# ---------------------------------------------------------------------------
-# validacion
+# Búsqueda
 # ---------------------------------------------------------------------------
 
 def validar_filtros(filtros: FiltrosBusqueda) -> list[ErrorValidacion]:
@@ -135,10 +54,6 @@ def validar_filtros(filtros: FiltrosBusqueda) -> list[ErrorValidacion]:
             ))
     return errores
 
-
-# ---------------------------------------------------------------------------
-# repository
-# ---------------------------------------------------------------------------
 
 def _normalizar(texto) -> str:
     """Minúsculas y sin tildes: 'José' y 'jose' deben encontrarse entre sí.
@@ -168,7 +83,7 @@ WITH base AS (
           ORDER BY t.fecha_inicio DESC, t.id DESC LIMIT 1) AS estado_tratamiento,
         (SELECT MAX(c.fecha) FROM consultas c
           WHERE c.paciente_id = p.id) AS ultima_consulta
-    FROM pacientes_identidad p
+    FROM pacientes p
     WHERE p.oncologo_id = ?
 )
 """
@@ -240,7 +155,7 @@ def buscar_pacientes(
     pagina: int = 1,
     tamano_pagina: int = TAMANO_PAGINA_DEFECTO,
 ) -> ResultadoBusqueda:
-    """Requiere conn.row_factory = sqlite3.Row (igual que repository.py)."""
+    """Requiere conn.row_factory = sqlite3.Row (lo deja así db.conectar)."""
     conn.create_function("norm", 1, _normalizar, deterministic=True)
 
     where, params_where = _construir_where(filtros)
@@ -281,3 +196,83 @@ def buscar_pacientes(
         tamano_pagina=tamano_pagina,
         mensaje=mensaje_sin_resultados(filtros) if total == 0 else None,
     )
+
+
+# ---------------------------------------------------------------------------
+# Datos clínicos sobre los que se filtra
+# ---------------------------------------------------------------------------
+
+def _texto_o_none(texto: Optional[str]) -> Optional[str]:
+    return texto.strip() if texto and texto.strip() else None
+
+
+def registrar_diagnostico(
+    conn: sqlite3.Connection,
+    paciente_id: int,
+    descripcion: str,
+    fecha: Optional[date] = None,
+    estadio: Optional[str] = None,
+) -> int:
+    """La descripción se guarda tal cual; la normalización para buscar se
+    aplica al consultar (ver _normalizar)."""
+    if not descripcion or not descripcion.strip():
+        raise ValueError("La descripción del diagnóstico es obligatoria.")
+    cur = conn.execute(
+        "INSERT INTO diagnosticos (paciente_id, descripcion, estadio, fecha) VALUES (?, ?, ?, ?)",
+        (paciente_id, descripcion.strip(), _texto_o_none(estadio), fecha.isoformat() if fecha else None),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def registrar_tratamiento(
+    conn: sqlite3.Connection,
+    paciente_id: int,
+    estado: EstadoTratamiento,
+    fecha_inicio: Optional[date] = None,
+    regimen: Optional[str] = None,
+) -> int:
+    """El estado que usa la búsqueda es el del tratamiento más reciente por
+    fecha_inicio (a igual fecha, el último registrado)."""
+    cur = conn.execute(
+        "INSERT INTO tratamientos (paciente_id, estado, regimen, fecha_inicio) VALUES (?, ?, ?, ?)",
+        (paciente_id, estado.value, _texto_o_none(regimen), fecha_inicio.isoformat() if fecha_inicio else None),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def registrar_consulta(
+    conn: sqlite3.Connection, paciente_id: int, fecha: date, nota: Optional[str] = None
+) -> int:
+    """La fecha es obligatoria: sin ella la consulta no podría participar
+    en el filtro por última consulta."""
+    cur = conn.execute(
+        "INSERT INTO consultas (paciente_id, fecha, nota) VALUES (?, ?, ?)",
+        (paciente_id, fecha.isoformat(), _texto_o_none(nota)),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+# Historial por paciente, más reciente primero.
+
+def listar_diagnosticos(conn: sqlite3.Connection, paciente_id: int) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM diagnosticos WHERE paciente_id = ? ORDER BY fecha DESC, id DESC",
+        (paciente_id,),
+    ).fetchall()
+
+
+def listar_tratamientos(conn: sqlite3.Connection, paciente_id: int) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM tratamientos WHERE paciente_id = ? ORDER BY fecha_inicio DESC, id DESC",
+        (paciente_id,),
+    ).fetchall()
+
+
+def listar_consultas(conn: sqlite3.Connection, paciente_id: int) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM consultas WHERE paciente_id = ? ORDER BY fecha DESC, id DESC",
+        (paciente_id,),
+    ).fetchall()
