@@ -413,3 +413,18 @@
 ### Eliminado
 
 - `OllamaLLMClient`, `OllamaConnectionError` y sus pruebas.
+
+## [Sin versionar] — Demo unificada
+
+### Añadido
+
+- `demo.py`: todo lo implementado con un solo comando (`python demo.py`),
+  en 12 secciones con pausa entre cada una; `--solo`, `--sin-pausa`,
+  `--sin-red` y `--lista`. Reutiliza las demos de cada historia y agrega
+  guiones fijos para IA-01/IA-06, TX y NFR-06. Corre en bases en memoria o
+  temporales. Ver `docs/DEMO_UNIFICADA.md`.
+
+### Cambiado
+
+- `ia_clinica/summary/demo.py`: con un modelo real, una sección sin citas
+  válidas se informa como faltante en vez de detener el demo con `assert`.
