@@ -104,6 +104,11 @@ class FuenteHistoriaExterna(Protocol):
 
     ``obtener_historia`` puede lanzar cualquier excepción (red, timeout,
     respuesta inválida): ``sincronizar_paciente`` la captura y la registra.
+
+    Una fuente con un formato propio (p. ej. ``cbioportal.FuenteCBioPortal``)
+    expone además ``traducir(contenido, paciente) -> (registros, omitidos)``,
+    que convierte su respuesta en ``RegistroExterno``; así reutiliza la
+    verificación, la idempotencia y la transacción de esta historia.
     """
 
     nombre: str
@@ -176,6 +181,8 @@ def sincronizar_paciente(
     except Exception as exc:  # noqa: BLE001 -- cualquier fallo de la fuente es un fallo de sincronización
         return _registrar_fallo(conn, paciente_id, fuente.nombre, fuente.formato, _describir(exc), ahora)
 
+    if getattr(fuente, "traducir", None) is not None:
+        return importar_historia(conn, paciente_id, contenido, fuente, ahora)
     if fuente.formato == FORMATO_FHIR:
         return importar_bundle_fhir(conn, paciente_id, contenido, fuente.nombre, ahora)
     if fuente.formato == FORMATO_HL7V2:
@@ -183,6 +190,18 @@ def sincronizar_paciente(
     return _registrar_fallo(
         conn, paciente_id, fuente.nombre, fuente.formato, f"Formato de fuente no soportado: {fuente.formato!r}.", ahora
     )
+
+
+def importar_historia(
+    conn: sqlite3.Connection,
+    paciente_id: int,
+    contenido: Any,
+    fuente: FuenteHistoriaExterna,
+    ahora: Optional[datetime] = None,
+) -> ResultadoSincronizacion:
+    """Importa un ``contenido`` ya obtenido de una fuente con ``traducir``
+    (evita volver a pedirlo a la red cuando quien llama ya lo tiene)."""
+    return _importar(conn, paciente_id, fuente.nombre, fuente.formato, contenido, fuente.traducir, ahora)
 
 
 def importar_bundle_fhir(
@@ -286,12 +305,16 @@ def antecedentes_externos_de_paciente(
 
 
 @dataclass(frozen=True)
-class _Registro:
+class RegistroExterno:
     """Un recurso externo ya traducido a una fila local."""
 
     identificador_externo: str
-    tabla: str  # laboratorios | imagenologia | antecedentes_externos
+    #: laboratorios | imagenologia | biomarcadores | datos_clinicos_estructurados | antecedentes_externos
+    tabla: str
     valores: Dict[str, Any]
+
+
+_Registro = RegistroExterno
 
 
 def _importar(conn, paciente_id, fuente, formato, contenido, traductor, ahora) -> ResultadoSincronizacion:

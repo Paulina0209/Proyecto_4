@@ -359,3 +359,25 @@
   parámetro opcional `organizations` (filtra y prioriza por organización). Sin
   él, el comportamiento no cambia. Nueva función `organization_matches`.
 - Pruebas en `tests/configuracion/`.
+
+## [Sin versionar] — Base de datos real con cBioPortal
+
+### Añadido
+
+- Nuevo componente `cbioportal/`: importa pacientes reales desidentificados
+  de cBioPortal (por defecto MSK-CHORD, `msk_chord_2024`) al expediente que
+  leen DX, EST, TX, IA y HC-05. Trae tipo de cáncer, estadio AJCC, HER2 y
+  receptores hormonales, ECOG, marcadores tumorales, hallazgos de radiología
+  (NLP), tratamientos, mutaciones y fusiones de genes clave, MSI y TMB. La
+  carga pasa por HC-01 (identidad, todo-o-nada, idempotencia, trazabilidad),
+  con reglas fail-closed: no deriva variables que requieren juicio clínico,
+  no etiqueta variantes como "positivo" y solo afirma "no detectada" en genes
+  del panel. Ver `docs/cbioportal.md`.
+- CLI `python -m cbioportal` para cargar `data/copiloto.db` y, con
+  `--db-pacientes`, también la base de búsqueda y 360 (PAC-02/PAC-03).
+- `historia_clinica.integracion_externa`: `RegistroExterno` e
+  `importar_historia` son públicos, y `sincronizar_paciente` acepta fuentes
+  con su propio traductor (`traducir`).
+- `patients.models.TipoIdentificacion.EXTERNO` para pacientes importados. El
+  formulario de registro lo rechaza.
+- Pruebas en `tests/cbioportal/` (sin red).
