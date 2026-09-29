@@ -1,7 +1,7 @@
 import pytest
 
 from historia_clinica.db import crear_conexion
-from historia_clinica_mock.seed import sembrar_datos_sinteticos
+from tests.datos_sinteticos import sembrar_datos_sinteticos
 
 
 @pytest.fixture

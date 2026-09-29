@@ -23,17 +23,16 @@ def test_1_6_no_hay_definicion_duplicada_de_obtener_conexion():
 def test_1_6_obtener_conexion_es_singleton_perezoso_e_inicializa_una_sola_vez(monkeypatch):
     from tx_clinica.tools import _db
 
-    llamadas = {"crear_conexion": 0, "seed": 0, "medicacion": 0, "auditoria": 0, "decision": 0}
+    llamadas = {"crear_conexion": 0, "medicacion": 0, "auditoria": 0, "decision": 0}
 
     class FakeConn:
         pass
 
-    def fake_crear_conexion(ruta, check_same_thread=False):
+    def fake_conectar_expediente(ruta=None, check_same_thread=False):
         llamadas["crear_conexion"] += 1
         return FakeConn()
 
-    monkeypatch.setattr(_db, "crear_conexion", fake_crear_conexion)
-    monkeypatch.setattr(_db, "sembrar_datos_sinteticos", lambda c: llamadas.__setitem__("seed", llamadas["seed"] + 1))
+    monkeypatch.setattr(_db, "conectar_expediente", fake_conectar_expediente)
     monkeypatch.setattr(_db, "_init_medicacion", lambda c: llamadas.__setitem__("medicacion", llamadas["medicacion"] + 1))
     monkeypatch.setattr(_db, "_init_auditoria", lambda c: llamadas.__setitem__("auditoria", llamadas["auditoria"] + 1))
     monkeypatch.setattr(_db, "_init_decision", lambda c: llamadas.__setitem__("decision", llamadas["decision"] + 1))
@@ -43,7 +42,7 @@ def test_1_6_obtener_conexion_es_singleton_perezoso_e_inicializa_una_sola_vez(mo
     c2 = _db.obtener_conexion()
 
     assert c1 is c2, "debe reutilizar la misma conexión (singleton)"
-    assert llamadas == {"crear_conexion": 1, "seed": 1, "medicacion": 1, "auditoria": 1, "decision": 1}, (
+    assert llamadas == {"crear_conexion": 1, "medicacion": 1, "auditoria": 1, "decision": 1}, (
         "la inicialización completa debe ocurrir UNA sola vez, en la primera llamada"
     )
 

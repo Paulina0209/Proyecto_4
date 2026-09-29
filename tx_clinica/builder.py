@@ -389,10 +389,46 @@ def construir_recomendaciones_tratamiento(
     orden_prioridad = {"supports_prescription": 0, "requires_clinical_review": 1, "not_evaluable": 2}
     candidatos.sort(key=lambda c: orden_prioridad.get(c.audit_effect, 3))
 
+    faltantes: tuple[str, ...] = ()
+    if not candidatos:
+        faltantes = _variables_que_impiden_candidatos(module_folder, archivos_regla, facts_paciente, regimens_payload)
+
     return ResultadoRecomendacionTratamiento(
         patient_id=patient_id,
         module_id=module_folder_name,
         generado_en=ahora or datetime.now(),
         candidatos=tuple(candidatos),
         sin_guia_aplicable=False,
+        variables_faltantes_para_candidatos=faltantes,
     )
+
+
+def _variables_que_impiden_candidatos(
+    module_folder: Path, archivos_regla: list[str], facts_paciente: dict[str, Any], regimens_payload: Any
+) -> tuple[str, ...]:
+    """Variables sin dato por las que no se pudo evaluar ninguna regla que
+    respaldaría un régimen. Con datos reales incompletos (p. ej. sin PD-L1
+    TPS ni línea de tratamiento), el oncólogo necesita saber qué completar
+    en vez de recibir una lista vacía sin explicación."""
+    faltantes: set[str] = set()
+    for regimen in _iterar_regimenes(regimens_payload):
+        farmacos = _extraer_farmacos(regimen)
+        if farmacos is None:
+            continue
+        regimen_id = regimen.get("id")
+        overrides: dict[str, Any] = {"prescribed_antineoplastic_drugs": farmacos, "prescribed_regimen_id": regimen_id}
+        fase = _extraer_fase(regimen)
+        if fase is not None:
+            overrides["treatment_phase"] = fase
+        if "treatment_line" in regimen:
+            overrides["treatment_line"] = regimen["treatment_line"]
+        for archivo in archivos_regla:
+            for evaluacion in _evaluaciones_para_archivo(module_folder, archivo, facts_paciente, overrides):
+                conclusion = evaluacion.conclusion or {}
+                if evaluacion.status != "not_evaluable" or conclusion.get("audit_effect") not in _EFECTOS_POSITIVOS:
+                    continue
+                referenciados = _regimenes_referenciados_en_conclusion(conclusion)
+                if referenciados and regimen_id not in referenciados:
+                    continue
+                faltantes.update(evaluacion.missing_fields or ())
+    return tuple(sorted(faltantes - {"prescribed_antineoplastic_drugs", "prescribed_regimen_id", "treatment_phase"}))

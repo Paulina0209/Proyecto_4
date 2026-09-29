@@ -1,7 +1,7 @@
 import pytest
 
-from historia_clinica_mock.db import crear_conexion
-from historia_clinica_mock.seed import sembrar_datos_sinteticos
+from expediente.db import crear_conexion
+from tests.datos_sinteticos import sembrar_datos_sinteticos
 
 from documentos_clinicos.carga_documentos import crear_conexion as crear_conexion_documentos
 from documentos_clinicos.pdf_export import BloqueTabla, BloqueTexto, DocumentoExportable, SeccionDocumento
@@ -20,7 +20,7 @@ def conn_documentos():
     """Conexión propia (en memoria) para la tabla de solo-inserción de DOC-01.
 
     Deliberadamente separada de ``conn_sembrada`` (la conexión de
-    ``historia_clinica_mock``), igual que en el código de producción:
+    ``expediente``), igual que en el código de producción:
     ``cargar_documento_clinico`` recibe las dos conexiones por separado.
     """
 

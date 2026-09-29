@@ -26,7 +26,7 @@ Nuevo componente `estadificacion/`, en el mismo estilo que `dx_clinica/` y
 ## Cómo construye la propuesta
 
 1. Lee la variable estructurada `cancer_type` del expediente
-   (`historia_clinica_mock`). Sin ella → propuesta vacía con `cancer_type` como
+   (`expediente`). Sin ella → propuesta vacía con `cancer_type` como
    dato faltante.
 2. Selecciona el sistema con `sistema_para_cancer`. Sin sistema → propuesta vacía
    explicando por qué (no se aplican criterios que no corresponden).
@@ -104,7 +104,7 @@ componentes indeterminados quedan marcados como tales.
 confirma el médico, con exactamente el mismo diseño que
 `dx_clinica/juicio_clinico.py` para DX-03: tabla propia de solo-inserción
 (`confirmaciones_estadificacion`, en una conexión SQLite separada de
-`historia_clinica_mock`), "vigente" = la fila más reciente, y ninguna
+`expediente`), "vigente" = la fila más reciente, y ninguna
 validación de concordancia — `confirmar_estadificacion` nunca compara
 `estadio_confirmado` contra la propuesta de EST-01 para aceptarla o
 rechazarla, solo para calcular `difiere_de_sugerencia` (comparación
@@ -132,6 +132,6 @@ insensible a mayúsculas/espacios) como snapshot de auditoría.
 - `tests/estadificacion/test_staging_systems.py`, `test_builder.py`,
   `test_incompleta.py` y `test_confirmacion.py`: cubren los criterios de
   aceptación de EST-01, EST-02 y EST-03.
-- `python -m estadificacion.demo` — incluye, para cada paciente, la propuesta
-  de EST-01, el análisis de completitud de EST-03, y una confirmación manual
-  de EST-02 (una que coincide con la sugerencia, dos que la ajustan).
+- `python demo.py --solo est` (demo unificada sobre pacientes reales de cBioPortal; ver `docs/DEMO_UNIFICADA.md`): con los datos de cBioPortal (sin
+  T/N/M) la estadificación queda incompleta; el oncólogo registra M1 y EST-03
+  acota el estadio a IV; EST-02 lo confirma.

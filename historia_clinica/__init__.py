@@ -6,7 +6,7 @@
       diagnosticar, estadificar o tratar, según un checklist configurable
       por tipo de cáncer.
 
-Trabaja sobre la misma base de datos que ``historia_clinica_mock``
+Trabaja sobre la misma base de datos que ``expediente``
 (``db.crear_conexion`` aplica ambos esquemas), así que lo integrado aquí
 queda disponible para DX, EST, TX e IA sin adaptadores adicionales.
 """

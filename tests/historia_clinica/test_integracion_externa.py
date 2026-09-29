@@ -17,7 +17,7 @@ from historia_clinica.integracion_externa import (
     listar_sincronizaciones,
     sincronizar_paciente,
 )
-from historia_clinica_mock.repository import (
+from expediente.repository import (
     imagenologia_de_paciente,
     laboratorios_de_paciente,
     obtener_paciente,

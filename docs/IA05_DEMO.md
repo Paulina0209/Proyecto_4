@@ -15,13 +15,10 @@ Resultado esperado:
 ## Ejecutar demo
 
 ```powershell
-python -m ia_clinica.explainability.demo
+python demo.py --solo ia
 ```
 
-La demo muestra dos escenarios:
-
-1. **María:** recomendación con datos clínicos trazables y guía ESMO versionada. Como el módulo de guía conserva `clinical_validation_status: pending`, el sistema muestra confianza `LOW` y explica la limitación en vez de presentarla con falsa seguridad.
-2. **Carlos:** candidato con un hallazgo clínico real pero sin una guía/evidencia asociada. IA-05 devuelve `NOT_EVALUABLE`, identifica el criterio faltante y declara explícitamente que no existe evidencia registrada.
+Demo unificada sobre pacientes reales de cbioportal; ver `docs/demo_unificada.md`. Muestra la recomendación explicable de un paciente real con progresión por imagen: el criterio sustentado con el hallazgo exacto, los criterios faltantes y la confianza `NOT_EVALUABLE` cuando no hay guía asociada.
 
 ## Qué significa el nivel de confianza
 

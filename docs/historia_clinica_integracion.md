@@ -6,7 +6,7 @@
 
 Módulo: `historia_clinica/integracion_externa.py`. Esquema:
 `historia_clinica/schema_historia_clinica.sql`, que se aplica sobre la misma
-base de datos de `historia_clinica_mock`. Lo que se importa queda en
+base de datos de `expediente`. Lo que se importa queda en
 `laboratorios`, `imagenologia` y `antecedentes_externos`, así que DX, EST, TX e
 IA lo leen sin adaptadores adicionales.
 

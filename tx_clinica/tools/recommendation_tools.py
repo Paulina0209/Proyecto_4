@@ -99,15 +99,19 @@ def _recomendar_con_diagnostico_previo(patient_id: Optional[int], facts: dict[st
     if isinstance(resultado, dict):
         return json.dumps(resultado, ensure_ascii=False)
 
-    return json.dumps(
-        {
-            "requiere_mas_datos": False,
-            "sin_guia_aplicable": False,
-            "module_id": resultado.module_id,
-            "candidatos": [serializar_candidato(c) for c in resultado.candidatos],
-        },
-        ensure_ascii=False,
-    )
+    respuesta: dict[str, Any] = {
+        "requiere_mas_datos": False,
+        "sin_guia_aplicable": False,
+        "module_id": resultado.module_id,
+        "candidatos": [serializar_candidato(c) for c in resultado.candidatos],
+    }
+    if resultado.variables_faltantes_para_candidatos:
+        respuesta["variables_faltantes_para_candidatos"] = list(resultado.variables_faltantes_para_candidatos)
+        respuesta["mensaje"] = (
+            "La guía aplica, pero no se pudo evaluar ningún régimen porque faltan datos clínicos. "
+            "Pregúntale al oncólogo estas variables y usa completar_datos_paciente_y_recomendar."
+        )
+    return json.dumps(respuesta, ensure_ascii=False)
 
 
 @tool

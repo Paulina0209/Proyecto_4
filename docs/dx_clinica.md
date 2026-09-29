@@ -13,7 +13,7 @@ cuatro historias existe todavía como implementación completa en este
 repositorio, así que se resolvió así:
 
 - **HC-02 (laboratorios) y HC-04 (biomarcadores):** cubiertas por
-  `historia_clinica_mock`, ya construido para IA-02. Se le agregaron
+  `expediente`, ya construido para IA-02. Se le agregaron
   funciones a nivel de paciente completo (`laboratorios_de_paciente`,
   `imagenologia_de_paciente`, `biomarcadores_de_paciente`,
   `obtener_hallazgos_de_paciente`), porque DX-02 necesita combinar *todo*
@@ -83,7 +83,7 @@ realmente afirma.
 
 `dx_clinica/knowledge_base.py` tiene, a propósito, muy pocos perfiles
 (4), pensados para poder evaluarse contra los dos pacientes sintéticos de
-`historia_clinica_mock`. **No es un catálogo diagnóstico clínicamente
+`expediente`. **No es un catálogo diagnóstico clínicamente
 validado ni con pretensión de cobertura real** — es un punto de partida
 para poder probar DX-02 de punta a punta. Ampliarlo con criterios
 clínicamente revisados es trabajo pendiente, no algo que deba inferirse
@@ -93,8 +93,10 @@ riesgo de alucinación que la historia busca evitar).
 ## Cómo probarlo
 
 ```
-python -m dx_clinica.demo
+python demo.py --solo dx
 ```
+
+Demo unificada sobre pacientes reales de cBioPortal (ver `docs/DEMO_UNIFICADA.md`).
 
 Muestra el diagnóstico diferencial de los dos pacientes sintéticos ya
 usados en IA-02, incluyendo el caso donde "progresión de enfermedad" NO

@@ -12,7 +12,9 @@ fastapi>=0.115
 httpx>=0.27
 langchain>=0.3
 langchain-core>=0.3
-langchain-ollama>=0.2
+langchain-openai>=1.0
+openai>=2.0
+python-dotenv>=1.0
 langgraph>=0.2
 
 # documentos_clinicos/pdf_export.py (DOC-02) y tx_clinica/observability.py

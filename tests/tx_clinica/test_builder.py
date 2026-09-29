@@ -367,3 +367,26 @@ class TestObtenerFarmacosDeRegimen:
         modulo_vacio = tmp_path / "modulo_sin_regimens"
         modulo_vacio.mkdir()
         assert obtener_farmacos_de_regimen(modulo_vacio, "cualquier_id") is None
+
+
+def test_guia_resuelta_sin_candidatos_informa_las_variables_que_faltan(guidelines_root):
+    """Con datos reales incompletos (sin línea de tratamiento ni PD-L1 TPS)
+    no hay candidatos: el resultado dice qué completar en vez de solo
+    devolver una lista vacía."""
+    facts = {"cancer_type": "NSCLC", "molecular_pathway_status": "non_oncogene_addicted"}
+
+    resultado = construir_recomendaciones_tratamiento(None, facts, guidelines_root)
+
+    assert resultado.module_id == "nsclc_metastatic_non_oncogene"
+    assert resultado.candidatos == ()
+    assert {"treatment_line", "pdl1_tps", "histology"} <= set(resultado.variables_faltantes_para_candidatos)
+
+
+def test_con_candidatos_no_se_reportan_variables_faltantes(guidelines_root):
+    facts = {"cancer_type": "NSCLC", "molecular_pathway_status": "non_oncogene_addicted",
+             "histology": "non_squamous", "treatment_line": 1}
+
+    resultado = construir_recomendaciones_tratamiento(None, facts, guidelines_root)
+
+    assert resultado.candidatos
+    assert resultado.variables_faltantes_para_candidatos == ()

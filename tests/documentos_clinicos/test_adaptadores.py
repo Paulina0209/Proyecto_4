@@ -1,13 +1,13 @@
 """Pruebas de los adaptadores de DOC-02: traducción de fuentes reales del
 repositorio (resumen de caso de IA-04, expediente completo de
-``historia_clinica_mock``) al modelo genérico ``DocumentoExportable``.
+``expediente``) al modelo genérico ``DocumentoExportable``.
 """
 
 from datetime import datetime
 
 import pytest
 
-from historia_clinica_mock.adapters import PacienteNoEncontradoError
+from expediente.adapters import PacienteNoEncontradoError
 
 from ia_clinica.summary.models import (
     DIAGNOSTICO,

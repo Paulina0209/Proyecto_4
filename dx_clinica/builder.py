@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional, Sequence
 
-from historia_clinica_mock.repository import HallazgoClinico, Paciente
+from expediente.repository import HallazgoClinico, Paciente
 
 from dx_clinica.evidence import evidencia_por_diagnostico_principal, obtener_evidencia
 from dx_clinica.knowledge_base import CATALOGO_DIAGNOSTICO_DIFERENCIAL, PerfilDiagnostico
@@ -24,7 +24,10 @@ def _evaluar_perfil(perfil: PerfilDiagnostico, hallazgos: Sequence[HallazgoClini
 
     for criterio in perfil.criterios:
         hallazgos_ids = tuple(
-            hallazgo.id for hallazgo in hallazgos if coincide_sin_negacion(hallazgo.texto, criterio.palabras_clave)
+            hallazgo.id
+            for hallazgo in hallazgos
+            if coincide_sin_negacion(hallazgo.texto, criterio.palabras_clave)
+            and all(coincide_sin_negacion(hallazgo.texto, (clave,)) for clave in criterio.palabras_clave_requeridas)
         )
         if hallazgos_ids:
             criterios_sustentados.append(

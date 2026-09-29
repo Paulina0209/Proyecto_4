@@ -10,22 +10,19 @@ Comandos:
 from clinical_query import (
     AmbiguityKind,
     Clarification,
-    MockSQLiteClinicalRepository,
+    SQLiteClinicalRepository,
     NaturalLanguageClinicalQueryService,
 )
-from historia_clinica_mock.adapters import obtener_hallazgos_de_paciente
-from historia_clinica_mock.db import crear_conexion
-from historia_clinica_mock.repository import listar_pacientes
-from historia_clinica_mock.seed import sembrar_datos_sinteticos
+from expediente.adapters import obtener_hallazgos_de_paciente
+from historia_clinica.db import conectar_expediente, ruta_expediente
+from expediente.repository import buscar_paciente_por_identificacion, obtener_paciente, pacientes_con_historia
 from ia_clinica.explainability import PatientRecommendationService
 from evidencia_clinica import EvidenceSearchService
 
 
 def seleccionar_paciente(conn) -> int:
-    pacientes = listar_pacientes(conn)
-
-    print("\nPacientes sintéticos disponibles:")
-    for paciente in pacientes:
+    print("\nPacientes con historia clínica cargada (hay más en el índice):")
+    for paciente in pacientes_con_historia(conn):
         print(
             f"  {paciente.id}. {paciente.nombre} | "
             f"{paciente.diagnostico_principal or 'Sin diagnóstico'} | "
@@ -33,27 +30,25 @@ def seleccionar_paciente(conn) -> int:
         )
 
     while True:
-        choice = input("\nSeleccione paciente por ID > ").strip()
-        try:
-            patient_id = int(choice)
-        except ValueError:
-            print("Ingrese un ID numérico válido.")
-            continue
-
-        if any(p.id == patient_id for p in pacientes):
-            return patient_id
-        print("Ese paciente no existe en el mock.")
+        choice = input("\nSeleccione paciente por ID interno o de cBioPortal (P-XXXXXXX) > ").strip()
+        paciente = (
+            obtener_paciente(conn, int(choice)) if choice.isdigit()
+            else buscar_paciente_por_identificacion(conn, choice)
+        )
+        if paciente is not None:
+            return paciente.id
+        print("Ese paciente no existe en el expediente.")
 
 
 def obtener_paciente_activo(conn, patient_id: int):
-    return next(p for p in listar_pacientes(conn) if p.id == patient_id)
+    return obtener_paciente(conn, patient_id)
 
 
 def mostrar_trazabilidad_consulta(patient_id: int, response) -> None:
     """Hace visible de dónde salió la respuesta de IA-01."""
     print("\n  Trazabilidad:")
     print(f"  - Paciente interno consultado: {patient_id}")
-    print("  - Repositorio: historia_clinica_mock (SQLite sintético)")
+    print("  - Repositorio: expediente (base real del copiloto, SQLite)")
 
     if response.datum is not None:
         print(f"  - Concepto recuperado: {response.concept}")
@@ -117,7 +112,7 @@ def mostrar_recomendaciones(conn, paciente, recommendation_service) -> None:
     print("\n" + "=" * 78)
     print(f"RECOMENDACIONES EXPLICABLES — {paciente.nombre}")
     print(f"Paciente interno: {paciente.id}")
-    print("Fuente clínica: exclusivamente el expediente activo en historia_clinica_mock")
+    print("Fuente clínica: exclusivamente el expediente activo en expediente")
     print("=" * 78)
 
     if result.warning:
@@ -201,17 +196,18 @@ def resolver_consulta_con_aclaracion(query_service, patient_id, question):
 
 
 def main() -> None:
-    conn = crear_conexion()
-    sembrar_datos_sinteticos(conn)
+    if not ruta_expediente().is_file():
+        raise SystemExit("No hay base real. Prepárala con `python demo.py` (o `python -m cbioportal`, ver docs/cbioportal.md).")
+    conn = conectar_expediente()
 
-    repository = MockSQLiteClinicalRepository(conn)
+    repository = SQLiteClinicalRepository(conn)
     query_service = NaturalLanguageClinicalQueryService(repository)
     recommendation_service = PatientRecommendationService()
     evidence_service = EvidenceSearchService()
 
     print("=" * 78)
     print("COPILOTO CLÍNICO — DEMO UNIFICADA IA-01 + IA-05 + EV-01")
-    print("Fuente: historia_clinica_mock (SQLite, datos 100% sintéticos)")
+    print(f"Fuente: base real del copiloto ({ruta_expediente()}), pacientes de cBioPortal")
     print("=" * 78)
 
     patient_id = seleccionar_paciente(conn)

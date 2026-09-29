@@ -19,16 +19,16 @@
 - `ClinicalContext.from_text()` y `split_sentences()` en
   `ia_clinica.notes.models`: permiten construir el contexto a partir de un
   único párrafo de texto libre (no solo fragmentos ya separados a mano).
-- Nuevo componente `historia_clinica_mock/`: base de datos SQLite con
+- Nuevo componente `expediente/`: base de datos SQLite con
   datos sintéticos (pacientes, consultas, laboratorios, imagenología,
   biomarcadores) y un adaptador (`adapters.construir_contexto_clinico`)
   que conecta esos datos con `ia_clinica.notes` para poder generar
   borradores de nota a partir de una consulta guardada, con trazabilidad
   hasta la fila exacta de la base de datos. Ver
-  `docs/historia_clinica_mock.md`.
-- Pruebas en `tests/historia_clinica_mock/` (esquema, seed, repository,
+  `docs/expediente.md`.
+- Pruebas en `tests/expediente/` (esquema, seed, repository,
   adaptador e integración end-to-end con IA-02).
-- `historia_clinica_mock`: nuevas consultas a nivel de todo el paciente
+- `expediente`: nuevas consultas a nivel de todo el paciente
   (`laboratorios_de_paciente`, `imagenologia_de_paciente`,
   `biomarcadores_de_paciente`) y `obtener_hallazgos_de_paciente` (modelo
   `HallazgoClinico`), para historias que necesitan combinar todo el
@@ -36,7 +36,7 @@
 - Nuevo componente `dx_clinica/` que implementa **DX-02 — Apoyo al
   diagnóstico diferencial**: lista priorizada de alternativas
   diagnósticas sustentadas en hallazgos reales del expediente
-  (`historia_clinica_mock`) y en evidencia trazable leída de
+  (`expediente`) y en evidencia trazable leída de
   `guidelines/*/metadata.yaml` (implementación mínima de IA-04, que
   todavía no existe como historia propia). Incluye detección simple de
   negación en el emparejamiento de texto (para no confundir "sin
@@ -114,14 +114,14 @@
   información suficiente, el documento la marca explícitamente en vez de
   inventar contenido, con una advertencia visible al inicio listando qué
   falta (criterio de aceptación AC2). Ver `docs/ia_clinica_resumen_caso.md`.
-- Nuevo adaptador `historia_clinica_mock.adapters.construir_contexto_resumen_caso`,
+- Nuevo adaptador `expediente.adapters.construir_contexto_resumen_caso`,
   que combina `diagnostico_principal`/`estadio` del paciente con los
   mismos hallazgos que ya reúne `obtener_hallazgos_de_paciente` (DX-02)
   en un `CaseSummaryContext` para IA-04.
 - Pruebas en `tests/ia_clinica/summary/` (modelos, prompts/cliente de
   referencia, y los dos criterios de aceptación de IA-04 más la regla de
   no-alucinación), y casos añadidos a
-  `tests/historia_clinica_mock/test_adapters.py` para el nuevo adaptador.
+  `tests/expediente/test_adapters.py` para el nuevo adaptador.
   Demo en `ia_clinica/summary/demo.py`.
 
 - Nuevo `dx_clinica/catalogo_estudios.py` + `dx_clinica/recomendacion_estudios.py`:
@@ -172,7 +172,7 @@
 - Nuevo componente `estadificacion/` que implementa **EST-01 — Estadificación
   automática asistida**: `proponer_estadificacion` propone componentes T/N/M y un
   grupo de estadio a partir de las variables estructuradas del expediente
-  (`historia_clinica_mock`), usando un catálogo versionado de sistemas de
+  (`expediente`), usando un catálogo versionado de sistemas de
   estadificación (`estadificacion/staging_systems.py`, subconjunto ilustrativo de
   AJCC 8ª, no validado clínicamente). Cada propuesta conserva el sistema y la
   versión aplicados, el criterio de cada componente y la trazabilidad hasta la
@@ -198,7 +198,7 @@
   implementa **EST-02 — Ajuste manual de estadificación**. Mismo diseño que
   `dx_clinica/juicio_clinico.py` para DX-03: tabla propia de solo-inserción
   (`confirmaciones_estadificacion`, conexión SQLite separada de
-  `historia_clinica_mock`), "vigente" = la confirmación más reciente, y
+  `expediente`), "vigente" = la confirmación más reciente, y
   ninguna validación de concordancia — `confirmar_estadificacion` nunca
   compara el estadio del médico contra la propuesta de EST-01 para aceptarla o
   rechazarla, solo para calcular `difiere_de_sugerencia` (insumo directo de
@@ -207,18 +207,18 @@
   médico si existe, o la propuesta del sistema rotulada como apoyo si no.
   Pruebas en `tests/estadificacion/test_confirmacion.py`; demo ampliada en
   `estadificacion/demo.py`. Ver `docs/estadificacion.md`.
-- `historia_clinica_mock/seed.py`: nuevo paciente sintético 6
+- `expediente/seed.py`: nuevo paciente sintético 6
   (`Diana Sofía Restrepo`, NSCLC temprano) con hemoglobina en dos consultas
   (para IA-06) y T/N/M clínico completo (para EST-01); variables `clinical_m_status`
   añadidas a María y T/N/M a Roberto. Solo son filas nuevas: no se modificó
   ningún registro sintético existente. Se actualizaron dos aserciones de
-  `tests/historia_clinica_mock/test_db_y_seed.py` que fijaban el número exacto de
+  `tests/expediente/test_db_y_seed.py` que fijaban el número exacto de
   pacientes/consultas del seed (ya desactualizadas en `main`) para fijar el
   mínimo y las invariantes en su lugar.
 
 - Nuevo `documentos_clinicos/carga_documentos.py` que implementa
   **DOC-01 — Carga de documentos clínicos**: `cargar_documento_clinico`
-  valida que el paciente exista (contra `historia_clinica_mock`, que
+  valida que el paciente exista (contra `expediente`, que
   cumple en la práctica el rol de PAC-01 en este repositorio), que la
   extensión del archivo esté en el catálogo `FORMATOS_SOPORTADOS`
   (`.pdf`, `.jpg`/`.jpeg`/`.png`, `.dcm`) y que el contenido real tenga
@@ -249,7 +249,7 @@
   resumen de caso de IA-04 (`resumen_caso_a_documento_exportable`,
   conservando su disclaimer de IA y exponiendo sus secciones faltantes
   como advertencia visible) y el expediente clínico completo de un
-  paciente directamente desde `historia_clinica_mock`
+  paciente directamente desde `expediente`
   (`expediente_completo_a_documento_exportable`, sin ningún LLM
   involucrado) — al modelo genérico.
 - Pruebas en `tests/documentos_clinicos/` (renderizado a PDF y su
@@ -313,7 +313,7 @@
 ### Añadido
 
 - Nuevo componente `historia_clinica/` sobre la misma base de datos de
-  `historia_clinica_mock`:
+  `expediente`:
   - **HC-01 — Integración de historia clínica externa**
     (`integracion_externa.py`): importación desde FHIR R4 (`FuenteFHIR`,
     `importar_bundle_fhir`) y HL7 v2 ORU^R01 (`importar_mensaje_hl7`) hacia
@@ -359,3 +359,114 @@
   parámetro opcional `organizations` (filtra y prioriza por organización). Sin
   él, el comportamiento no cambia. Nueva función `organization_matches`.
 - Pruebas en `tests/configuracion/`.
+
+## [Sin versionar] — Base de datos real con cBioPortal
+
+### Añadido
+
+- Nuevo componente `cbioportal/`: importa pacientes reales desidentificados
+  de cBioPortal (por defecto MSK-CHORD, `msk_chord_2024`) al expediente que
+  leen DX, EST, TX, IA y HC-05. Trae tipo de cáncer, estadio AJCC, HER2 y
+  receptores hormonales, ECOG, marcadores tumorales, hallazgos de radiología
+  (NLP), tratamientos, mutaciones y fusiones de genes clave, MSI y TMB. La
+  carga pasa por HC-01 (identidad, todo-o-nada, idempotencia, trazabilidad),
+  con reglas fail-closed: no deriva variables que requieren juicio clínico,
+  no etiqueta variantes como "positivo" y solo afirma "no detectada" en genes
+  del panel. Ver `docs/cbioportal.md`.
+- CLI `python -m cbioportal` para cargar `data/copiloto.db` y, con
+  `--db-pacientes`, también la base de búsqueda y 360 (PAC-02/PAC-03).
+- `historia_clinica.integracion_externa`: `RegistroExterno` e
+  `importar_historia` son públicos, y `sincronizar_paciente` acepta fuentes
+  con su propio traductor (`traducir`).
+- `patients.models.TipoIdentificacion.EXTERNO` para pacientes importados. El
+  formulario de registro lo rechaza.
+- Modo índice (`cbioportal/indice.py`, `python -m cbioportal --indice`):
+  todos los pacientes de un estudio con datos básicos en segundos (13.159 de
+  mama y pulmón en 4 s) y detalle bajo demanda al abrir el paciente en la
+  API (`GET /pacientes/{id}` y `/resumen-360`), activado con
+  `COPILOTO_EXPEDIENTE_DB`. Si cBioPortal no responde, el 360 muestra los
+  datos básicos y el fallo queda registrado.
+- `historia_clinica.integracion_externa.registrar_fallo_sincronizacion`.
+- Pruebas en `tests/cbioportal/` (sin red).
+
+## [Sin versionar] — Modelo GPT de OpenAI en lugar de Ollama
+
+### Cambiado
+
+- El LLM real del proyecto pasa de un modelo local en Ollama a un modelo GPT
+  de OpenAI (por defecto `gpt-6-luna`, configurable con `OPENAI_MODEL`).
+  La llave va en `OPENAI_API_KEY` del `.env` de la raíz, que no se versiona.
+  Ver `docs/llm_openai.md`.
+- `ia_clinica.notes.llm_client.OpenAILLMClient` reemplaza a
+  `OllamaLLMClient` (IA-02, IA-03 e IA-04). Mismo contrato `LLMClient`, JSON
+  garantizado por la API y `esta_disponible()` sin generar texto.
+- `tx_clinica/agent.py` usa `ChatOpenAI` en vez de `ChatOllama`.
+- `requirements.txt`: `langchain-openai`, `openai` y `python-dotenv` en vez
+  de `langchain-ollama`.
+
+### Añadido
+
+- `core/llm_config.py`: llave, modelo y tiempo de espera compartidos, leídos
+  del `.env`.
+- Pruebas en `tests/ia_clinica/notes/test_openai_llm_client.py` (sin red).
+
+### Eliminado
+
+- `OllamaLLMClient`, `OllamaConnectionError` y sus pruebas.
+
+## [Sin versionar] — Demo unificada
+
+### Añadido
+
+- `demo.py`: todo lo implementado con un solo comando (`python demo.py`),
+  en 12 secciones con pausa entre cada una; `--solo`, `--sin-pausa`,
+  `--sin-red` y `--lista`. Reutiliza las demos de cada historia y agrega
+  guiones fijos para IA-01/IA-06, TX y NFR-06. Corre en bases en memoria o
+  temporales. Ver `docs/DEMO_UNIFICADA.md`.
+
+### Cambiado
+
+- `ia_clinica/summary/demo.py`: con un modelo real, una sección sin citas
+  válidas se informa como faltante en vez de detener el demo con `assert`.
+
+## [Sin versionar] — Solo base de datos real (sin datos simulados)
+
+### Cambiado
+
+- La aplicación ya no usa datos inventados: la API de pacientes no carga
+  datos de ejemplo al arrancar, el agente de tratamiento abre la base real
+  (`data/copiloto.db`, o `COPILOTO_EXPEDIENTE_DB`) y los datos sintéticos
+  quedan solo en las pruebas (`tests/datos_sinteticos.py`,
+  `tests/patients/datos_prueba.sql`). Las pruebas nunca abren la base real.
+- `historia_clinica_mock` pasa a llamarse `expediente` (esquema y lecturas,
+  sin datos). `MockSQLiteClinicalRepository` → `SQLiteClinicalRepository`.
+- `demo.py` corre sobre pacientes reales de cBioPortal: prepara la base si
+  falta y trabaja sobre una copia. `demo_ia01.py` y `demo_tx.py` también usan
+  la base real. Se eliminaron las demos por historia que dependían de datos
+  sintéticos (sus casos están en `demo.py --solo <sección>`).
+- Modelo por defecto `gpt-6-luna`.
+
+### Añadido
+
+- `expediente/registro.py`: el oncólogo registra consultas, variables
+  clínicas y comorbilidades (lo que cBioPortal no trae).
+- `patients.medicacion_actual.registrar_conciliacion`.
+- TX-01: si la guía aplica pero ningún régimen se puede evaluar, se informan
+  las variables que faltan (`variables_faltantes_para_candidatos`).
+- IA-01 reconoce CEA, CA 15-3, CA 19-9, KRAS, ALK, ROS1, BRAF, MET, RET,
+  PIK3CA, TMB, MSI y receptores hormonales.
+- Los hallazgos de paciente (DX-02, IA-04, IA-05) incluyen los antecedentes
+  importados (tratamientos, cirugías, radioterapia).
+
+### Corregido (encontrado al usar datos reales)
+
+- cBioPortal: HR/HER2 "No" de MSK-CHORD se registraba como negativo y se
+  derivaba "triple negativo"; es "sin antecedente de positivo" (hay
+  pacientes así tratadas con trastuzumab u hormonoterapia). Ahora queda
+  faltante.
+- cBioPortal: el texto de imagen empezaba con "no es el texto original", y
+  ese "no" hacía que DX-02 nunca detectara una progresión real.
+- DX-02: cualquier laboratorio fuera de rango (p. ej. CEA) sustentaba
+  "toxicidad hepática"; ahora exige un laboratorio hepático alterado.
+- IA-06: la palabra "paciente" (y "cBioPortal") en una pregunta se tomaba
+  como mención de otro paciente con los nombres genéricos de cBioPortal.

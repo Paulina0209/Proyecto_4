@@ -1,7 +1,7 @@
 """EST-01 — Propuesta de estadificación a partir del expediente."""
 
 from estadificacion.builder import proponer_estadificacion
-from historia_clinica_mock.repository import datos_clinicos_estructurados_de_paciente
+from expediente.repository import datos_clinicos_estructurados_de_paciente
 
 
 def _componente(propuesta, codigo):

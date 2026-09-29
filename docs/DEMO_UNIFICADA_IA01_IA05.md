@@ -15,13 +15,16 @@ python demo_ia01.py
 
 ## Flujo sugerido
 
-1. Elegir María (ID 1).
-2. Preguntar: `¿Cuál es el HER2 más reciente?`
+Usa la base real (`data/copiloto.db`; se prepara con `python demo.py`). Los
+pacientes se eligen por id interno o por su id de cBioPortal.
+
+1. Elegir `P-0016350` (pulmón, EGFR L858R).
+2. Preguntar: `¿Cuál es el EGFR?`
 3. Escribir: `recomendaciones`
 4. Escribir: `cambiar`
-5. Elegir Carlos (ID 2).
-6. Preguntar: `¿Cuál es el EGFR más reciente?`
-7. Escribir: `recomendaciones`
+5. Elegir `P-0008538` (mama).
+6. Preguntar: `¿Cuál es el CEA más reciente?`
+7. Escribir: `evidencia`
 8. Escribir: `salir`
 
 Cada consulta clínica muestra el paciente consultado, repositorio, concepto, registro, ID exacto y fecha. Las recomendaciones se construyen solo con hallazgos del paciente activo y muestran datos usados, evidencia/guía, confianza cualitativa, datos faltantes y limitaciones.

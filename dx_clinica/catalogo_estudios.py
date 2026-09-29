@@ -6,7 +6,7 @@ estudios pedir: cada entrada del catálogo indica, de forma legible por un
 humano, qué sospecha diagnóstica la activa, qué estudio se sugiere y por
 qué. Es deliberadamente un punto de partida pequeño para poder probar
 DX-01 de punta a punta (pensado para los pacientes sintéticos de
-``historia_clinica_mock``), no un catálogo clínico validado ni exhaustivo.
+``expediente``), no un catálogo clínico validado ni exhaustivo.
 
 Cada :class:`EstudioCatalogado` incluye ``palabras_clave_equivalencia``:
 las palabras clave que ``recomendacion_estudios`` usa para reconocer que

@@ -58,17 +58,17 @@ de información:
    discretas. Ahí participa el generador/LLM, con la misma validación de
    trazabilidad que ya usa IA-02.
 
-El adaptador `historia_clinica_mock.adapters.construir_contexto_resumen_caso`
+El adaptador `expediente.adapters.construir_contexto_resumen_caso`
 arma ese contexto reutilizando `obtener_hallazgos_de_paciente` (sin
 duplicar su lógica) y convirtiendo cada `HallazgoClinico` a un
 `SourceSpan` — el mismo tipo que ya usa IA-02 para poder citar
 fragmentos exactos.
 
-## Ya hay un modelo real conectado (Ollama) — se reutiliza sin cambios
+## Ya hay un modelo real conectado (OpenAI) — se reutiliza sin cambios
 
-Igual que IA-03, esta historia reutiliza el modelo local que ya sirve
-Ollama para el proyecto (`ia_clinica.notes.llm_client.OllamaLLMClient`),
-sin necesidad de un segundo cliente ni un segundo adaptador HTTP: el
+Igual que IA-03, esta historia reutiliza el modelo GPT del proyecto
+(`ia_clinica.notes.llm_client.OpenAILLMClient`, ver `docs/llm_openai.md`),
+sin necesidad de un segundo cliente ni un segundo adaptador: el
 generador de IA-04 simplemente le pasa un prompt distinto al mismo
 `LLMClient.complete(system_prompt, user_prompt) -> str`.
 
@@ -77,8 +77,8 @@ Solo se le pide al modelo redactar **dos** de las cuatro secciones
 "estadio" (ver sección anterior). `ia_clinica.summary.llm_client` define
 el prompt de sistema con esta restricción explícita, y
 `RuleBasedSummaryLLMClient` (clasificador léxico sin red, análogo a
-`RuleBasedLLMClient` de IA-02) sirve de respaldo automático si no hay
-servidor Ollama disponible, exactamente con el mismo mecanismo de
+`RuleBasedLLMClient` de IA-02) sirve de respaldo automático si el
+modelo de OpenAI no está disponible, exactamente con el mismo mecanismo de
 `esta_disponible()` que ya usan los demos de IA-02/IA-03.
 
 ## Cómo se satisface cada criterio de aceptación
@@ -122,64 +122,30 @@ Igual que IA-02, ninguna sección derivada (`tratamientos_previos`,
 - `generator.py`: `CaseSummaryGenerator.generate_summary()` — orquesta las
   secciones estructuradas (directas) y las derivadas (vía `LLMClient` +
   validación de trazabilidad), y `CaseSummaryGenerationError`.
-- `historia_clinica_mock/adapters.py`: nuevo
+- `expediente/adapters.py`: nuevo
   `construir_contexto_resumen_caso(conn, paciente_id)`.
-- `demo.py`: dos escenarios completos (AC1 — historia suficiente; AC2 —
-  información incompleta), usando `OllamaLLMClient` si hay servidor
-  disponible o `RuleBasedSummaryLLMClient` como respaldo.
+- Demo: `python demo.py --solo ia` (demo unificada sobre pacientes reales de cBioPortal; ver `docs/DEMO_UNIFICADA.md`).
 
 ## Cómo probarlo
 
 ```
-python -m ia_clinica.summary.demo
+python demo.py --solo ia
 ```
 
 Y las pruebas automatizadas:
 
 ```
 pytest tests/ia_clinica/summary -v
-pytest tests/historia_clinica_mock/test_adapters.py -v
+pytest tests/expediente/test_adapters.py -v
 ```
 
-## Cómo levantar el modelo local de Ollama (recordatorio)
+## Configuración del modelo (recordatorio)
 
-IA-04 reutiliza el mismo servidor que ya usan IA-02/IA-03/TX-01 — no hay
-nada nuevo que instalar. Se necesitan **dos ventanas de terminal**
-abiertas al mismo tiempo:
-
-**Ventana 1 — servidor Ollama (se queda corriendo, no se cierra):**
-
-```powershell
-ollama serve
-```
-
-(o, si `ollama` no está en el PATH de esa terminal:
-`& "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" serve`). Si aparece
-`bind: Only one usage of each socket address...`, es buena señal: quiere
-decir que el servidor ya estaba corriendo de antes.
-
-**Ventana 2 — donde se corren los demos/pruebas (con el `.venv` activado):**
-
-```powershell
-# Opcionales — solo si se quiere otro modelo/timeout/URL distinto al
-# valor por defecto (qwen2.5:14b-instruct-q4_K_M, 300s, 127.0.0.1:11434):
-$env:OLLAMA_MODEL = "qwen2.5:7b-instruct-q4_K_M"   # modelo más chico/rápido, útil sin GPU
-$env:OLLAMA_TIMEOUT = "900"
-$env:OLLAMA_BASE_URL = "http://127.0.0.1:11434"
-
-python -m ia_clinica.summary.demo
-```
-
-Si el modelo aún no está descargado en esa máquina:
-
-```powershell
-ollama pull qwen2.5:14b-instruct-q4_K_M
-```
-
-Si Ollama no está corriendo (o tarda más de lo esperado), el demo lo
-detecta solo (`esta_disponible()`) y sigue funcionando con
-`RuleBasedSummaryLLMClient`, imprimiendo un aviso — no hace falta nada
-manual para que el demo no se rompa.
+Solo hace falta la llave de OpenAI en el `.env` de la raíz
+(`OPENAI_API_KEY`); el modelo se cambia con `OPENAI_MODEL`. Ver
+`docs/llm_openai.md`. Si no hay llave o no hay red, el demo lo detecta
+solo (`esta_disponible()`) y sigue funcionando con
+`RuleBasedSummaryLLMClient`, imprimiendo un aviso.
 
 ## Fuera de alcance de esta historia
 

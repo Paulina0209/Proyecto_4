@@ -10,7 +10,7 @@ from datetime import datetime
 
 import pytest
 
-from historia_clinica_mock.repository import HallazgoClinico
+from expediente.repository import HallazgoClinico
 
 from dx_clinica.recomendacion_estudios import (
     SOSPECHA_NO_RECONOCIDA,
@@ -188,7 +188,7 @@ class TestSospechaNoReconocida:
 # ---------------------------------------------------------------------------
 class TestIntegracionConExpedienteReal:
     def test_maria_toxicidad_musculoesqueletica_sin_estudios_previos(self, conn_sembrada):
-        from historia_clinica_mock.adapters import obtener_hallazgos_de_paciente
+        from expediente.adapters import obtener_hallazgos_de_paciente
 
         conn, ids = conn_sembrada
         hallazgos = obtener_hallazgos_de_paciente(conn, ids["paciente_maria"])
@@ -204,7 +204,7 @@ class TestIntegracionConExpedienteReal:
         assert not resultado.estudios_omitidos_por_redundantes
 
     def test_carlos_progresion_no_repite_estudios_recientes_pero_reevalua_biomarcador_antiguo(self, conn_sembrada):
-        from historia_clinica_mock.adapters import obtener_hallazgos_de_paciente
+        from expediente.adapters import obtener_hallazgos_de_paciente
 
         conn, ids = conn_sembrada
         hallazgos = obtener_hallazgos_de_paciente(conn, ids["paciente_carlos"])

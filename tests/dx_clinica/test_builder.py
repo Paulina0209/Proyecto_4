@@ -1,7 +1,7 @@
 """Pruebas de aceptación de DX-02 — Apoyo al diagnóstico diferencial."""
 
-from historia_clinica_mock.adapters import obtener_hallazgos_de_paciente
-from historia_clinica_mock.repository import HallazgoClinico, obtener_paciente
+from expediente.adapters import obtener_hallazgos_de_paciente
+from expediente.repository import HallazgoClinico, obtener_paciente
 
 from dx_clinica.builder import construir_diagnosticos_diferenciales
 from dx_clinica.models import SIN_SUSTENTO_SUFICIENTE
@@ -148,3 +148,39 @@ class TestNoInventaSinSustento:
         resultado = construir_diagnosticos_diferenciales(paciente=None, hallazgos=hallazgos_irrelevantes)
         assert resultado.esta_vacio()
         assert resultado.advertencia_sin_sustento == SIN_SUSTENTO_SUFICIENTE
+
+
+# ---------------------------------------------------------------------------
+# Datos reales (cBioPortal): un marcador tumoral elevado no es una enzima
+# hepática, y la progresión por imagen debe reconocerse.
+# ---------------------------------------------------------------------------
+class TestCriteriosConDatosReales:
+    @staticmethod
+    def _hallazgo(hid, texto, origen="laboratorio"):
+        return HallazgoClinico(id=hid, paciente_id=1, origen=origen, texto=texto, fecha="2026-09-01")
+
+    def test_cea_elevado_no_sustenta_toxicidad_hepatica(self):
+        hallazgos = [
+            self._hallazgo("lab-1", "Resultado de laboratorio — CEA: 276.9 ng/ml (referencia: 0-5.0) (fuera de rango de referencia)."),
+        ]
+        resultado = construir_diagnosticos_diferenciales(None, hallazgos)
+        assert "toxicidad_hepatica_tratamiento" not in [c.perfil_id for c in resultado.candidatos]
+
+    def test_alt_elevada_si_sustenta_toxicidad_hepatica(self):
+        hallazgos = [
+            self._hallazgo("lab-1", "Resultado de laboratorio — función hepática (ALT): 78 U/L (referencia: 7-56) (fuera de rango de referencia)."),
+        ]
+        resultado = construir_diagnosticos_diferenciales(None, hallazgos)
+        assert "toxicidad_hepatica_tratamiento" in [c.perfil_id for c in resultado.candidatos]
+
+    def test_progresion_detectada_por_imagen_sustenta_progresion(self):
+        texto = ("TAC de tórax: Progresión detectada (probabilidad 0.93). Cáncer presente (probabilidad 1.00). "
+                 "(Resumen de informe radiológico generado por NLP en MSK-CHORD, distinto del texto original.)")
+        resultado = construir_diagnosticos_diferenciales(None, [self._hallazgo("imagen-1", texto, "imagenologia")])
+        assert "progresion_enfermedad_base" in [c.perfil_id for c in resultado.candidatos]
+
+    def test_sin_progresion_por_imagen_no_la_sustenta(self):
+        texto = ("TAC de tórax: Sin progresión (probabilidad 0.02). Cáncer presente (probabilidad 1.00). "
+                 "(Resumen de informe radiológico generado por NLP en MSK-CHORD, distinto del texto original.)")
+        resultado = construir_diagnosticos_diferenciales(None, [self._hallazgo("imagen-1", texto, "imagenologia")])
+        assert "progresion_enfermedad_base" not in [c.perfil_id for c in resultado.candidatos]

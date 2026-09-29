@@ -3,8 +3,13 @@ datos clínicos) y PAC-03 (resumen 360).
 
     uvicorn patients.api:app
 
-Al arrancar crea el esquema y, si no hay pacientes, carga los datos de
-prueba (db/datos_prueba.sql).
+Al arrancar crea el esquema si falta. No carga datos de ejemplo: los
+pacientes son los registrados y los de cBioPortal.
+
+Si existe el expediente real (``data/copiloto.db`` o la ruta de
+``COPILOTO_EXPEDIENTE_DB``), los pacientes creados por el índice de
+cBioPortal traen su detalle la primera vez que se abren (``leer_paciente``
+y ``resumen_360``). Ver docs/cbioportal.md.
 
 TODO(SEC-01): el oncólogo llega como parámetro (`oncologo_id`), sin
 autenticación. Cuando exista, debe salir de la identidad autenticada.
@@ -23,6 +28,7 @@ from fastapi.responses import JSONResponse
 from auditoria.models import TipoAccion
 from auditoria.registro_acceso import inicializar_schema as inicializar_schema_auditoria
 from auditoria.registro_acceso import registrar_acceso
+from historia_clinica.db import ruta_expediente
 
 from . import db
 from .busqueda import (
@@ -65,8 +71,10 @@ from .schemas import (
 )
 
 DB_PATH = db.RUTA_DB
-# Los tests que registran sus propios pacientes lo ponen en False.
-SEMBRAR_DATOS_PRUEBA = True
+#: Carga bajo demanda del detalle de pacientes externos (cbioportal.indice.
+#: CargadorDetalle). None = desactivada; se crea al arrancar si existe el
+#: expediente real, y los tests pueden asignarla directamente.
+CARGADOR_DETALLE = None
 
 
 def get_conn():
@@ -80,12 +88,16 @@ def get_conn():
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    global CARGADOR_DETALLE
+    ruta = ruta_expediente()
+    if CARGADOR_DETALLE is None and ruta.is_file():
+        from cbioportal.indice import CargadorDetalle
+
+        CARGADOR_DETALLE = CargadorDetalle.desde_ruta(str(ruta))
     conn = db.conectar(DB_PATH)
     try:
         db.inicializar(conn)
         inicializar_schema_auditoria(conn)
-        if SEMBRAR_DATOS_PRUEBA:
-            db.sembrar_datos_prueba(conn)
     finally:
         conn.close()
     yield
@@ -142,6 +154,13 @@ def _paciente_del_oncologo_o_404(conn: sqlite3.Connection, paciente_id: int, onc
     if paciente is None or paciente.oncologo_id != oncologo_id:
         raise HTTPException(status_code=404, detail=f"No existe un paciente con id {paciente_id}.")
     return paciente
+
+
+def _asegurar_detalle(conn: sqlite3.Connection, paciente_id: int) -> None:
+    """Un paciente del índice de cBioPortal trae su detalle al abrirse por
+    primera vez. Nunca falla: si la fuente no responde, se muestra lo que hay."""
+    if CARGADOR_DETALLE is not None:
+        CARGADOR_DETALLE.asegurar_detalle(conn, paciente_id)
 
 
 def _a_schema(paciente: Paciente) -> PacienteResponseSchema:
@@ -268,9 +287,10 @@ def leer_paciente(
     conn: sqlite3.Connection = Depends(get_conn),
 ):
     paciente = _paciente_del_oncologo_o_404(conn, paciente_id, oncologo_id)
+    _asegurar_detalle(conn, paciente_id)
     if usuario_id is not None:
         registrar_acceso(conn, usuario_id, TipoAccion.VER, paciente_id=paciente_id)
-    return _a_schema(paciente)
+    return _a_schema(buscar_por_id(conn, paciente_id))
 
 
 @app.patch(
@@ -414,6 +434,9 @@ def _leer_fila(conn: sqlite3.Connection, tabla: str, fila_id: int, esquema):
     summary="Resumen 360 del paciente",
 )
 def resumen_360(paciente_id: int, oncologo_id: int = OncologoId, conn: sqlite3.Connection = Depends(get_conn)):
+    # Solo se carga el detalle de un paciente del propio oncólogo.
+    _paciente_del_oncologo_o_404(conn, paciente_id, oncologo_id)
+    _asegurar_detalle(conn, paciente_id)
     try:
         return Resumen360Schema.model_validate(obtener_resumen_360(conn, paciente_id, oncologo_id))
     except PacienteNoEncontrado as e:

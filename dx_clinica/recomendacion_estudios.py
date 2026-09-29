@@ -8,7 +8,7 @@ general ni de un modelo estadístico: cada estudio sugerido proviene de
 ``catalogo_estudios`` (una tabla curada, explícita) y siempre viene
 acompañado de su justificación clínica. Antes de sugerir un estudio,
 se cruza contra los hallazgos ya registrados en el expediente
-(``historia_clinica_mock``, vía ``obtener_hallazgos_de_paciente`` de
+(``expediente``, vía ``obtener_hallazgos_de_paciente`` de
 DX-02) para no repetir un estudio equivalente que ya exista y siga
 siendo reciente — evitando exactamente el "sobre-pedido" que describe la
 historia de usuario.
@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import List, Optional, Sequence, Tuple
 
-from historia_clinica_mock.repository import HallazgoClinico
+from expediente.repository import HallazgoClinico
 
 from dx_clinica.catalogo_estudios import (
     CATALOGO_ESTUDIOS_POR_SOSPECHA,
@@ -153,7 +153,7 @@ def recomendar_estudios(
 
     ``hallazgos`` debe cubrir todo el expediente del paciente (mismo
     alcance que usa DX-02, típicamente obtenido con
-    ``historia_clinica_mock.adapters.obtener_hallazgos_de_paciente``): se
+    ``expediente.adapters.obtener_hallazgos_de_paciente``): se
     necesita el historial completo, no solo el de una consulta puntual,
     para poder detectar estudios ya existentes en cualquier momento
     reciente del expediente.

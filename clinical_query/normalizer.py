@@ -21,11 +21,25 @@ CONCEPT_ALIASES: dict[str, tuple[str, ...]] = {
     "leucocitos": ("leucocitos", "wbc", "leukocytes"),
     "plaquetas": ("plaquetas", "platelets"),
     "psa": ("psa", "antigeno prostatico", "antigeno prostatico especifico"),
-    # Concepts present in historia_clinica_mock
+    # Concepts present in expediente
     "her2": ("her2", "her 2"),
     "egfr": ("egfr", "receptor del factor de crecimiento epidermico"),
     "neutrofilos": ("neutrofilos", "neutrofilo", "neutrophils"),
     "alt": ("alt", "alanina aminotransferasa", "funcion hepatica"),
+    # Marcadores tumorales y biomarcadores que trae cBioPortal (docs/cbioportal.md)
+    "cea": ("cea", "antigeno carcinoembrionario"),
+    "ca 15-3": ("ca 15-3", "ca15-3", "ca 15 3", "ca 153"),
+    "ca 19-9": ("ca 19-9", "ca19-9", "ca 19 9", "ca 199"),
+    "kras": ("kras",),
+    "alk": ("alk",),
+    "ros1": ("ros1",),
+    "braf": ("braf",),
+    "met": ("met",),
+    "ret": ("ret",),
+    "pik3ca": ("pik3ca",),
+    "tmb": ("tmb", "carga mutacional", "carga mutacional tumoral"),
+    "msi": ("msi", "inestabilidad de microsatelites"),
+    "receptores hormonales": ("receptores hormonales", "receptor hormonal", "hr"),
 }
 
 

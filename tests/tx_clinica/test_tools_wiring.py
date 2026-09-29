@@ -1,11 +1,11 @@
 """Tests de ensamblaje de tx_clinica/tools/__init__.py y
 tx_clinica/middleware/human_in_the_loop.py.
 
-No invoca Ollama ni construye el agente completo (create_agent con un
-LLM real no se puede probar sin un servidor Ollama corriendo) -- esto
+No invoca el LLM ni construye el agente completo (create_agent con un
+LLM real no se puede probar sin llamar a la API de OpenAI) -- esto
 solo confirma que la LISTA de tools está bien armada y que la
 configuración del middleware apunta a la tool correcta. Ver el plan de
-continuidad para lo que sigue pendiente de probar contra Ollama real.
+continuidad para lo que sigue pendiente de probar contra el modelo real.
 """
 
 from __future__ import annotations

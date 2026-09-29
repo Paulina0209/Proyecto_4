@@ -1,7 +1,7 @@
 from evidencia_clinica import EvidenceSearchService
-from historia_clinica_mock.db import crear_conexion
-from historia_clinica_mock.repository import obtener_paciente
-from historia_clinica_mock.seed import sembrar_datos_sinteticos
+from expediente.db import crear_conexion
+from expediente.repository import obtener_paciente
+from tests.datos_sinteticos import sembrar_datos_sinteticos
 
 
 def test_free_search_returns_relevant_source_and_publication_date():

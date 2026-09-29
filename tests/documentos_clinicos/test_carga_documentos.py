@@ -19,7 +19,7 @@ aceptarse solo porque el nombre "dice" ser de un formato válido.
 
 import pytest
 
-from historia_clinica_mock.adapters import PacienteNoEncontradoError
+from expediente.adapters import PacienteNoEncontradoError
 
 from documentos_clinicos.carga_documentos import (
     ContenidoNoCoincideConFormatoError,

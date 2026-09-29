@@ -76,8 +76,8 @@ def test_sin_ninguna_conexion_provista_devuelve_vacio():
 
 def test_est_marca_diferencia_cuando_el_medico_no_sigue_la_sugerencia(conn_est):
     from estadificacion.builder import proponer_estadificacion
-    from historia_clinica_mock.db import crear_conexion as crear_conexion_hc
-    from historia_clinica_mock.seed import sembrar_datos_sinteticos
+    from expediente.db import crear_conexion as crear_conexion_hc
+    from tests.datos_sinteticos import sembrar_datos_sinteticos
 
     conn_hc = crear_conexion_hc(":memory:")
     ids = sembrar_datos_sinteticos(conn_hc)

@@ -31,6 +31,10 @@ class TipoIdentificacion(str, Enum):
     PASAPORTE = "pasaporte"
     REGISTRO_CIVIL = "registro_civil"
     TEMPORAL = "temporal"
+    #: Paciente importado de una fuente externa (p. ej. cBioPortal), con su
+    #: identificador de origen. Solo lo asigna la integración, nunca el
+    #: formulario de registro.
+    EXTERNO = "externo"
 
 
 @dataclass

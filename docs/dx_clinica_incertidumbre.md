@@ -14,7 +14,7 @@ Este documento describe el diseño de `dx_clinica.incertidumbre` y
 DX-03 depende formalmente de DX-02, HC-02 y HC-04. DX-02 ya está
 implementado en este repositorio (`dx_clinica.builder`); HC-02
 (laboratorios) y HC-04 (biomarcadores) siguen cubiertos, como en DX-02,
-por `historia_clinica_mock`. DX-03 no vuelve a tocar ninguno de esos dos
+por `expediente`. DX-03 no vuelve a tocar ninguno de esos dos
 componentes: es una capa que **analiza** el `ResultadoDiagnosticoDiferencial`
 que ya produce DX-02, y una capa separada que **registra** el juicio del
 médico — ninguna de las dos modifica `dx_clinica.builder`.
@@ -63,7 +63,7 @@ parte distinta del resultado de DX-02:
   no se detectan contradicciones literales entre valores clínicos (por
   ejemplo, dos resultados de laboratorio incompatibles para la misma
   prueba) — eso requeriría un modelo de datos clínicos más rico del que
-  tiene `historia_clinica_mock` hoy. Se documenta esta limitación en vez
+  tiene `expediente` hoy. Se documenta esta limitación en vez
   de fingir una detección de contradicciones que no existe.
 - **`INCERTIDUMBRE_INHERENTE_AL_CASO`**: la alternativa líder pertenece a
   un perfil diagnóstico con muy pocos criterios definidos en total
@@ -120,16 +120,14 @@ bloquear, ni advertir en contra del juicio del médico.
   `JuicioClinico`, `DecisionDiagnosticaVigente`,
   `registrar_juicio_clinico()`, `obtener_juicio_vigente()`,
   `obtener_historial_juicios()`, `obtener_decision_diagnostica_vigente()`.
-- `dx_clinica/demo_incertidumbre.py`: cuatro escenarios construidos a
-  mano (uno por cada combinación relevante de tipos de incertidumbre, más
-  el caso sin incertidumbre) y un caso real (Carlos, NSCLC) para mostrar
-  el registro de un juicio médico que prevalece sobre la sugerencia del
-  sistema.
+- Demo: `python demo.py --solo dx` (demo unificada sobre pacientes reales de cBioPortal; ver `docs/DEMO_UNIFICADA.md`): analiza la incertidumbre del
+  diferencial de un paciente real y registra el juicio del médico, que
+  prevalece sobre la sugerencia.
 
 ## Cómo probarlo
 
 ```
-python -m dx_clinica.demo_incertidumbre
+python demo.py --solo dx
 pytest tests/dx_clinica/test_incertidumbre.py tests/dx_clinica/test_juicio_clinico.py -v
 ```
 
@@ -137,7 +135,7 @@ pytest tests/dx_clinica/test_incertidumbre.py tests/dx_clinica/test_juicio_clini
 
 - **Detección de contradicciones clínicas literales** (dos valores de
   datos que se contradicen entre sí): requeriría enriquecer el modelo de
-  datos de `historia_clinica_mock`; ver limitación documentada arriba.
+  datos de `expediente`; ver limitación documentada arriba.
 - **Notificar automáticamente al médico** cuando se detecta incertidumbre
   (por ejemplo, una alerta push): esta historia solo genera el análisis y
   lo deja disponible para quien consuma `dx_clinica`; el canal de

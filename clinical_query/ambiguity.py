@@ -83,11 +83,18 @@ def tiene_calificador_temporal(question: str) -> bool:
     return any(f" {c} " in normalized for c in _CALIFICADORES_TEMPORALES)
 
 
+#: Palabras que aparecen en los nombres pero no identifican a nadie: la marca
+#: "(sintético)" de los datos de prueba y el nombre genérico de los pacientes
+#: de cBioPortal ("Paciente P-0000012 (cBioPortal msk_chord_2024)"). Sin
+#: esto, "¿cuál es el CEA del paciente?" coincidía con todos los pacientes.
+_TOKENS_NO_IDENTIFICADORES = {"sintetico", "de", "la", "el", "del", "paciente", "cbioportal", "msk", "chord"}
+
+
 def _tokens_significativos(nombre: str) -> list[str]:
-    # Se ignoran tokens muy cortos y la marca "(sintético)" de los datos de
-    # prueba para no generar falsos positivos.
-    descartar = {"sintetico", "de", "la", "el", "del"}
-    return [t for t in normalize_text(nombre).split() if len(t) >= 3 and t not in descartar]
+    return [
+        t for t in normalize_text(nombre).split()
+        if len(t) >= 3 and t not in _TOKENS_NO_IDENTIFICADORES and not t.isdigit()
+    ]
 
 
 def nombra_otro_paciente(

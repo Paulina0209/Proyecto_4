@@ -2,10 +2,10 @@
 
 Reutiliza la misma interfaz :class:`~ia_clinica.notes.llm_client.LLMClient`
 que ya usan IA-02/IA-03 (``complete(system_prompt, user_prompt) -> str``):
-el mismo servidor local de Ollama (``OllamaLLMClient``) sirve aquí sin
-ningún cambio, solo con un prompt distinto. No se define un nuevo cliente
-de Ollama para esta historia a propósito — sería duplicar exactamente el
-mismo adaptador HTTP que ya existe y ya está probado.
+el mismo cliente de OpenAI (``OpenAILLMClient``) sirve aquí sin ningún
+cambio, solo con un prompt distinto. No se define un nuevo cliente para
+esta historia a propósito — sería duplicar exactamente el mismo adaptador
+que ya existe y ya está probado.
 
 Solo se le pide al modelo (real o de referencia) que redacte dos de las
 cuatro secciones del resumen: "tratamientos previos" y "estado actual".
@@ -88,7 +88,7 @@ class RuleBasedSummaryLLMClient(LLMClient):
     expediente a "tratamientos_previos" o "estado_actual" según palabras
     clave, y copia el fragmento literalmente — por lo que cualquier salida
     que produce está garantizada como "grounded". Sirve de respaldo seguro
-    cuando no hay un servidor Ollama disponible (ver ``demo.py``).
+    cuando el modelo de OpenAI no está disponible (ver ``demo.py``).
     """
 
     _KEYWORDS = {

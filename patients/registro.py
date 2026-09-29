@@ -61,6 +61,11 @@ def validar_campos_obligatorios(paciente: Paciente) -> list[ErrorValidacion]:
 
     if paciente.tipo_identificacion is None:
         errores.append(ErrorValidacion("tipo_identificacion", "El tipo de identificación es obligatorio."))
+    elif paciente.tipo_identificacion == TipoIdentificacion.EXTERNO:
+        errores.append(ErrorValidacion(
+            "tipo_identificacion",
+            "El tipo 'externo' lo asigna la integración con fuentes externas; no se puede registrar a mano.",
+        ))
     elif not paciente.numero_identificacion or not paciente.numero_identificacion.strip():
         errores.append(ErrorValidacion(
             "numero_identificacion",

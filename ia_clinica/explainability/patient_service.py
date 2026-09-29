@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Sequence
 
 from dx_clinica.builder import construir_diagnosticos_diferenciales
-from historia_clinica_mock.repository import HallazgoClinico, Paciente
+from expediente.repository import HallazgoClinico, Paciente
 
 from .models import ClinicalExplanation
 from .service import ExplanationService

@@ -109,7 +109,7 @@ def obtener_evidencia(module_folder: str) -> Optional[EvidenceReference]:
 
 
 # Asociación explícita y curada entre el diagnóstico principal registrado
-# en `historia_clinica_mock` y el módulo de guías más relevante. Es
+# en `expediente` y el módulo de guías más relevante. Es
 # deliberadamente una tabla explícita (no un emparejamiento difuso por
 # texto libre) para no inferir una asociación clínica que nadie validó.
 _DIAGNOSTICO_A_MODULO: Dict[str, str] = {

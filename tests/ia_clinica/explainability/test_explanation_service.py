@@ -1,8 +1,8 @@
 """Pruebas de aceptación IA-05 — Explicabilidad de recomendaciones."""
 
 from dx_clinica.builder import construir_diagnosticos_diferenciales
-from historia_clinica_mock.adapters import obtener_hallazgos_de_paciente
-from historia_clinica_mock.repository import obtener_paciente
+from expediente.adapters import obtener_hallazgos_de_paciente
+from expediente.repository import obtener_paciente
 from ia_clinica.explainability import (
     ConfidenceLevel,
     EvidenceTrace,

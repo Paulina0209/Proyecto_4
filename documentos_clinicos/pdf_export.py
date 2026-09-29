@@ -1,7 +1,7 @@
 """Renderizado a PDF de un documento clínico exportable (DOC-02).
 
 Este módulo **no sabe nada** de `ia_clinica`, `dx_clinica` ni
-`historia_clinica_mock`: recibe un :class:`DocumentoExportable` genérico
+`expediente`: recibe un :class:`DocumentoExportable` genérico
 (título, referencia de paciente, fecha de generación, secciones con
 bloques de texto o de tabla, disclaimer y advertencias opcionales) y
 produce un PDF con formato profesional. Quién construye ese

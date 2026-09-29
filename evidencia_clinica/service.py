@@ -5,7 +5,7 @@ import unicodedata
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
-from historia_clinica_mock.repository import Paciente
+from expediente.repository import Paciente
 
 from .catalog import load_guideline_catalog
 from .models import EvidenceDocument, EvidenceSearchResult

@@ -6,7 +6,7 @@ evidencia disponible, para apoyar mi razonamiento diagnóstico.
 
 Este paquete **no** decide ni presenta un diagnóstico definitivo: genera
 una lista de alternativas, cada una sustentada explícitamente en
-hallazgos reales del expediente (`historia_clinica_mock`) y, cuando
+hallazgos reales del expediente (`expediente`) y, cuando
 corresponde, en una guía clínica ya existente en `guidelines/`. Si no hay
 sustento real para una alternativa, esa alternativa simplemente no se
 incluye — nunca se inventa un hallazgo ni una fuente de evidencia para

@@ -29,7 +29,7 @@ python demo_ia01.py
 Ejemplo:
 
 ```text
-Seleccione paciente por ID > 2
+Seleccione paciente por ID interno o de cBioPortal (P-XXXXXXX) > P-0012063
 Oncólogo > evidencia
 Oncólogo > evidencia EGFR NSCLC metastatic
 ```

@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 
-from historia_clinica_mock.repository import (
+from expediente.repository import (
     biomarcadores_de_paciente,
     laboratorios_de_paciente,
     listar_pacientes,
@@ -69,8 +69,8 @@ class JsonClinicalRepository(ClinicalRepository):
         return [item for item in record.data if item.concept.casefold() == concept.casefold()]
 
 
-class MockSQLiteClinicalRepository(ClinicalRepository):
-    """IA-01 adapter over the project's SQLite synthetic clinical-record mock.
+class SQLiteClinicalRepository(ClinicalRepository):
+    """IA-01 adapter over the project's SQLite clinical record (``expediente``).
 
     The application service remains unaware of SQLite. Every returned value is
     scoped by ``patient_id`` and carries the exact source row identifier.

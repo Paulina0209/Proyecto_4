@@ -2,7 +2,7 @@
 
 from .ambiguity import AmbiguityFinding, AmbiguityKind, PacienteRef
 from .models import ClinicalDatum, ClinicalRecord, QueryResponse
-from .repository import ClinicalRepository, JsonClinicalRepository, MockSQLiteClinicalRepository
+from .repository import ClinicalRepository, JsonClinicalRepository, SQLiteClinicalRepository
 from .service import Clarification, NaturalLanguageClinicalQueryService
 
 __all__ = [
@@ -11,7 +11,7 @@ __all__ = [
     "QueryResponse",
     "ClinicalRepository",
     "JsonClinicalRepository",
-    "MockSQLiteClinicalRepository",
+    "SQLiteClinicalRepository",
     "NaturalLanguageClinicalQueryService",
     "Clarification",
     "AmbiguityFinding",

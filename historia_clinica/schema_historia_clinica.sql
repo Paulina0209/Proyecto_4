@@ -1,6 +1,6 @@
 -- Esquema de HC-01 (integración de historia clínica externa).
 --
--- Vive en la MISMA base de datos que `historia_clinica_mock/schema.sql`
+-- Vive en la MISMA base de datos que `expediente/schema.sql`
 -- (se aplica encima de ella): todo lo que se integra aquí termina en las
 -- tablas clínicas que ya leen DX, EST, TX e IA (laboratorios,
 -- imagenologia, biomarcadores, datos_clinicos_estructurados). Estas

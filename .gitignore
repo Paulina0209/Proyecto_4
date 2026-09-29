@@ -24,6 +24,10 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
+# Bases de datos locales (se generan con `python -m cbioportal`)
+data/*.db
+patients/db/pacientes.db
+
 # SQLite temporales
 *.sqlite-journal
 *.sqlite-shm
