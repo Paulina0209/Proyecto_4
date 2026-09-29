@@ -21,6 +21,11 @@ Reglas clínicas del mapeo (fail-closed, igual que HC-05):
       más de un diagnóstico primario, no se toma ningún estadio.
     - Los hallazgos de imagen de MSK-CHORD vienen de NLP sobre informes
       radiológicos; el texto guardado lo dice explícitamente.
+    - HR y HER2 de MSK-CHORD son "antecedente de un resultado positivo": un
+      "No" significa que no se encontró un positivo, no un negativo
+      confirmado (hay pacientes con "No" tratadas con trastuzumab u
+      hormonoterapia). Solo "Yes" se registra; "No" queda faltante y nunca
+      se deriva "triple negativo".
 
 Fechas: cBioPortal está desidentificado y publica días relativos, no
 fechas. Se ubican en el calendario de forma que el último evento del
@@ -303,19 +308,14 @@ def _datos_estructurados(contenido: Dict[str, Any]) -> Iterable[Tuple[str, str, 
         yield "metastatic_disease", "yes", None
 
     if tipo == "breast":
-        her2, hr = _si_no(datos.get("HER2")), _si_no(datos.get("HR"))
+        # Solo positivos: ver docstring (HR/HER2 "No" no es un negativo
+        # confirmado). Con HR positivo tampoco se sabe si es RE o RP.
+        her2, hr = _antecedente_positivo(datos.get("HER2")), _antecedente_positivo(datos.get("HR"))
         if her2:
             yield "her2_status", her2, None
         if hr:
             yield "hormone_receptor_status", hr, None
-        if hr == "negative":
-            # HR negativo en MSK-CHORD = RE y RP negativos. Con HR positivo no
-            # se sabe cuál de los dos lo es: se deja faltante.
-            yield "er_status", "negative", None
-            yield "pr_status", "negative", None
-        if her2 == "negative" and hr == "negative":
-            yield "breast_subtype", "triple_negative", None
-        elif her2 == "positive" or hr == "positive":
+        if her2 or hr:
             yield "breast_subtype", "other", None
 
     pdl1 = [e for e in contenido.get("eventos") or [] if e["tipo"] == "Pathology" and "PDL1_POSITIVE" in e["atributos"]]
@@ -349,14 +349,10 @@ def _biomarcadores(contenido: Dict[str, Any]) -> Iterable[Tuple[str, str, Option
     }
 
     if tipo == "breast":
-        her2, hr = _si_no(datos.get("HER2")), _si_no(datos.get("HR"))
-        if her2:
-            yield "HER2", _positivo(her2), None
-        if hr:
-            yield "Receptores hormonales (HR)", _positivo(hr), None
-        if hr == "negative":
-            yield "RE", "negativo", None
-            yield "RP", "negativo", None
+        if _antecedente_positivo(datos.get("HER2")):
+            yield "HER2", "positivo", None
+        if _antecedente_positivo(datos.get("HR")):
+            yield "Receptores hormonales (HR)", "positivo", None
 
     for muestra_id, muestra in sorted(muestras.items()):
         d = muestra["datos"]
@@ -431,17 +427,25 @@ def _imagenes(contenido: Dict[str, Any]) -> Iterable[Tuple[int, str, str, str]]:
     for (dia, procedimiento), eventos in sorted(grupos.items()):
         regiones = [nombre for clave, nombre in _REGIONES
                     if any(str(a.get(clave, "")).upper() in {"1", "TRUE"} for a in eventos)]
-        partes = ["Informe radiológico procesado con NLP (MSK-CHORD); no es el texto original del informe."]
+        # El texto lo leen matchers con detección de negación (DX-02): la
+        # negación va ANTES del término ("Sin progresión"), la progresión va
+        # primero para que otra frase negada no la alcance, y el aviso de NLP
+        # va al final (antes decía "no es el texto original" al inicio, y ese
+        # "no" negaba todo lo siguiente). Primero el hallazgo: es lo que se ve
+        # en los resúmenes cortos (360).
+        partes: List[str] = []
+        for a in eventos:
+            if a["SUBTYPE"] == "Progression":
+                partes.append(f"{_frase_nlp(a.get('PROGRESSION'), 'progresión', 'Progresión detectada')} "
+                              f"(probabilidad {_prob(a.get('NLP_PROGRESSION_PROBABILITY'))}).")
         for a in eventos:
             if a["SUBTYPE"] == "HasCancer":
-                partes.append(f"Cáncer presente: {_si_no_es(a.get('HAS_CANCER'))} "
+                partes.append(f"{_frase_nlp(a.get('HAS_CANCER'), 'cáncer presente', 'Cáncer presente')} "
                               f"(probabilidad {_prob(a.get('NLP_HAS_CANCER_PROBABILITY'))}).")
-            elif a["SUBTYPE"] == "Progression":
-                partes.append(f"Progresión: {_si_no_es(a.get('PROGRESSION'))} "
-                              f"(probabilidad {_prob(a.get('NLP_PROGRESSION_PROBABILITY'))}).")
         sitios = sorted({_SITIOS.get(a["TUMOR_SITE"], a["TUMOR_SITE"]) for a in eventos if a.get("TUMOR_SITE")})
         if sitios:
             partes.append(f"Sitios tumorales: {', '.join(sitios)}.")
+        partes.append("(Resumen de informe radiológico generado por NLP en MSK-CHORD, distinto del texto original.)")
         yield dia, _MODALIDADES.get(procedimiento, procedimiento), ", ".join(regiones) or "no especificada", " ".join(partes)
 
 
@@ -463,12 +467,14 @@ def _si_no(valor: Optional[str]) -> Optional[str]:
     return {"yes": "positive", "no": "negative"}.get((valor or "").strip().lower())
 
 
-def _positivo(valor: str) -> str:
-    return "positivo" if valor == "positive" else "negativo"
+def _antecedente_positivo(valor: Optional[str]) -> Optional[str]:
+    """HR/HER2 de MSK-CHORD: "Yes" es positivo; "No" no es un negativo confirmado."""
+    return "positive" if (valor or "").strip().lower() == "yes" else None
 
 
-def _si_no_es(valor: Optional[str]) -> str:
-    return {"Y": "sí", "N": "no"}.get((valor or "").upper(), "no concluyente")
+def _frase_nlp(valor: Optional[str], termino: str, afirmativa: str) -> str:
+    """"Progresión detectada" / "Sin progresión" / "No concluyente para progresión"."""
+    return {"Y": afirmativa, "N": f"Sin {termino}"}.get((valor or "").upper(), f"No concluyente para {termino}")
 
 
 def _prob(valor: Optional[str]) -> str:

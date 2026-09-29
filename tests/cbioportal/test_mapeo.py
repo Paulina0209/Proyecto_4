@@ -60,15 +60,26 @@ def test_con_dos_canceres_no_se_asume_tipo_ni_estadio(historia):
     assert len([a for a in _filas(contenido, "antecedentes_externos") if a["tipo"] == "condicion"]) == 2
 
 
-def test_mama_triple_negativa(historia):
+def test_hr_y_her2_no_no_son_un_negativo_confirmado(historia):
+    """En MSK-CHORD, HR/HER2 "No" = no se encontró un positivo (hay
+    pacientes así tratadas con trastuzumab u hormonoterapia): no se registra
+    negativo ni se deriva triple negativo; queda faltante para HC-05."""
     contenido = historia("P-0000015")
     datos, biomarcadores = _datos(contenido), _biomarcadores(contenido)
     assert datos["cancer_type"] == "breast"
-    assert datos["her2_status"] == "negative"
-    assert datos["er_status"] == datos["pr_status"] == "negative"
-    assert datos["breast_subtype"] == "triple_negative"
-    assert biomarcadores["HER2"] == "negativo"
-    assert biomarcadores["RE"] == biomarcadores["RP"] == "negativo"
+    for variable in ("her2_status", "hormone_receptor_status", "er_status", "pr_status", "breast_subtype"):
+        assert variable not in datos
+    for nombre in ("HER2", "Receptores hormonales (HR)", "RE", "RP"):
+        assert nombre not in biomarcadores
+
+
+def test_her2_positivo_si_se_registra(cliente, fuente):
+    cliente.pacientes["P-0000015"]["datos_paciente"]["HER2"] = "Yes"
+    contenido = fuente.historia(ESTUDIO, "P-0000015")
+    datos, biomarcadores = _datos(contenido), _biomarcadores(contenido)
+    assert datos["her2_status"] == "positive"
+    assert biomarcadores["HER2"] == "positivo"
+    assert datos["breast_subtype"] == "other"
 
 
 def test_con_receptores_hormonales_positivos_no_se_inventa_re_ni_rp(cliente, fuente):
@@ -147,8 +158,21 @@ def test_imagenes_dicen_que_vienen_de_nlp(historia):
     imagen = _filas(historia("P-0000015"), "imagenologia")[0]
     assert imagen["modalidad"] == "TAC"
     assert imagen["region"] == "tórax, abdomen"
-    assert "NLP" in imagen["hallazgos"] and "no es el texto original" in imagen["hallazgos"]
-    assert "Progresión: sí" in imagen["hallazgos"] and "hueso" in imagen["hallazgos"]
+    assert "NLP" in imagen["hallazgos"] and "distinto del texto original" in imagen["hallazgos"]
+    assert "Progresión detectada" in imagen["hallazgos"] and "hueso" in imagen["hallazgos"]
+
+
+def test_la_progresion_de_imagen_se_lee_bien_con_deteccion_de_negacion(historia):
+    """DX-02 busca "progresión" con detección de negación: la afirmativa debe
+    contar y la negativa no (antes, el encabezado "no es el texto original"
+    negaba cualquier progresión)."""
+    from dx_clinica.matcher import coincide_sin_negacion
+
+    imagen = _filas(historia("P-0000015"), "imagenologia")[0]
+    assert coincide_sin_negacion(imagen["hallazgos"], ("progresión",))
+    for negativa in ("Sin progresión (probabilidad 0.02).", "No concluyente para progresión (probabilidad 0.40)."):
+        texto = negativa + " (Resumen de informe radiológico generado por NLP en MSK-CHORD, distinto del texto original.)"
+        assert not coincide_sin_negacion(texto, ("progresión",))
 
 
 def test_tratamientos_y_procedimientos_como_antecedentes(historia):

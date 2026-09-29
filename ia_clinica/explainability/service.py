@@ -6,7 +6,7 @@ from typing import Iterable, Mapping, Optional, Sequence
 
 from dx_clinica.evidence import EvidenceReference
 from dx_clinica.models import DiagnosticoDiferencialCandidato
-from historia_clinica_mock.repository import HallazgoClinico
+from expediente.repository import HallazgoClinico
 
 from .models import ClinicalExplanation, ConfidenceLevel, EvidenceTrace, PatientFactTrace
 

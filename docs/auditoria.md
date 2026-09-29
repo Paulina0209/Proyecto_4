@@ -96,5 +96,5 @@ son consultables posteriormente para auditoría
 
 ```
 python -m pytest tests/auditoria -q
-python -m auditoria.demo
+python demo.py --solo dx est tx aud   # decisiones registradas en la demo y su trazabilidad
 ```

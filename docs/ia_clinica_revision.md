@@ -91,7 +91,7 @@ puede demostrar de forma convincente con un objeto Python que vive solo
 en memoria del proceso actual — eso sería cierto por definición, sin
 probar nada sobre persistencia real. `ia_clinica/review/store.py` guarda
 cada revisión en una tabla SQLite propia (`revision_notas`), separada de
-`historia_clinica_mock` porque una nota en revisión no es un dato clínico
+`expediente` porque una nota en revisión no es un dato clínico
 del expediente, es un artefacto del flujo de trabajo del copiloto. Esto
 permite que las pruebas (y el demo) abran una conexión, hagan cambios,
 cierren esa conexión, abran una conexión **nueva** apuntando al mismo
@@ -110,16 +110,15 @@ simulación razonable de "cerrar sesión y volver a entrar".
   `editar_seccion(...)`, `aprobar_nota(...)`, `obtener_revision(...)` —
   capa fina que traduce entre `ClinicalNoteDraft` (IA-02) y el
   almacenamiento de IA-03.
-- `demo.py`: flujo completo — genera un borrador (con `OpenAILLMClient`
-  si hay llave configurada, si no con `RuleBasedLLMClient`), inicia la
-  revisión, edita una sección, cierra y reabre la conexión para simular
-  "cerrar sesión", aprueba explícitamente, y muestra que ya no se puede
-  editar después de aprobada.
+- Demo: `python demo.py --solo ia` (demo unificada sobre pacientes reales de
+  cBioPortal): el oncólogo registra la nota de la consulta, GPT redacta el
+  borrador SOAP, el oncólogo corrige una sección, lo aprueba y ya no se puede
+  editar.
 
 ## Cómo probarlo
 
 ```
-python -m ia_clinica.review.demo
+python demo.py --solo ia
 ```
 
 Y las pruebas automatizadas:
@@ -147,5 +146,5 @@ y que los errores de la API se traducen en `OpenAIConnectionError`).
   historia distinta, con su propio rastro de auditoría explícito.
 - **Integración con el expediente oficial del paciente:** esta historia
   deja la nota en estado `APPROVED` dentro de `revision_notas`; llevarla
-  al expediente real del paciente (`historia_clinica_mock` u otro sistema
+  al expediente real del paciente (`expediente` u otro sistema
   en producción) es un paso posterior no definido en el backlog todavía.

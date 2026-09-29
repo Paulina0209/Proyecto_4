@@ -1,4 +1,4 @@
-"""Conexión y creación del esquema de la base de datos mock."""
+"""Conexión y creación del esquema del expediente clínico."""
 
 from __future__ import annotations
 
@@ -11,9 +11,9 @@ _SCHEMA_PATH = Path(__file__).resolve().parent / "schema.sql"
 def crear_conexion(ruta: str = ":memory:", *, check_same_thread: bool = True) -> sqlite3.Connection:
     """Crea una conexión SQLite con el esquema ya inicializado.
 
-    Por defecto usa una base de datos en memoria (``:memory:``), ideal
-    para pruebas y demos: no deja ningún archivo en disco. Se puede pasar
-    una ruta de archivo si se quiere conservar entre ejecuciones.
+    Por defecto usa una base de datos en memoria (``:memory:``), útil en
+    pruebas. La base real del copiloto se abre con
+    ``historia_clinica.db.conectar_expediente``.
     """
 
     conn = sqlite3.connect(ruta, check_same_thread=check_same_thread)

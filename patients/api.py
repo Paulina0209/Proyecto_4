@@ -3,20 +3,19 @@ datos clínicos) y PAC-03 (resumen 360).
 
     uvicorn patients.api:app
 
-Al arrancar crea el esquema y, si no hay pacientes, carga los datos de
-prueba (db/datos_prueba.sql).
+Al arrancar crea el esquema si falta. No carga datos de ejemplo: los
+pacientes son los registrados y los de cBioPortal.
 
-Con la variable de entorno ``COPILOTO_EXPEDIENTE_DB`` (ruta del expediente
-de historia_clinica), los pacientes creados por el índice de cBioPortal
-traen su detalle la primera vez que se abren (``leer_paciente`` y
-``resumen_360``). Ver docs/cbioportal.md.
+Si existe el expediente real (``data/copiloto.db`` o la ruta de
+``COPILOTO_EXPEDIENTE_DB``), los pacientes creados por el índice de
+cBioPortal traen su detalle la primera vez que se abren (``leer_paciente``
+y ``resumen_360``). Ver docs/cbioportal.md.
 
 TODO(SEC-01): el oncólogo llega como parámetro (`oncologo_id`), sin
 autenticación. Cuando exista, debe salir de la identidad autenticada.
 """
 from __future__ import annotations
 
-import os
 import sqlite3
 from contextlib import asynccontextmanager
 from datetime import date
@@ -29,6 +28,7 @@ from fastapi.responses import JSONResponse
 from auditoria.models import TipoAccion
 from auditoria.registro_acceso import inicializar_schema as inicializar_schema_auditoria
 from auditoria.registro_acceso import registrar_acceso
+from historia_clinica.db import ruta_expediente
 
 from . import db
 from .busqueda import (
@@ -71,11 +71,9 @@ from .schemas import (
 )
 
 DB_PATH = db.RUTA_DB
-# Los tests que registran sus propios pacientes lo ponen en False.
-SEMBRAR_DATOS_PRUEBA = True
 #: Carga bajo demanda del detalle de pacientes externos (cbioportal.indice.
-#: CargadorDetalle). None = desactivada; se crea al arrancar si existe
-#: COPILOTO_EXPEDIENTE_DB, y los tests pueden asignarla directamente.
+#: CargadorDetalle). None = desactivada; se crea al arrancar si existe el
+#: expediente real, y los tests pueden asignarla directamente.
 CARGADOR_DETALLE = None
 
 
@@ -91,17 +89,15 @@ def get_conn():
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     global CARGADOR_DETALLE
-    ruta_expediente = os.environ.get("COPILOTO_EXPEDIENTE_DB")
-    if CARGADOR_DETALLE is None and ruta_expediente:
+    ruta = ruta_expediente()
+    if CARGADOR_DETALLE is None and ruta.is_file():
         from cbioportal.indice import CargadorDetalle
 
-        CARGADOR_DETALLE = CargadorDetalle.desde_ruta(ruta_expediente)
+        CARGADOR_DETALLE = CargadorDetalle.desde_ruta(str(ruta))
     conn = db.conectar(DB_PATH)
     try:
         db.inicializar(conn)
         inicializar_schema_auditoria(conn)
-        if SEMBRAR_DATOS_PRUEBA:
-            db.sembrar_datos_prueba(conn)
     finally:
         conn.close()
     yield

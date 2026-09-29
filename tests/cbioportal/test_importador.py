@@ -3,7 +3,7 @@
 from cbioportal import importar_estudio, importar_paciente, seleccionar_pacientes
 from historia_clinica.informacion_faltante import EstadoCompletitud, evaluar_informacion_faltante
 from historia_clinica.integracion_externa import listar_sincronizaciones, sincronizar_paciente
-from historia_clinica_mock.repository import (
+from expediente.repository import (
     biomarcadores_de_paciente,
     facts_estructurados_de_paciente,
     laboratorios_de_paciente,
@@ -108,9 +108,9 @@ def test_hc05_mama_importada_no_se_marca_completa_sin_tnm(conn, fuente):
 
     assert evaluacion.estado is EstadoCompletitud.INCOMPLETA
     faltantes = {f.id for f in evaluacion.faltantes}
-    presentes = {p[0] for p in evaluacion.presentes}
-    assert {"receptor_estrogeno", "receptor_progesterona", "her2"} <= presentes
-    assert {"categoria_t", "categoria_n"} <= faltantes
+    # HR/HER2 "No" de MSK-CHORD no es un negativo confirmado: el oncólogo
+    # debe registrar RE, RP y HER2 (ver mapeo).
+    assert {"receptor_estrogeno", "receptor_progesterona", "her2", "categoria_t", "categoria_n"} <= faltantes
 
 
 def test_hc05_pulmon_pide_tps_aunque_haya_pdl1_binario(conn, fuente):

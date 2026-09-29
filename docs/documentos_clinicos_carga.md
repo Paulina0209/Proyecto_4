@@ -26,9 +26,9 @@ points, dependencia **PAC-01**, MVP: Sí.
 Nota sobre la dependencia formal: PAC-01 ("registrar un nuevo paciente")
 no está implementada como un componente propio en este repositorio; el
 registro de pacientes lo cumple, en la práctica, la tabla `pacientes` de
-`historia_clinica_mock` — la misma que ya usan como referencia todas las
+`expediente` — la misma que ya usan como referencia todas las
 historias anteriores (DX-01, DX-02, IA-04, DOC-02). Por eso
-`cargar_documento_clinico` recibe una conexión a `historia_clinica_mock`
+`cargar_documento_clinico` recibe una conexión a `expediente`
 y valida ahí que el paciente exista antes de aceptar cualquier
 documento, exactamente igual que
 `documentos_clinicos.adaptadores.expediente_completo_a_documento_exportable`
@@ -37,7 +37,7 @@ documento, exactamente igual que
 ## Por qué es una tabla propia, de solo-inserción
 
 `documentos_clinicos_cargados` vive en su propia base SQLite
-(`carga_documentos.crear_conexion`), separada de `historia_clinica_mock`
+(`carga_documentos.crear_conexion`), separada de `expediente`
 — mismo patrón que ya usa `dx_clinica/juicio_clinico.py` para DX-03: una
 tabla de solo-inserción (append-only), donde un documento cargado nunca
 se sobreescribe ni se reemplaza en su lugar. Esto hace que "el historial
@@ -160,14 +160,13 @@ contenido real.
   `listar_documentos_de_paciente(...)`, `leer_contenido_documento(...)`.
 - `schema_documentos_clinicos.sql`: esquema de la tabla de solo-inserción
   `documentos_clinicos_cargados`.
-- `demo_carga_documentos.py`: tres escenarios (AC1 — los tres formatos
-  soportados; AC2 — extensión no soportada; contenido que no corresponde
-  al formato declarado), sobre el paciente sintético María.
+- Demo: `python demo.py --solo doc` (demo unificada sobre pacientes reales de cBioPortal; ver `docs/DEMO_UNIFICADA.md`): carga el PDF exportado de un
+  paciente real y rechaza un `.txt`.
 
 ## Cómo probarlo
 
 ```
-python -m documentos_clinicos.demo_carga_documentos
+python demo.py --solo doc
 ```
 
 Y las pruebas automatizadas:

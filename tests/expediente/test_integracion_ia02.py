@@ -11,7 +11,7 @@ from ia_clinica.notes.generator import ClinicalNoteGenerator
 from ia_clinica.notes.llm_client import RuleBasedLLMClient
 from ia_clinica.notes.models import MISSING_INFO_MARKER
 
-from historia_clinica_mock.adapters import construir_contexto_clinico
+from expediente.adapters import construir_contexto_clinico
 
 
 def _generar(conn, consulta_id):

@@ -1,6 +1,6 @@
-"""Puente historia_clinica_mock -> dict de facts para tx_clinica.builder.
+"""Puente expediente -> dict de facts para tx_clinica.builder.
 
-Equivalente, para tratamiento, de lo que historia_clinica_mock.adapters
+Equivalente, para tratamiento, de lo que expediente.adapters
 ya hace para IA-02/DX-02: construye la entrada que el módulo de dominio
 necesita a partir de las filas reales de la base de datos, con
 trazabilidad (aquí, implícita: cada valor viene de una fila real de
@@ -17,7 +17,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any, Dict
 
-from historia_clinica_mock.repository import (
+from expediente.repository import (
     comorbilidades_de_paciente,
     facts_estructurados_de_paciente,
     obtener_paciente,

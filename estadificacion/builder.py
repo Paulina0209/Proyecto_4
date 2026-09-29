@@ -1,6 +1,6 @@
 """Construcción de la propuesta de estadificación (punto de entrada de EST-01).
 
-Depende de la información que ya existe en ``historia_clinica_mock``:
+Depende de la información que ya existe en ``expediente``:
 
 - la variable estructurada ``cancer_type`` para elegir el sistema aplicable, y
 - las variables T/N/M (``clinical_t_category``, ``clinical_n_status``,
@@ -17,7 +17,7 @@ import sqlite3
 from datetime import datetime
 from typing import Dict, Optional
 
-from historia_clinica_mock.repository import (
+from expediente.repository import (
     DatoClinicoEstructurado,
     datos_clinicos_estructurados_de_paciente,
     obtener_paciente,

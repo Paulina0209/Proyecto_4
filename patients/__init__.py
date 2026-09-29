@@ -7,12 +7,11 @@ Historias de usuario (un archivo por historia):
 
 Compartido:
     models.py         Modelos de dominio de las tres historias
-    db/               Única base de datos: schema.sql, datos_prueba.sql y la conexión
+    db/               Única base de datos: schema.sql y la conexión (sin datos de ejemplo)
     api.py            API HTTP (uvicorn patients.api:app)
     schemas.py        Esquemas de entrada/salida de la API
     demo.py           Cliente de consola (python -m patients.demo)
 
 Usados desde fuera del módulo:
     medicacion_actual.py    tx_clinica (chequeo de interacciones)
-    paciente_de_prueba.sql  demo_tx.py (datos de historia_clinica_mock)
 """

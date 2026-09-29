@@ -10,7 +10,7 @@ real todavía — es deliberadamente un punto de partida pequeño para poder
 probar DX-02 de punta a punta, no un catálogo diagnóstico validado.
 
 Los perfiles aquí están pensados para poder evaluarse contra los
-pacientes sintéticos de ``historia_clinica_mock`` (breast_early_tnbc y
+pacientes sintéticos de ``expediente`` (breast_early_tnbc y
 NSCLC oncogene-addicted), no para cobertura clínica general.
 """
 
@@ -25,6 +25,9 @@ class Criterio:
     id: str
     descripcion: str
     palabras_clave: Tuple[str, ...]
+    #: Además de alguna de ``palabras_clave``, el mismo hallazgo debe
+    #: contener todas estas (p. ej. "función hepática" Y "fuera de rango").
+    palabras_clave_requeridas: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -114,7 +117,11 @@ PERFIL_TOXICIDAD_HEPATICA = PerfilDiagnostico(
         Criterio(
             id="enzimas_hepaticas_alteradas",
             descripcion="Elevación de enzimas hepáticas fuera de rango de referencia",
-            palabras_clave=("función hepática", "fuera de rango de referencia", "alt"),
+            # Solo laboratorios hepáticos alterados: "fuera de rango" sola
+            # también la cumplen el CEA o el CA 15-3 elevados.
+            palabras_clave=("función hepática", "(alt)", "transaminasa", "bilirrubina",
+                            "alanina aminotransferasa", "aspartato aminotransferasa"),
+            palabras_clave_requeridas=("fuera de rango de referencia",),
         ),
     ),
     evidencia_dinamica=True,

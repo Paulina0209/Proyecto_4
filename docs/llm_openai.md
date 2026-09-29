@@ -20,7 +20,7 @@ modelo es cambiar una variable de entorno.
 1. Copia `.env.example` como `.env` en la raíz del repositorio.
 2. Pon tu llave en `OPENAI_API_KEY` (por compatibilidad también se acepta
    `API_KEY`).
-3. Opcional: `OPENAI_MODEL` (por defecto `gpt-5.4-mini`) y
+3. Opcional: `OPENAI_MODEL` (por defecto `gpt-6-luna`) y
    `OPENAI_TIMEOUT` en segundos (por defecto 120).
 
 El `.env` está en `.gitignore`: **nunca** se sube a GitHub. Solo se versiona
@@ -28,9 +28,8 @@ El `.env` está en `.gitignore`: **nunca** se sube a GitHub. Solo se versiona
 
 ```powershell
 pip install -r requirements.txt
-python -m ia_clinica.summary.demo    # IA-04 con GPT
-python -m ia_clinica.review.demo     # IA-02 + IA-03 con GPT
-python demo_tx.py                    # agente de tratamiento con GPT
+python demo.py --solo ia tx          # IA-02/03/04 y agente de tratamiento con GPT
+python demo_tx.py                    # agente de tratamiento, conversación libre
 ```
 
 ## Salvaguardas que no cambian

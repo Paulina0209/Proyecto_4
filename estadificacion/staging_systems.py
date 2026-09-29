@@ -9,7 +9,7 @@ curada y versionada, en el mismo espíritu que ``guidelines/`` y que
 
 Nota de alcance (igual que DX-02): las tablas de agrupación aquí son un
 **subconjunto ilustrativo mínimo**, suficiente para probar EST-01 de punta a
-punta contra los pacientes sintéticos de ``historia_clinica_mock``. No
+punta contra los pacientes sintéticos de ``expediente``. No
 reproducen la totalidad de una edición de AJCC/UICC y **no están validadas
 clínicamente**. El estadio propuesto es siempre apoyo a la decisión y debe
 validarlo el profesional (regla de negocio de EST-01).

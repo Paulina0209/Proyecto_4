@@ -62,7 +62,7 @@ un identificador de médico autorizado. Ver `docs/ia_clinica_revision.md`.
 junta médica / interconsulta**: a diferencia de `ia_clinica/notes`
 (acotado a una consulta), combina *todo* el expediente disponible del
 paciente (mismo alcance que `dx_clinica`, vía
-`historia_clinica_mock.adapters.construir_contexto_resumen_caso`) en un
+`expediente.adapters.construir_contexto_resumen_caso`) en un
 documento de cuatro secciones (diagnóstico, estadio, tratamientos
 previos, estado actual). Diagnóstico y estadio se toman directamente del
 registro estructurado del paciente, sin pasar por ningún LLM; las otras
@@ -99,7 +99,7 @@ estadio usando un catálogo versionado de sistemas de estadificación
 seleccionado según el tipo de cáncer del paciente. Cada propuesta conserva el
 sistema y la versión aplicados, el criterio usado para cada componente y la
 trazabilidad hasta la fila exacta de `datos_clinicos_estructurados` en
-`historia_clinica_mock`. Es apoyo a la decisión: no reemplaza el juicio del
+`expediente`. Es apoyo a la decisión: no reemplaza el juicio del
 profesional y solo aplica criterios del sistema seleccionado.
 `estadificacion/incompleta.py` añade **EST-03 — manejo de la estadificación
 incompleta**: una capa de lectura sobre la propuesta de EST-01 que identifica
@@ -115,19 +115,19 @@ EST-01, sin ninguna validación de concordancia, y deja registrado si difirió d
 la sugerencia (insumo directo de AUD-02, todavía no implementada). Ver
 `docs/estadificacion.md`.
 
-### historia_clinica_mock
+### expediente
 
 Base de datos SQLite pequeña con datos sintéticos (pacientes, consultas,
 laboratorios, imagenología, biomarcadores), usada para probar `ia_clinica`
 y `dx_clinica` de forma end-to-end. No implementa HC-01 a HC-06
 (integración real con sistemas externos); es una herramienta de
-prueba/demo. Ver `docs/historia_clinica_mock.md`.
+prueba/demo. Ver `docs/expediente.md`.
 Se extendió con dos tablas para TX-01: datos_clinicos_estructurados (variable/valor genérico, para el vocabulario categórico que cada módulo de guidelines/ necesita — estadio TNM, biomarcadores, ECOG, etc., que no existía en ninguna tabla de texto libre previa) y comorbilidades (registro clínico de condiciones del paciente, con una columna separada tipo_contraindicacion_ici para el juicio explícito del oncólogo sobre si esa condición contraindica inmunoterapia).
 
 ### historia_clinica
 
 Épica Historia Clínica, sobre la **misma** base de datos de
-`historia_clinica_mock` (`historia_clinica.db.crear_conexion` aplica ambos
+`expediente` (`historia_clinica.db.crear_conexion` aplica ambos
 esquemas), así que lo que se integra aquí lo leen DX, EST, TX e IA sin
 adaptadores adicionales.
 
@@ -146,7 +146,7 @@ adaptadores adicionales.
 
 Contiene las capacidades de la épica Diagnóstico. Implementa **DX-02** —
 apoyo al diagnóstico diferencial: combina los hallazgos clínicos de
-`historia_clinica_mock` con un catálogo diagnóstico explícito y con
+`expediente` con un catálogo diagnóstico explícito y con
 evidencia leída de `guidelines/*/metadata.yaml` (una implementación
 mínima de lo que después sería un IA-04 de explicabilidad/trazabilidad de
 evidencia — ver nota de numeración más abajo). No usa las reglas de
@@ -175,7 +175,7 @@ configurable, sí se vuelve a sugerir). Ver
 Contiene las capacidades de la épica Gestión Documental. Implementa
 **DOC-01** — carga de documentos clínicos: `carga_documentos.py` recibe
 un archivo (PDF, imagen o DICOM) y lo asocia al expediente de un
-paciente (validado contra `historia_clinica_mock.pacientes`, que cumple
+paciente (validado contra `expediente.pacientes`, que cumple
 en la práctica el rol de PAC-01 en este repositorio). Nunca confía solo
 en la extensión del archivo: verifica también la firma binaria real del
 contenido (`%PDF-`, cabecera JPEG/PNG, preámbulo DICOM), rechazando con
@@ -189,14 +189,14 @@ simplemente listar sus filas. Ver `docs/documentos_clinicos_carga.md`.
 
 También implementa **DOC-02** — exportación de expediente médico a PDF:
 `pdf_export.py` es un renderizador genérico que no conoce `ia_clinica`,
-`dx_clinica` ni `historia_clinica_mock` — recibe un `DocumentoExportable`
+`dx_clinica` ni `expediente` — recibe un `DocumentoExportable`
 (título, referencia de paciente, secciones con bloques de texto o tabla,
 disclaimer y advertencias opcionales) y produce un PDF con formato
 profesional, sin generar nunca un PDF a partir de un documento sin
 contenido real (`DocumentoInsuficienteError`). `adaptadores.py` traduce
 las dos fuentes que permite la historia — el resumen de caso de IA-04 y
 el expediente clínico completo directamente desde
-`historia_clinica_mock` — al modelo genérico, cada una en su propia
+`expediente` — al modelo genérico, cada una en su propia
 función. Ver `docs/documentos_clinicos_exportacion.md`.
 
 ### configuracion

@@ -58,7 +58,7 @@ de información:
    discretas. Ahí participa el generador/LLM, con la misma validación de
    trazabilidad que ya usa IA-02.
 
-El adaptador `historia_clinica_mock.adapters.construir_contexto_resumen_caso`
+El adaptador `expediente.adapters.construir_contexto_resumen_caso`
 arma ese contexto reutilizando `obtener_hallazgos_de_paciente` (sin
 duplicar su lógica) y convirtiendo cada `HallazgoClinico` a un
 `SourceSpan` — el mismo tipo que ya usa IA-02 para poder citar
@@ -122,23 +122,21 @@ Igual que IA-02, ninguna sección derivada (`tratamientos_previos`,
 - `generator.py`: `CaseSummaryGenerator.generate_summary()` — orquesta las
   secciones estructuradas (directas) y las derivadas (vía `LLMClient` +
   validación de trazabilidad), y `CaseSummaryGenerationError`.
-- `historia_clinica_mock/adapters.py`: nuevo
+- `expediente/adapters.py`: nuevo
   `construir_contexto_resumen_caso(conn, paciente_id)`.
-- `demo.py`: dos escenarios completos (AC1 — historia suficiente; AC2 —
-  información incompleta), usando `OpenAILLMClient` si hay llave
-  configurada o `RuleBasedSummaryLLMClient` como respaldo.
+- Demo: `python demo.py --solo ia` (demo unificada sobre pacientes reales de cBioPortal; ver `docs/DEMO_UNIFICADA.md`).
 
 ## Cómo probarlo
 
 ```
-python -m ia_clinica.summary.demo
+python demo.py --solo ia
 ```
 
 Y las pruebas automatizadas:
 
 ```
 pytest tests/ia_clinica/summary -v
-pytest tests/historia_clinica_mock/test_adapters.py -v
+pytest tests/expediente/test_adapters.py -v
 ```
 
 ## Configuración del modelo (recordatorio)

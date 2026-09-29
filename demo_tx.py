@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 try:  # lee LANGFUSE_* del .env de la raíz, si python-dotenv está instalado
@@ -17,7 +16,6 @@ from tx_clinica.conversacion import RespuestaAgente, enviar_mensaje, reanudar_co
 from tx_clinica.observability import vaciar_langfuse
 from tx_clinica.tools._db import conn_lock, obtener_conexion
 
-RUTA_SQL_PACIENTE = Path("patients") / "paciente_de_prueba.sql"
 ONCOLOGO_ID = 1
 
 # Estable durante TODA la conversación de esta ejecución (el checkpointer lo
@@ -28,11 +26,21 @@ ONCOLOGO_ID = 1
 THREAD_ID = f"demo-tx-clinica-{datetime.now():%Y%m%d-%H%M%S}"
 
 
-def cargar_paciente_de_prueba() -> None:
-    conn = obtener_conexion()  # dispara la creación del esquema + siembra real, si no existía ya
+def mostrar_pacientes_disponibles() -> None:
+    """El agente trabaja sobre la base real (data/copiloto.db): muestra
+    pacientes con historia cargada para poder referirse a ellos por id."""
+    from expediente.repository import pacientes_con_historia
+
+    conn = obtener_conexion()
     with conn_lock:
-        conn.executescript(RUTA_SQL_PACIENTE.read_text(encoding="utf-8"))
-        conn.commit()
+        pacientes = pacientes_con_historia(conn, limite=10)
+    if not pacientes:
+        print("No hay pacientes con historia cargada. Prepara la base real con `python demo.py`.")
+        return
+    print("Pacientes con historia cargada (id interno):")
+    for p in pacientes:
+        print(f"  {p.id}. {p.nombre} | {p.diagnostico_principal or 'Sin diagnóstico'}")
+    print()
 
 
 def _imprimir_mensajes_nuevos(mensajes_previos_len: int, mensajes: list) -> int:
@@ -45,8 +53,9 @@ def _imprimir_mensajes_nuevos(mensajes_previos_len: int, mensajes: list) -> int:
             for tc in mensaje.tool_calls:
                 print("  Tool llamada:", tc["name"])
                 print("  Argumentos:", tc["args"])
-        if hasattr(mensaje, "content") and mensaje.content:
-            print("  Contenido:", mensaje.content)
+        texto = getattr(mensaje, "text", None) or ""
+        if texto:
+            print("  Contenido:", texto)
     return len(mensajes)
 
 
@@ -83,7 +92,7 @@ def _pedir_decisiones(respuesta: RespuestaAgente) -> list[dict[str, Any]]:
 
 def main() -> None:
     agente = construir_agente()
-    cargar_paciente_de_prueba()
+    mostrar_pacientes_disponibles()
 
     print(f"thread_id / session Langfuse: {THREAD_ID}")
     print("Escribe tu mensaje y presiona Enter. Escribe 'salir' para terminar.\n")

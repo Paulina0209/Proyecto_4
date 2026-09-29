@@ -3,17 +3,17 @@
 from clinical_query import (
     AmbiguityKind,
     Clarification,
-    MockSQLiteClinicalRepository,
+    SQLiteClinicalRepository,
     NaturalLanguageClinicalQueryService,
 )
-from historia_clinica_mock.db import crear_conexion
-from historia_clinica_mock.seed import sembrar_datos_sinteticos
+from expediente.db import crear_conexion
+from tests.datos_sinteticos import sembrar_datos_sinteticos
 
 
 def build_service():
     conn = crear_conexion()
     ids = sembrar_datos_sinteticos(conn)
-    service = NaturalLanguageClinicalQueryService(MockSQLiteClinicalRepository(conn))
+    service = NaturalLanguageClinicalQueryService(SQLiteClinicalRepository(conn))
     return conn, ids, service
 
 
@@ -100,3 +100,22 @@ def test_confirming_active_patient_allows_the_answer():
         assert "positivo (exón 19)" in response.answer
     finally:
         conn.close()
+
+
+def test_nombres_genericos_de_cbioportal_no_generan_ambiguedad_de_paciente():
+    """Con pacientes reales de cBioPortal los nombres son genéricos
+    ("Paciente P-0000012 (cBioPortal msk_chord_2024)"): la palabra
+    "paciente" no debe hacer creer que se nombra a otro paciente."""
+    from clinical_query.ambiguity import nombra_otro_paciente
+    from clinical_query.repository import PacienteRef
+
+    directorio = [
+        PacienteRef(id=str(i), nombre=f"Paciente P-000000{i} (cBioPortal msk_chord_2024)",
+                    identificacion=f"CBIO:msk_chord_2024:P-000000{i}")
+        for i in (1, 2)
+    ]
+    assert nombra_otro_paciente("¿Cuál es el CEA del paciente?", directorio, "1") is None
+    assert nombra_otro_paciente("¿Qué dice cBioPortal del KRAS?", directorio, "1") is None
+    assert nombra_otro_paciente("¿Cuál es el KRAS del paciente P-0000001?", directorio, "1") is None
+    hallazgo = nombra_otro_paciente("¿Cuál es el KRAS de P-0000002?", directorio, "1")
+    assert hallazgo is not None and hallazgo.options == ("Paciente P-0000002 (cBioPortal msk_chord_2024)",)

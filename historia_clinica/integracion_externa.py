@@ -49,7 +49,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Protocol, Tuple, Union
 
 from historia_clinica.db import ahora_iso
-from historia_clinica_mock.repository import Paciente, obtener_paciente
+from expediente.repository import Paciente, obtener_paciente
 
 FORMATO_FHIR = "fhir"
 FORMATO_HL7V2 = "hl7v2"

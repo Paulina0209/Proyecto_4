@@ -30,7 +30,7 @@ Ninguna regla se reescribe.
 
 ## Comorbilidades
 
-`historia_clinica_mock` tiene la tabla `comorbilidades`, con una columna
+`expediente` tiene la tabla `comorbilidades`, con una columna
 `condicion` (registro clínico, texto libre, no interpretado por el
 sistema) y una columna separada `tipo_contraindicacion_ici`
 (`"immediate"` | `"absolute"` | `NULL`), que es el juicio clínico

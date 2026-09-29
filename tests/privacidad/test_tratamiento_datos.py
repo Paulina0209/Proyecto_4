@@ -8,7 +8,7 @@ import pytest
 from auditoria.models import TipoAccion
 from auditoria.registro_acceso import obtener_eventos_de_paciente, obtener_eventos_de_usuario
 from historia_clinica.db import crear_conexion as crear_conexion_expediente
-from historia_clinica_mock.seed import sembrar_datos_sinteticos
+from tests.datos_sinteticos import sembrar_datos_sinteticos
 from privacidad.models import EstadoAutorizacion, EstadoSolicitud, Finalidad
 from privacidad.tratamiento_datos import (
     actualizar_solicitud,

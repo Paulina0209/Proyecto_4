@@ -39,7 +39,7 @@ una señal distinta del resultado de DX-02):
    este módulo no detecta contradicciones literales entre valores
    clínicos (por ejemplo, dos resultados de laboratorio incompatibles
    entre sí para la misma prueba) — eso requeriría un modelo de datos
-   clínicos más rico del que dispone `historia_clinica_mock` hoy. Lo que
+   clínicos más rico del que dispone `expediente` hoy. Lo que
    sí se detecta, de forma honesta y verificable, es este empate de
    evidencia entre alternativas.
 

@@ -47,7 +47,7 @@ def explain_treatment_candidate(
     facts_paciente: Mapping[str, Any],
 ) -> "ClinicalExplanation":  # noqa: F821 - tipo de ia_clinica.explainability.models
     patient_facts = tuple(
-        PatientFactTrace(fact_id=k, value=str(v), source_type="historia_clinica_mock", date=None)
+        PatientFactTrace(fact_id=k, value=str(v), source_type="expediente", date=None)
         for k, v in facts_paciente.items()
         if k in candidato.field_ids_usados
     )

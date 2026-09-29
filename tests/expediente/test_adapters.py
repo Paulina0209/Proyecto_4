@@ -1,6 +1,6 @@
 import pytest
 
-from historia_clinica_mock.adapters import (
+from expediente.adapters import (
     ConsultaNoEncontradaError,
     PacienteNoEncontradoError,
     construir_contexto_clinico,

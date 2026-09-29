@@ -22,7 +22,7 @@ la función. Por eso la regla es fail-closed: cualquier duda (sin
 checklist, fase sin ítems, valor no interpretable) se reporta como
 alerta, nunca como completo.
 
-Este módulo solo lee el expediente (``historia_clinica_mock``): no
+Este módulo solo lee el expediente (``expediente``): no
 registra datos ni modifica nada.
 """
 
@@ -37,7 +37,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 import yaml
 
 from historia_clinica.db import normalizar_texto
-from historia_clinica_mock.repository import (
+from expediente.repository import (
     biomarcadores_de_paciente,
     datos_clinicos_estructurados_de_paciente,
     imagenologia_de_paciente,

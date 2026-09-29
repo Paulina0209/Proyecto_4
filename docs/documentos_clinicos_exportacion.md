@@ -24,7 +24,7 @@ points, dependencias **HC-06** y **TX-04**, no MVP.
 
 Nota sobre las dependencias formales: HC-06 (expediente clínico
 integrado) ya está cubierto, en el alcance de este repositorio, por
-`historia_clinica_mock`. TX-04 (una historia de tratamientos que
+`expediente`. TX-04 (una historia de tratamientos que
 todavía no se ha implementado en este repositorio) no es una
 dependencia dura del código de esta historia: el renderizador y los dos
 adaptadores no leen absolutamente nada de `tx_clinica`. La dependencia
@@ -38,7 +38,7 @@ La historia permite exportar "**el resumen del caso o** el expediente
 completo" — dos fuentes de contenido completamente distintas, que además
 ya existen en el repositorio en formas muy distintas entre sí: `CaseSummary`
 (IA-04, con secciones redactadas por un LLM y trazabilidad a fragmentos
-fuente) y las tablas normalizadas de `historia_clinica_mock` (sin ningún
+fuente) y las tablas normalizadas de `expediente` (sin ningún
 LLM involucrado). En vez de escribir dos funciones "exportar X a PDF"
 que dupliquen todo el código de maquetado, el diseño separa:
 
@@ -53,7 +53,7 @@ que dupliquen todo el código de maquetado, el diseño separa:
   redactadas, la otra construye tablas directamente desde filas SQL.
 
 `pdf_export.py` no importa nada de `adaptadores.py` ni de
-`ia_clinica`/`historia_clinica_mock`; la dependencia va siempre en un
+`ia_clinica`/`expediente`; la dependencia va siempre en un
 solo sentido. Esto permite que el renderizador sirva, sin cambios, para
 cualquier documento clínico exportable que se agregue en el futuro (no
 solo los dos que cubre esta historia), y que cada adaptador se pueda
@@ -118,7 +118,7 @@ tienen sustento suficiente todavía.
 ### Expediente completo (`expediente_completo_a_documento_exportable`)
 
 A diferencia del resumen de caso, aquí no hay nada que "redactar": cada
-sección es una copia directa de filas reales de `historia_clinica_mock`
+sección es una copia directa de filas reales de `expediente`
 (datos del paciente, consultas, laboratorios, imagenología,
 biomarcadores, comorbilidades), en el mismo espíritu de trazabilidad que
 el resto del proyecto — no hay ningún paso intermedio donde un LLM
@@ -129,13 +129,13 @@ biomarcadores, comorbilidades) solo se agrega al documento si el
 paciente tiene al menos una fila real de ese tipo; un expediente sin
 imágenes registradas, por ejemplo, no muestra una sección "Imagenología"
 vacía. Las comorbilidades reciben un tratamiento adicional: el valor
-centinela `"ninguna_registrada"` que usa `historia_clinica_mock` para
+centinela `"ninguna_registrada"` que usa `expediente` para
 "se preguntó explícitamente y no tiene ninguna" se filtra antes de
 decidir si la sección se incluye — no es una comorbilidad real que deba
 aparecer en un PDF exportado, es la ausencia documentada de una.
 
 Lanza `PacienteNoEncontradoError` (la misma excepción que ya usan los
-otros adaptadores de `historia_clinica_mock.adapters`) si el paciente no
+otros adaptadores de `expediente.adapters`) si el paciente no
 existe.
 
 ## Cómo se satisface el criterio de aceptación
@@ -170,15 +170,13 @@ existe.
   genérico.
 - `adaptadores.py`: `resumen_caso_a_documento_exportable(...)`,
   `expediente_completo_a_documento_exportable(...)`.
-- `demo_exportacion.py`: dos escenarios (resumen de caso de María vía
-  IA-04; expediente completo de María directo desde
-  `historia_clinica_mock`), cada uno generando un PDF real revisable en
-  `salida_demo_doc02/`.
+- Demo: `python demo.py --solo doc` (demo unificada sobre pacientes reales de cBioPortal; ver `docs/DEMO_UNIFICADA.md`): exporta el resumen de caso y
+  el expediente completo de un paciente real a PDF (en `%TEMP%\copiloto_demo\pdf`).
 
 ## Cómo probarlo
 
 ```
-python -m documentos_clinicos.demo_exportacion
+python demo.py --solo doc
 ```
 
 Y las pruebas automatizadas:

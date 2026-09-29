@@ -8,7 +8,7 @@ traduciendo su fuente real a un :class:`~documentos_clinicos.pdf_export.Document
       ``CaseSummary`` (resumen de caso para junta médica/interconsulta,
       `ia_clinica.summary`).
     - :func:`expediente_completo_a_documento_exportable`: directamente
-      desde `historia_clinica_mock` — datos del paciente, todas sus
+      desde `expediente` — datos del paciente, todas sus
       consultas, laboratorios, imagenología, biomarcadores y
       comorbilidades.
 
@@ -21,7 +21,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 
-from historia_clinica_mock.repository import (
+from expediente.repository import (
     biomarcadores_de_paciente,
     comorbilidades_de_paciente,
     imagenologia_de_paciente,
@@ -29,7 +29,7 @@ from historia_clinica_mock.repository import (
     listar_consultas,
     obtener_paciente,
 )
-from historia_clinica_mock.adapters import PacienteNoEncontradoError
+from expediente.adapters import PacienteNoEncontradoError
 
 from documentos_clinicos.pdf_export import (
     BloqueTabla,
@@ -88,7 +88,7 @@ def expediente_completo_a_documento_exportable(
     A diferencia del resumen de caso (redactado por un LLM sobre
     hallazgos no estructurados), este camino no interpreta ni resume
     nada: cada tabla es una copia directa de las filas reales de
-    `historia_clinica_mock`, en el mismo espíritu de trazabilidad que el
+    `expediente`, en el mismo espíritu de trazabilidad que el
     resto del proyecto.
 
     Lanza ``PacienteNoEncontradoError`` si el paciente no existe.

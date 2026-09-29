@@ -1,4 +1,4 @@
-from historia_clinica_mock.repository import (
+from expediente.repository import (
     biomarcadores_de_consulta,
     imagenologia_de_consulta,
     laboratorios_de_consulta,

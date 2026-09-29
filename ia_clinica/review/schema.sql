@@ -1,7 +1,7 @@
 -- Esquema de persistencia para IA-03 (revisión y aprobación de notas
 -- clínicas generadas por IA).
 --
--- Es una tabla independiente de historia_clinica_mock: una nota en
+-- Es una tabla independiente de expediente: una nota en
 -- revisión no es un dato clínico del expediente del paciente, sino un
 -- artefacto del propio flujo de trabajo del copiloto de IA (borrador ->
 -- edición -> aprobación). Guardarla en su propia tabla evita mezclar dos

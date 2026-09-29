@@ -122,6 +122,10 @@ class ResultadoRecomendacionTratamiento:
     faltan_datos_para_determinar_guia: bool = False
     #: Solo poblado cuando faltan_datos_para_determinar_guia=True.
     variables_faltantes_por_modulo: dict = field(default_factory=dict)
+    #: Guía resuelta pero sin candidatos: variables sin dato que impidieron
+    #: evaluar alguna regla que respaldaría un régimen (p. ej. pdl1_tps).
+    #: Vacío si no hay candidatos porque las reglas realmente no aplican.
+    variables_faltantes_para_candidatos: Tuple[str, ...] = ()
 
     disclaimer: str = field(default=DISCLAIMER, init=False)
 

@@ -34,8 +34,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Dict, Optional, Tuple, Union
 
-from historia_clinica_mock.adapters import PacienteNoEncontradoError
-from historia_clinica_mock.repository import obtener_paciente
+from expediente.adapters import PacienteNoEncontradoError
+from expediente.repository import obtener_paciente
 
 _SCHEMA_PATH = Path(__file__).resolve().parent / "schema_documentos_clinicos.sql"
 
@@ -163,9 +163,9 @@ def cargar_documento_clinico(
 
     Orden de validación, cada una con un error explícito propio:
 
-    1. El paciente debe existir en ``historia_clinica_mock`` (mismo
+    1. El paciente debe existir en ``expediente`` (mismo
        ``PacienteNoEncontradoError`` que ya usan los demás adaptadores de
-       ``historia_clinica_mock`` y ``documentos_clinicos.adaptadores``) --
+       ``expediente`` y ``documentos_clinicos.adaptadores``) --
        nunca se asocia un documento a un paciente que no existe.
     2. ``cargado_por`` y ``contenido`` no pueden estar vacíos
        (``DocumentoInvalidoError``).

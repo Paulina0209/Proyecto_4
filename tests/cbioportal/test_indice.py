@@ -174,7 +174,6 @@ def api(tmp_path, monkeypatch, conn, cliente, ruta_expediente):
     _indice(conn, conn_pac, cliente)
     conn_pac.close()
     monkeypatch.setattr(api_module, "DB_PATH", ruta_pac)
-    monkeypatch.setattr(api_module, "SEMBRAR_DATOS_PRUEBA", False)
     monkeypatch.setattr(api_module, "CARGADOR_DETALLE", CargadorDetalle.desde_ruta(ruta_expediente, cliente))
     with TestClient(api_module.app) as c:
         yield c

@@ -21,7 +21,7 @@ Criterios de aceptación:
 
 Dependencias formales: **HC-05** e **IA-01**. HC-05 (resultados de
 laboratorio/imagenología/biomarcadores del expediente) ya está cubierto
-por `historia_clinica_mock`; IA-01 (el asistente conversacional) es,
+por `expediente`; IA-01 (el asistente conversacional) es,
 en la práctica, quien le entregaría a este módulo la sospecha
 diagnóstica como texto — este módulo no depende de ningún componente
 concreto de IA-01, solo recibe esa sospecha como parámetro de texto.
@@ -33,7 +33,7 @@ expediente del paciente (cualquier laboratorio, imagen o biomarcador ya
 registrado, esté o no vinculado a una consulta puntual), no solo lo de
 la consulta actual — exactamente el mismo alcance que ya necesita DX-02.
 Por eso `recomendar_estudios(...)` recibe una lista de `HallazgoClinico`
-(el mismo tipo que produce `historia_clinica_mock.adapters.obtener_hallazgos_de_paciente`)
+(el mismo tipo que produce `expediente.adapters.obtener_hallazgos_de_paciente`)
 en vez de definir su propio adaptador: no hay nada que este módulo
 necesite del expediente que DX-02 no haya resuelto ya.
 
@@ -85,7 +85,7 @@ que esos dos sí quedan correctamente omitidos como redundantes.
 La comparación de fechas usa cadenas ISO (`AAAA-MM-DD`) directamente
 (`hallazgo.fecha >= fecha_limite`), válida porque ese formato ordena
 lexicográficamente igual que cronológicamente — el mismo patrón que ya
-usa `historia_clinica_mock.repository.facts_estructurados_de_paciente`.
+usa `expediente.repository.facts_estructurados_de_paciente`.
 
 ## Nunca se inventa una lista genérica
 
@@ -105,14 +105,12 @@ cuando ninguna alternativa diagnóstica tiene sustento real.
 - `recomendacion_estudios.py`: `EstudioSugerido`, `EstudioOmitidoPorRedundante`,
   `ResultadoRecomendacionEstudios`, y `recomendar_estudios(...)` — el
   punto de entrada de la historia.
-- `demo_estudios.py`: tres escenarios (AC1 sin estudios previos; AC2 no
-  repite lo reciente pero sí reevalúa lo antiguo; sospecha no
-  reconocida), usando los pacientes sintéticos María y Carlos.
+- Demo: `python demo.py --solo dx` (demo unificada sobre pacientes reales de cBioPortal; ver `docs/DEMO_UNIFICADA.md`).
 
 ## Cómo probarlo
 
 ```
-python -m dx_clinica.demo_estudios
+python demo.py --solo dx
 ```
 
 Y las pruebas automatizadas:

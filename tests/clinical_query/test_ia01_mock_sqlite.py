@@ -1,12 +1,12 @@
-from clinical_query import MockSQLiteClinicalRepository, NaturalLanguageClinicalQueryService
-from historia_clinica_mock.db import crear_conexion
-from historia_clinica_mock.seed import sembrar_datos_sinteticos
+from clinical_query import SQLiteClinicalRepository, NaturalLanguageClinicalQueryService
+from expediente.db import crear_conexion
+from tests.datos_sinteticos import sembrar_datos_sinteticos
 
 
 def build_service():
     conn = crear_conexion()
     ids = sembrar_datos_sinteticos(conn)
-    service = NaturalLanguageClinicalQueryService(MockSQLiteClinicalRepository(conn))
+    service = NaturalLanguageClinicalQueryService(SQLiteClinicalRepository(conn))
     return conn, ids, service
 
 

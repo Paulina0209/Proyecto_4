@@ -1,7 +1,7 @@
 # Base de datos real con cBioPortal
 
 El copiloto deja de depender solo de los pacientes sintéticos de
-`historia_clinica_mock/seed.py`. El paquete `cbioportal/` importa pacientes
+`expediente/seed.py`. El paquete `cbioportal/` importa pacientes
 reales y desidentificados de estudios públicos de
 [cBioPortal](https://www.cbioportal.org) al mismo expediente SQLite que ya
 leen DX, EST, TX, IA y HC-05. Si se indica, también los crea en la base del
@@ -120,10 +120,10 @@ estudios TCGA también funcionan, pero traen menos información clínica.
 | Paciente (sexo, edad) | `pacientes` | Identificación `CBIO:<estudio>:<paciente>`. El nombre es el id, porque no hay nombres. |
 | Tipo de cáncer de la muestra | `datos_clinicos_estructurados.cancer_type` | `breast`, `NSCLC`, …; los demás tipos conservan su nombre original. |
 | Diagnóstico primario (registro de tumores) | `pacientes.estadio`, `ajcc_stage_at_diagnosis`, antecedente `condicion` | AJCC al diagnóstico. |
-| HER2 / HR | `her2_status`, `hormone_receptor_status`, biomarcadores | Ver reglas. |
+| HER2 / HR (solo positivos) | `her2_status`, `hormone_receptor_status`, biomarcadores | Ver reglas. |
 | ECOG | `ecog_ps` | El más reciente. |
 | Marcadores tumorales (CEA, CA 15-3, CA 19-9, PSA) | `laboratorios` | Con rango de referencia y `alterado`. |
-| Radiología (NLP) | `imagenologia` | Un estudio por día y modalidad. |
+| Radiología (NLP) | `imagenologia` | Un estudio por día y modalidad. Redactado para la detección de negación de DX-02 ("Progresión detectada" / "Sin progresión"). |
 | Tratamientos, radioterapia, cirugía | `antecedentes_externos` | Con fechas de inicio y fin. |
 | Mutaciones y fusiones de genes clave | `biomarcadores` | Genes según el tipo de cáncer (`mapeo.GENES_POR_TIPO`). |
 | MSI, TMB | `biomarcadores` | Por muestra. |
@@ -148,9 +148,12 @@ dato faltante.
   accionable; hay variantes de significado incierto.
 - **"No detectada" solo para genes que el panel de la muestra cubre.** Si
   no se conoce el panel, solo se guardan los hallazgos.
-- **Receptores hormonales.** En MSK-CHORD, HR negativo significa RE y RP
-  negativos, así que se registran ambos. Con HR positivo no se sabe cuál de
-  los dos lo es, y RE/RP quedan como faltantes.
+- **HR y HER2 solo cuando son positivos.** En MSK-CHORD son "antecedente
+  de un resultado positivo": un "No" significa que no se encontró un
+  positivo, no un negativo confirmado (hay pacientes con "No" tratadas con
+  trastuzumab u hormonoterapia). "No" queda faltante y nunca se deriva
+  "triple negativo". Con HR positivo tampoco se sabe si es RE o RP, así que
+  RE/RP quedan faltantes.
 - **ERBB2 no se consulta en mama.** Su nombre coincide con el ítem HER2 de
   HC-05, y "sin mutación en ERBB2" no equivale al estado HER2 por IHC/ISH.
 - **PD-L1 binario no cumple el ítem de TPS.** Por eso no se guarda como

@@ -4,7 +4,7 @@ Importa pacientes reales (desidentificados) de estudios públicos de
 cBioPortal —por defecto MSK-CHORD (``msk_chord_2024``), que trae línea de
 tiempo clínica, biomarcadores, marcadores tumorales, tratamientos y
 hallazgos de imagen— al mismo expediente SQLite que ya leen DX, EST, TX,
-IA y HC-05 (esquema de ``historia_clinica_mock`` + ``historia_clinica``).
+IA y HC-05 (esquema de ``expediente`` + ``historia_clinica``).
 
 La carga reutiliza HC-01 (``historia_clinica.integracion_externa``):
 cBioPortal es una fuente externa más, con verificación de identidad,

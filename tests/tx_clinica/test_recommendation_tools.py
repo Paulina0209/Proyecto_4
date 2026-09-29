@@ -1,6 +1,6 @@
 """Tests de tx_clinica/tools/recommendation_tools.py.
 
-No depende de historia_clinica_mock real -- para las tools que reciben
+No depende de expediente real -- para las tools que reciben
 patient_id, se monkeypatchea obtener_paciente_o_error/
 construir_facts_paciente/obtener_conexion dentro del propio módulo
 recommendation_tools (son imports de nombre, se pueden reemplazar ahí

@@ -1,4 +1,4 @@
-"""Puentes entre la base de datos mock y los módulos de IA que la consumen.
+"""Puentes entre el expediente clínico y los módulos de IA que lo consumen.
 
 Tres adaptadores conviven aquí, porque cada historia necesita un recorte
 distinto del expediente:
@@ -33,7 +33,7 @@ from typing import List
 from ia_clinica.notes.models import ClinicalContext, SourceSpan, split_sentences
 from ia_clinica.summary.models import CaseSummaryContext
 
-from historia_clinica_mock.repository import (
+from expediente.repository import (
     Biomarcador,
     EstudioImagenologico,
     HallazgoClinico,
@@ -133,7 +133,9 @@ def obtener_hallazgos_de_paciente(conn: sqlite3.Connection, paciente_id: int) ->
     estudios de imagenología y biomarcadores del paciente, estén o no
     vinculados a una consulta puntual. Pensado para historias que razonan
     sobre "toda la información clínica disponible del paciente" (DX-02),
-    no sobre una consulta aislada (IA-02).
+    no sobre una consulta aislada (IA-02). Incluye también los antecedentes
+    importados de fuentes externas (HC-01: tratamientos, cirugías,
+    radioterapia, diagnósticos previos), si el expediente los tiene.
 
     Lanza ``PacienteNoEncontradoError`` si el id no existe.
     """
@@ -177,7 +179,34 @@ def obtener_hallazgos_de_paciente(conn: sqlite3.Connection, paciente_id: int) ->
             )
         )
 
+    for fila in _antecedentes_externos(conn, paciente_id):
+        hallazgos.append(
+            HallazgoClinico(
+                id=f"antecedente-{fila['id']}",
+                paciente_id=paciente_id,
+                origen="antecedente",
+                texto=f"Antecedente ({fila['tipo']}): {fila['descripcion']}",
+                fecha=fila["fecha"],
+            )
+        )
+
     return hallazgos
+
+
+def _antecedentes_externos(conn: sqlite3.Connection, paciente_id: int) -> List[sqlite3.Row]:
+    """Antecedentes de HC-01 (tabla de ``historia_clinica``); vacío si el
+    expediente no tiene esa tabla. Los que no tienen fecha se omiten: los
+    hallazgos se ordenan y comparan por fecha."""
+    existe = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'antecedentes_externos'"
+    ).fetchone()
+    if existe is None:
+        return []
+    return conn.execute(
+        "SELECT id, tipo, descripcion, fecha FROM antecedentes_externos "
+        "WHERE paciente_id = ? AND fecha IS NOT NULL ORDER BY fecha, id",
+        (paciente_id,),
+    ).fetchall()
 
 
 def construir_contexto_resumen_caso(conn: sqlite3.Connection, paciente_id: int) -> CaseSummaryContext:

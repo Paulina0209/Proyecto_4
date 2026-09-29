@@ -6,7 +6,7 @@ from typing import Any, Union
 
 from langchain_core.tools import tool
 
-from historia_clinica_mock.repository import obtener_paciente
+from expediente.repository import obtener_paciente
 from tx_clinica.patient_facts import construir_facts_paciente
 from tx_clinica.tools._db import conn_lock, obtener_conexion
 
@@ -14,7 +14,7 @@ from tx_clinica.tools._db import conn_lock, obtener_conexion
 @dataclass
 class PacienteResuelto:
     paciente_id: int
-    paciente: Any = None  # tipo real de historia_clinica_mock.repository.Paciente
+    paciente: Any = None  # tipo real de expediente.repository.Paciente
 
 
 @dataclass

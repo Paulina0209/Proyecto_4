@@ -1,4 +1,4 @@
-"""Consultas de lectura sobre la base de datos mock de historia clínica."""
+"""Consultas de lectura sobre el expediente clínico."""
 
 from __future__ import annotations
 
@@ -77,15 +77,41 @@ class HallazgoClinico:
 
     id: str
     paciente_id: int
-    origen: str  # "consulta" | "laboratorio" | "imagenologia" | "biomarcador"
+    origen: str  # "consulta" | "laboratorio" | "imagenologia" | "biomarcador" | "antecedente"
     texto: str
     fecha: str
 
 
 def listar_pacientes(conn: sqlite3.Connection) -> List[Paciente]:
-    """Lista los pacientes sintéticos disponibles para demos y pruebas."""
+    """Lista los pacientes del expediente."""
     rows = conn.execute("SELECT * FROM pacientes ORDER BY id").fetchall()
     return [_fila_a_paciente(row) for row in rows]
+
+
+def pacientes_con_historia(conn: sqlite3.Connection, limite: int = 20) -> List[Paciente]:
+    """Pacientes con historia clínica cargada (al menos un laboratorio,
+    imagen, biomarcador o consulta), los más recientes primero. Útil para
+    elegir paciente en un expediente grande donde la mayoría solo está en
+    el índice."""
+    rows = conn.execute(
+        "SELECT * FROM pacientes p WHERE EXISTS (SELECT 1 FROM biomarcadores b WHERE b.paciente_id = p.id) "
+        "OR EXISTS (SELECT 1 FROM laboratorios l WHERE l.paciente_id = p.id) "
+        "OR EXISTS (SELECT 1 FROM imagenologia i WHERE i.paciente_id = p.id) "
+        "OR EXISTS (SELECT 1 FROM consultas c WHERE c.paciente_id = p.id) "
+        "ORDER BY p.id DESC LIMIT ?",
+        (limite,),
+    ).fetchall()
+    return [_fila_a_paciente(row) for row in rows]
+
+
+def buscar_paciente_por_identificacion(conn: sqlite3.Connection, texto: str) -> Optional[Paciente]:
+    """Por identificación exacta o por su sufijo (p. ej. ``P-0012063`` para
+    ``CBIO:msk_chord_2024:P-0012063``)."""
+    row = conn.execute(
+        "SELECT * FROM pacientes WHERE identificacion = ? OR identificacion LIKE ? ORDER BY id LIMIT 1",
+        (texto, f"%:{texto}"),
+    ).fetchone()
+    return _fila_a_paciente(row) if row else None
 
 
 def obtener_paciente(conn: sqlite3.Connection, paciente_id: int) -> Optional[Paciente]:

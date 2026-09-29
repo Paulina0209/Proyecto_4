@@ -39,7 +39,7 @@ listar todas sus filas.
 
 Este submódulo es deliberadamente independiente de qué produjo el
 contenido que se exporta: `pdf_export.py` no sabe nada de `ia_clinica`,
-`dx_clinica` ni `historia_clinica_mock`. Recibe un
+`dx_clinica` ni `expediente`. Recibe un
 :class:`~documentos_clinicos.pdf_export.DocumentoExportable` — un modelo
 genérico de "documento con secciones" — y produce el PDF. Los
 adaptadores en `adaptadores.py` son los que sí conocen esos módulos
@@ -50,7 +50,7 @@ concretos y traducen su salida al modelo genérico:
       (`ia_clinica.summary`).
     - :func:`adaptadores.expediente_completo_a_documento_exportable` —
       exporta el expediente completo de un paciente directamente desde
-      `historia_clinica_mock` (consultas, laboratorios, imagenología,
+      `expediente` (consultas, laboratorios, imagenología,
       biomarcadores, comorbilidades).
 
 Componentes públicos:

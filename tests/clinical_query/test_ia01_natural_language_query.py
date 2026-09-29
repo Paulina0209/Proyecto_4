@@ -4,7 +4,7 @@ from clinical_query import JsonClinicalRepository, NaturalLanguageClinicalQueryS
 
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA = ROOT / "data" / "clinical_query" / "sample_patients.json"
+DATA = Path(__file__).resolve().parent / "datos" / "sample_patients.json"
 
 
 def build_service() -> NaturalLanguageClinicalQueryService:
