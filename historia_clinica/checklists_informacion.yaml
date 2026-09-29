@@ -1,0 +1,173 @@
+# HC-05 — Checklist clínico de información mínima, configurable por tipo de cáncer.
+#
+# Cada tipo de cáncer define, por fase de decisión (diagnostico,
+# estadificacion, tratamiento), qué información debe estar disponible.
+# Un ítem se considera presente si CUALQUIERA de sus `evidencias` está en
+# el expediente con un valor concluyente:
+#
+#   - variable:     fila de datos_clinicos_estructurados (último valor).
+#   - biomarcador:  fila de biomarcadores cuyo nombre coincide con algún alias.
+#   - imagen:       estudio de imagenologia (opcionalmente filtrado por región).
+#   - laboratorio:  resultado de laboratorios cuyo nombre contiene algún término.
+#
+# Un valor como "unknown", "pending", "equivocal" o "indeterminado" NO
+# cuenta como presente: se reporta como información no concluyente.
+#
+# Un tipo de cáncer sin entrada aquí no se evalúa: el sistema dice que no
+# puede valorar la completitud en vez de asumir que está completa.
+#
+# Contenido ilustrativo para el prototipo; cada institución debe revisarlo
+# con su comité clínico antes de usarlo.
+
+version: "1.0"
+
+tipos_cancer:
+  breast:
+    nombre: Cáncer de mama
+    alias: [breast, mama, cancer de mama, carcinoma de mama]
+    items:
+      - id: confirmacion_histologica
+        descripcion: Confirmación histológica del diagnóstico (biopsia)
+        fases: [diagnostico, tratamiento]
+        evidencias:
+          - variable: histopathology_confirmed
+          - variable: diagnosis_confirmed
+      - id: imagen_mamaria
+        descripcion: Estudio de imagen mamaria (mamografía, ecografía o resonancia)
+        fases: [diagnostico]
+        evidencias:
+          - imagen: [mama]
+      - id: receptor_estrogeno
+        descripcion: Estado del receptor de estrógeno (RE)
+        fases: [diagnostico, tratamiento]
+        evidencias:
+          - variable: er_status
+          - biomarcador: [re, er, receptor de estrogeno, receptor estrogenico, estrogen receptor]
+      - id: receptor_progesterona
+        descripcion: Estado del receptor de progesterona (RP)
+        fases: [diagnostico, tratamiento]
+        evidencias:
+          - variable: pr_status
+          - biomarcador: [rp, pr, receptor de progesterona, progesterone receptor]
+      - id: her2
+        descripcion: Estado de HER2
+        fases: [diagnostico, tratamiento]
+        evidencias:
+          - variable: her2_status
+          - biomarcador: [her2, her2 neu, erbb2]
+      - id: categoria_t
+        descripcion: Categoría T (tamaño/extensión del tumor primario)
+        fases: [estadificacion, tratamiento]
+        evidencias:
+          - variable: clinical_t_category
+      - id: categoria_n
+        descripcion: Categoría N (compromiso ganglionar)
+        fases: [estadificacion, tratamiento]
+        evidencias:
+          - variable: clinical_n_status
+      - id: categoria_m
+        descripcion: Categoría M (metástasis a distancia)
+        fases: [estadificacion, tratamiento]
+        evidencias:
+          - variable: clinical_m_status
+          - variable: metastatic_disease
+
+  NSCLC:
+    nombre: Cáncer de pulmón de células no pequeñas
+    alias: [nsclc, lung, pulmon, cancer de pulmon no microcitico]
+    items:
+      - id: histologia
+        descripcion: Subtipo histológico (escamoso / no escamoso)
+        fases: [diagnostico, tratamiento]
+        evidencias:
+          - variable: histology
+      - id: imagen_torax
+        descripcion: Estudio de imagen de tórax (TAC)
+        fases: [diagnostico, estadificacion]
+        evidencias:
+          - imagen: [torax, pulmon]
+      - id: categoria_t
+        descripcion: Categoría T
+        fases: [estadificacion]
+        evidencias:
+          - variable: clinical_t_category
+      - id: categoria_n
+        descripcion: Categoría N
+        fases: [estadificacion]
+        evidencias:
+          - variable: clinical_n_status
+      - id: categoria_m
+        descripcion: Categoría M
+        fases: [estadificacion]
+        evidencias:
+          - variable: clinical_m_status
+          - variable: disease_setting
+      - id: egfr
+        descripcion: Estado de EGFR
+        fases: [tratamiento]
+        evidencias:
+          - variable: egfr_status
+          - biomarcador: [egfr]
+      - id: alk
+        descripcion: Estado de ALK
+        fases: [tratamiento]
+        evidencias:
+          - variable: alk_status
+          - biomarcador: [alk]
+      - id: pdl1
+        descripcion: Expresión de PD-L1 (TPS)
+        fases: [tratamiento]
+        evidencias:
+          - variable: pdl1_tps
+          - biomarcador: [pd l1, pdl1, pd l1 tps]
+      - id: estado_funcional
+        descripcion: Estado funcional (ECOG)
+        fases: [tratamiento]
+        evidencias:
+          - variable: ecog_ps
+
+  melanoma:
+    nombre: Melanoma
+    alias: [melanoma, melanoma cutaneo]
+    items:
+      - id: confirmacion_histologica
+        descripcion: Confirmación histológica del diagnóstico
+        fases: [diagnostico, tratamiento]
+        evidencias:
+          - variable: diagnosis_confirmed
+      - id: categoria_t
+        descripcion: Categoría T (espesor de Breslow / ulceración)
+        fases: [estadificacion]
+        evidencias:
+          - variable: clinical_t_category
+      - id: categoria_n
+        descripcion: Categoría N
+        fases: [estadificacion]
+        evidencias:
+          - variable: clinical_n_status
+      - id: braf
+        descripcion: Estado de BRAF V600
+        fases: [tratamiento]
+        evidencias:
+          - variable: braf_v600_status
+          - biomarcador: [braf, braf v600, braf v600e]
+
+  renal_cell_carcinoma:
+    nombre: Carcinoma de células renales
+    alias: [renal_cell_carcinoma, renal, carcinoma de celulas renales]
+    items:
+      - id: confirmacion_histologica
+        descripcion: Confirmación histopatológica
+        fases: [diagnostico, tratamiento]
+        evidencias:
+          - variable: histopathology_confirmed
+      - id: subtipo_histologico
+        descripcion: Subtipo histológico (células claras / no claras)
+        fases: [diagnostico, tratamiento]
+        evidencias:
+          - variable: rcc_histology
+      - id: riesgo_imdc
+        descripcion: Grupo de riesgo IMDC
+        fases: [tratamiento]
+        evidencias:
+          - variable: imdc_risk_group
