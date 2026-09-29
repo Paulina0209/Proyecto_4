@@ -16,41 +16,32 @@ ciclo de vida de revisión/aprobación; no vuelve a generar contenido
 clínico ni a validar trazabilidad contra la consulta (eso ya lo hizo
 IA-02).
 
-## Ya hay un modelo real conectado (Ollama)
+## Ya hay un modelo real conectado (OpenAI)
 
-El proyecto ya tiene un modelo local corriendo con Ollama, usado hasta
-ahora por `tx_clinica` (TX-01) para redactar el rationale de una
-recomendación de tratamiento. Como parte de esta historia, ese mismo
-modelo se conecta también a IA-02 a través de un nuevo cliente:
-`ia_clinica.notes.llm_client.OllamaLLMClient`.
+IA-02 usa un modelo GPT de OpenAI a través de
+`ia_clinica.notes.llm_client.OpenAILLMClient` (el mismo modelo que usa el
+agente de `tx_clinica`; antes era un modelo local servido por Ollama).
+Configuración en `docs/llm_openai.md`.
 
 Sigue exactamente el mismo contrato (`LLMClient.complete(system_prompt,
 user_prompt) -> str`) que ya usaba `RuleBasedLLMClient`, así que
 `ClinicalNoteGenerator` no necesitó ningún cambio: sigue validando cada
 sección contra los fragmentos reales de la consulta antes de aceptarla en
 el borrador (ver `docs/ia_clinica_notas.md`). Esa validación importa
-todavía más ahora que hay un LLM real detrás: a diferencia del cliente de
-referencia (que solo copia texto existente), un modelo de lenguaje sí
-puede redactar contenido que no provenga literalmente de un fragmento —
-sigue siendo el generador, no el cliente, quien garantiza que eso nunca
-llegue al borrador sin una cita verificable.
+todavía más con un LLM real: a diferencia del cliente de referencia (que
+solo copia texto existente), un modelo de lenguaje sí puede redactar
+contenido que no provenga literalmente de un fragmento — sigue siendo el
+generador, no el cliente, quien garantiza que eso nunca llegue al
+borrador sin una cita verificable.
 
-`OllamaLLMClient` requiere Ollama corriendo localmente:
-
-```
-ollama serve
-ollama pull qwen2.5:14b-instruct-q4_K_M
-```
-
-Expone además `esta_disponible()`, un chequeo de salud liviano (solo
-consulta `/api/tags`, no genera texto) para poder decidir en tiempo de
-ejecución si usarlo o usar `RuleBasedLLMClient` como respaldo — así el
-demo de esta historia (y cualquier otro código) no se rompe si Ollama no
-está corriendo en esa máquina en ese momento.
+Expone además `esta_disponible()`, un chequeo liviano (consulta el
+modelo, no genera texto) para decidir en tiempo de ejecución si usarlo o
+usar `RuleBasedLLMClient` como respaldo — así el demo no se rompe si no
+hay llave o no hay red.
 
 **Nota de alcance:** el flujo de revisión/aprobación de IA-03 en sí mismo
 (`ia_clinica.review`) es independiente de qué LLM generó el borrador.
-Todo lo que se describe más abajo funciona igual con `OllamaLLMClient`,
+Todo lo que se describe más abajo funciona igual con `OpenAILLMClient`,
 `RuleBasedLLMClient`, o cualquier otro `LLMClient` futuro.
 
 ## Cómo se satisface cada criterio de aceptación
@@ -119,8 +110,8 @@ simulación razonable de "cerrar sesión y volver a entrar".
   `editar_seccion(...)`, `aprobar_nota(...)`, `obtener_revision(...)` —
   capa fina que traduce entre `ClinicalNoteDraft` (IA-02) y el
   almacenamiento de IA-03.
-- `demo.py`: flujo completo — genera un borrador (con `OllamaLLMClient`
-  si hay servidor disponible, si no con `RuleBasedLLMClient`), inicia la
+- `demo.py`: flujo completo — genera un borrador (con `OpenAILLMClient`
+  si hay llave configurada, si no con `RuleBasedLLMClient`), inicia la
   revisión, edita una sección, cierra y reabre la conexión para simular
   "cerrar sesión", aprueba explícitamente, y muestra que ya no se puede
   editar después de aprobada.
@@ -135,13 +126,12 @@ Y las pruebas automatizadas:
 
 ```
 pytest tests/ia_clinica/review -v
-pytest tests/ia_clinica/notes/test_ollama_llm_client.py -v
+pytest tests/ia_clinica/notes/test_openai_llm_client.py -v
 ```
 
-Las pruebas de `OllamaLLMClient` no requieren un servidor Ollama real:
-simulan la librería `requests` para verificar el contrato (qué se envía,
-qué se devuelve, y que los errores de red se traducen en
-`OllamaConnectionError`).
+Las pruebas de `OpenAILLMClient` no llaman a la API real: inyectan un
+cliente falso para verificar el contrato (qué se envía, qué se devuelve,
+y que los errores de la API se traducen en `OpenAIConnectionError`).
 
 ## Fuera de alcance de esta historia
 

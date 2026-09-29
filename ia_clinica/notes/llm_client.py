@@ -9,10 +9,9 @@ interfaz :class:`LLMClient`, nunca de un proveedor concreto. Esto permite:
       modelo propio de la institución, etc.) implementando la misma
       interfaz, sin tocar el generador ni las pruebas existentes.
 
-Se eligió explícitamente **no** integrar todavía un proveedor real por
-defecto: en este repositorio aún no hay una llave de API configurada, y
-elegir el proveedor definitivo es una decisión de producto/infraestructura
-que corresponde tomar por separado.
+El proveedor real del proyecto es OpenAI (:class:`OpenAILLMClient`,
+configurado con ``core.llm_config``); ``RuleBasedLLMClient`` queda como
+respaldo sin red para pruebas y demos.
 """
 
 from __future__ import annotations
@@ -158,137 +157,114 @@ class AnthropicLLMClient(LLMClient):
         return "".join(block.text for block in response.content if getattr(block, "type", None) == "text")
 
 
-class OllamaConnectionError(RuntimeError):
-    """No se pudo contactar (o no respondió a tiempo) al servidor local de Ollama."""
+class OpenAIConnectionError(RuntimeError):
+    """No se pudo obtener respuesta de la API de OpenAI (red, llave o modelo)."""
 
 
-class OllamaLLMClient(LLMClient):
-    """Adaptador para un modelo local servido por Ollama.
+class OpenAILLMClient(LLMClient):
+    """Adaptador para un modelo GPT servido por la API de OpenAI.
 
-    Este es el proveedor real que sí se usa por defecto a partir de IA-03:
-    el proyecto ya tiene un modelo local corriendo con Ollama (usado
-    también por ``tx_clinica`` para redactar el rationale de TX-01), así
-    que en vez de introducir un segundo mecanismo, este cliente reutiliza
-    el mismo servidor y sigue el mismo contrato conceptual que
-    ``tx_clinica.llm_client.LocalOllamaLLMClient``: el modelo solo redacta
-    texto, nunca decide qué es correcto citar. Aquí lo que redacta es el
-    borrador SOAP completo, con el mismo formato JSON que ya produce
-    ``RuleBasedLLMClient``, para que ``ClinicalNoteGenerator`` no necesite
-    ningún cambio: sigue validando cada sección contra los fragmentos
-    reales de la consulta (``_build_section``) exactamente igual que con
-    el cliente de referencia. Esa validación es la que importa aún más
-    aquí que con ``RuleBasedLLMClient``: un LLM real sí puede redactar
-    texto que no provenga literalmente de un fragmento, así que es
-    ``ClinicalNoteGenerator`` (no este cliente) quien sigue garantizando
-    que ninguna sección sin cita válida llegue al borrador final.
+    Es el proveedor real que se usa por defecto (IA-02, IA-03 e IA-04, y el
+    agente de ``tx_clinica``). El modelo solo redacta texto, nunca decide
+    qué es correcto citar: redacta el borrador con el mismo formato JSON
+    que ya produce ``RuleBasedLLMClient``, y ``ClinicalNoteGenerator`` sigue
+    validando cada sección contra los fragmentos reales de la consulta
+    (``_build_section``). Esa validación importa aún más con un LLM real,
+    que sí puede redactar texto que no provenga de un fragmento: es el
+    generador (no este cliente) quien garantiza que ninguna sección sin
+    cita válida llegue al borrador final.
 
-    Requiere Ollama corriendo localmente (``ollama serve``, por defecto en
-    ``http://127.0.0.1:11434``) y el modelo ya descargado, por ejemplo:
+    La llave, el modelo y el tiempo de espera salen de ``core.llm_config``
+    (``OPENAI_API_KEY``, ``OPENAI_MODEL``, ``OPENAI_TIMEOUT`` en el ``.env``
+    de la raíz) salvo que se pasen explícitamente.
 
-        ollama pull qwen2.5:14b-instruct-q4_K_M
-
-    Se usa ``127.0.0.1`` en vez de ``localhost`` como valor por defecto de
-    ``base_url`` a propósito: en algunas máquinas Windows, ``localhost``
-    resuelve primero a ``::1`` (loopback IPv6), y si Ollama solo escucha
-    en la interfaz IPv4 (``OLLAMA_HOST=http://127.0.0.1:11434``, el valor
-    por defecto de Ollama), una conexión a ``http://localhost:11434``
-    puede fallar o demorar de más incluso con el servidor corriendo y
-    escuchando correctamente. Usar la IP explícita evita depender de esa
-    resolución.
-
-    ``timeout`` (segundos de espera de la respuesta HTTP) es
-    deliberadamente generoso por defecto: generar el JSON completo de una
-    nota SOAP es una tarea más larga que el rationale corto de 2-4
-    oraciones de ``tx_clinica.LocalOllamaLLMClient``, y en una máquina sin
-    GPU la primera llamada además paga el costo de cargar el modelo
-    (varios GB) en memoria. Si aun así se agota el tiempo, súbelo más
-    (por ejemplo ``OllamaLLMClient(timeout=600)``) o "calienta" el modelo
-    antes corriendo una vez ``ollama run <modelo>`` desde la terminal.
-
-    Se usa ``"format": "json"`` de la API de Ollama por defecto
-    (``usar_formato_json=True``): esto restringe la decodificación del
-    modelo a una gramática JSON válida token por token, lo que evita el
-    error más común al generar JSON en texto libre — una comilla sin
-    escapar dentro de un campo de texto que rompe el parseo a la mitad
-    (visto en la práctica: ``json.JSONDecodeError`` a media respuesta).
-    En algunos backends esta restricción puede hacer la generación más
-    lenta; si eso resulta ser un problema en una máquina concreta, se
-    puede desactivar con ``OllamaLLMClient(usar_formato_json=False)`` —
-    pero entonces una respuesta con un error de sintaxis simplemente se
-    descarta (``GenerationError`` en ``ClinicalNoteGenerator``) en vez de
+    Por defecto se pide ``response_format={"type": "json_object"}``
+    (``usar_formato_json=True``): la API garantiza JSON sintácticamente
+    válido, lo que evita que una comilla sin escapar dentro de un campo de
+    texto rompa el parseo a la mitad. Con ``usar_formato_json=False`` una
+    respuesta con un error de sintaxis simplemente se descarta
+    (``GenerationError`` en ``ClinicalNoteGenerator``) en vez de
     inventarse una interpretación parcial.
+
+    ``client`` permite inyectar un cliente ya construido (en las pruebas,
+    uno falso), para no depender de red ni de una llave real.
     """
 
     def __init__(
         self,
-        model: str = "qwen2.5:14b-instruct-q4_K_M",
-        base_url: str = "http://127.0.0.1:11434",
-        timeout: int = 300,
-        temperature: float = 0.1,
+        model: str | None = None,
+        api_key: str | None = None,
+        timeout: float | None = None,
         usar_formato_json: bool = True,
+        client=None,
     ) -> None:
+        from core import llm_config
+
+        self._model = model or llm_config.obtener_modelo()
+        self._api_key = api_key or llm_config.obtener_api_key()
+        self._timeout = timeout if timeout is not None else llm_config.obtener_timeout()
+        self._usar_formato_json = usar_formato_json
+        self._client = client
+
+    @property
+    def model(self) -> str:
+        return self._model
+
+    def _cliente(self):
+        if self._client is not None:
+            return self._client
+        if not self._api_key:
+            raise OpenAIConnectionError(
+                "No hay llave de OpenAI configurada. Agrega OPENAI_API_KEY al "
+                "archivo .env de la raíz del repositorio (ver .env.example)."
+            )
         try:
-            import requests  # type: ignore  # noqa: F401
+            import openai  # type: ignore
         except ImportError as exc:  # pragma: no cover - depende de instalación externa
             raise ImportError(
-                "El paquete 'requests' no está instalado. Instálalo con "
-                "'pip install requests --break-system-packages' para usar OllamaLLMClient."
+                "El paquete 'openai' no está instalado. Instálalo con "
+                "'pip install -r requirements.txt' para usar OpenAILLMClient."
             ) from exc
-        self._model = model
-        self._base_url = base_url.rstrip("/")
-        self._timeout = timeout
-        self._temperature = temperature
-        self._usar_formato_json = usar_formato_json
+        self._client = openai.OpenAI(api_key=self._api_key, timeout=self._timeout, max_retries=2)
+        return self._client
 
     def complete(self, system_prompt: str, user_prompt: str) -> str:
-        import requests
-
-        payload = {
+        kwargs = {
             "model": self._model,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "stream": False,
-            "options": {"temperature": self._temperature},
         }
         if self._usar_formato_json:
-            payload["format"] = "json"
+            kwargs["response_format"] = {"type": "json_object"}
 
+        cliente = self._cliente()
         try:
-            response = requests.post(
-                f"{self._base_url}/api/chat",
-                json=payload,
-                timeout=self._timeout,
-            )
-            response.raise_for_status()
-        except requests.exceptions.RequestException as exc:
-            raise OllamaConnectionError(
-                f"No se pudo contactar al servidor Ollama en '{self._base_url}'. "
-                "Verifica que 'ollama serve' esté corriendo y que el modelo "
-                f"'{self._model}' ya esté descargado (ollama pull {self._model})."
+            response = cliente.chat.completions.create(**kwargs)
+        except Exception as exc:  # openai.APIError y errores de red
+            raise OpenAIConnectionError(
+                f"La API de OpenAI no respondió correctamente con el modelo "
+                f"'{self._model}': {exc}"
             ) from exc
 
-        payload = response.json()
         try:
-            return payload["message"]["content"]
-        except (KeyError, TypeError) as exc:
-            raise OllamaConnectionError(
-                f"Respuesta inesperada del servidor Ollama: {payload!r}"
-            ) from exc
+            contenido = response.choices[0].message.content
+        except (AttributeError, IndexError, TypeError) as exc:
+            raise OpenAIConnectionError(f"Respuesta inesperada de la API de OpenAI: {response!r}") from exc
+        if contenido is None:
+            raise OpenAIConnectionError("La API de OpenAI devolvió una respuesta sin texto.")
+        return contenido
 
     def esta_disponible(self) -> bool:
-        """Chequeo de salud liviano: ¿responde el servidor de Ollama?
+        """Chequeo liviano: ¿hay llave y el modelo existe para esa llave?
 
-        A propósito no genera texto (no llama ``/api/chat``): solo
-        consulta ``/api/tags``, para poder decidir si conviene usar este
-        cliente sin pagar el costo de una inferencia completa del modelo.
+        A propósito no genera texto: solo consulta el modelo
+        (``models.retrieve``), para decidir si conviene usar este cliente
+        sin pagar el costo de una inferencia completa.
         """
-        import requests
-
         try:
-            response = requests.get(f"{self._base_url}/api/tags", timeout=5)
-            response.raise_for_status()
-        except requests.exceptions.RequestException:
+            self._cliente().models.retrieve(self._model)
+        except Exception:
             return False
         return True

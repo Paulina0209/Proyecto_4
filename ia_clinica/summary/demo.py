@@ -4,23 +4,17 @@ Ejecútalo con (desde la raíz del repositorio):
 
     python -m ia_clinica.summary.demo
 
-Usa el modelo local ya configurado con Ollama (``OllamaLLMClient``, el
+Usa el modelo GPT configurado en el ``.env`` (``OpenAILLMClient``, el
 mismo que IA-02/IA-03) para redactar "tratamientos previos" y "estado
-actual" a partir del expediente completo del paciente. Si Ollama no está
-corriendo en esta máquina (``ollama serve`` + el modelo descargado), el
-demo lo detecta y sigue funcionando con ``RuleBasedSummaryLLMClient`` para
-no bloquear la demostración de IA-04, que es independiente de qué
-generó el texto de esas dos secciones.
+actual" a partir del expediente completo del paciente. Si no hay llave de
+OpenAI o la API no responde, el demo lo detecta y sigue funcionando con
+``RuleBasedSummaryLLMClient`` para no bloquear la demostración de IA-04,
+que es independiente de qué generó el texto de esas dos secciones.
 
-Se puede ajustar el modelo, la URL del servidor y el tiempo de espera sin
-tocar código, con las mismas variables de entorno que ya usan los demos
-de IA-02/IA-03 (útil para probar un modelo más chico/rápido en una
-máquina sin GPU, o una URL distinta si ``http://127.0.0.1:11434`` no es
-la correcta en esa máquina):
+El modelo y el tiempo de espera se ajustan sin tocar código con
+``OPENAI_MODEL`` y ``OPENAI_TIMEOUT`` (en el ``.env`` o en la terminal):
 
-    $env:OLLAMA_MODEL = "qwen2.5:7b-instruct-q4_K_M"
-    $env:OLLAMA_TIMEOUT = "900"
-    $env:OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+    $env:OPENAI_MODEL = "gpt-5.4"
     python -m ia_clinica.summary.demo
 
 El demo muestra dos escenarios, uno por cada criterio de aceptación de
@@ -39,34 +33,23 @@ IA-04:
 
 from __future__ import annotations
 
-import os
-
 from historia_clinica_mock.adapters import construir_contexto_resumen_caso
 from historia_clinica_mock.db import crear_conexion as crear_conexion_historia
 from historia_clinica_mock.seed import sembrar_datos_sinteticos
 
-from ia_clinica.notes.llm_client import OllamaLLMClient
+from ia_clinica.notes.llm_client import OpenAILLMClient
 from ia_clinica.summary.generator import CaseSummaryGenerator
 from ia_clinica.summary.llm_client import RuleBasedSummaryLLMClient
 
 
 def _construir_generador() -> CaseSummaryGenerator:
-    kwargs = {}
-    if os.environ.get("OLLAMA_MODEL"):
-        kwargs["model"] = os.environ["OLLAMA_MODEL"]
-    if os.environ.get("OLLAMA_TIMEOUT"):
-        kwargs["timeout"] = int(os.environ["OLLAMA_TIMEOUT"])
-    if os.environ.get("OLLAMA_BASE_URL"):
-        kwargs["base_url"] = os.environ["OLLAMA_BASE_URL"]
-
-    cliente = OllamaLLMClient(**kwargs)
+    cliente = OpenAILLMClient()
     if cliente.esta_disponible():
-        print("Usando OllamaLLMClient (modelo local real) para redactar el resumen.")
+        print(f"Usando OpenAILLMClient ({cliente.model}) para redactar el resumen.")
         return CaseSummaryGenerator(llm_client=cliente)
 
-    print(f"Aviso: no se detectó un servidor Ollama en {kwargs.get('base_url', 'http://127.0.0.1:11434')}.")
-    print("Se usa RuleBasedSummaryLLMClient como respaldo solo para poder demostrar IA-04 sin servidor local.")
-    print("(Corre 'ollama serve' con el modelo descargado para usar el modelo real.)")
+    print(f"Aviso: no se pudo usar el modelo de OpenAI '{cliente.model}' (¿falta OPENAI_API_KEY en el .env o no hay red?).")
+    print("Se usa RuleBasedSummaryLLMClient como respaldo solo para poder demostrar IA-04 sin el modelo real.")
     return CaseSummaryGenerator(llm_client=RuleBasedSummaryLLMClient())
 
 

@@ -5,7 +5,7 @@ poder compartirlo durante juntas médicas o interconsultas con otros
 especialistas.
 
 Depende de IA-02 (``ia_clinica.notes``): reutiliza la misma interfaz
-``LLMClient`` (y, por tanto, el mismo ``OllamaLLMClient`` ya configurado) y
+``LLMClient`` (y, por tanto, el mismo ``OpenAILLMClient`` ya configurado) y
 el mismo patrón de no-alucinación (marcador fijo de información faltante,
 descarte de contenido sin cita válida). A diferencia de IA-02, que razona
 sobre una sola consulta, IA-04 combina *todo* el expediente disponible del

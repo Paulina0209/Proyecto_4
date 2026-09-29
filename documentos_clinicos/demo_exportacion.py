@@ -4,9 +4,9 @@ Ejecútalo con (desde la raíz del repositorio):
 
     python -m documentos_clinicos.demo_exportacion
 
-No depende de Ollama: usa ``RuleBasedSummaryLLMClient`` para el camino
-del resumen de caso (igual que el demo de IA-04 cuando no hay servidor
-local disponible), porque lo que DOC-02 necesita probar es el renderizado
+No depende de OpenAI: usa ``RuleBasedSummaryLLMClient`` para el camino
+del resumen de caso (igual que el demo de IA-04 cuando el modelo de
+OpenAI no está disponible), porque lo que DOC-02 necesita probar es el renderizado
 a PDF en sí, no la redacción del contenido — eso ya lo prueba IA-04 por
 su cuenta.
 

@@ -388,3 +388,28 @@
   datos básicos y el fallo queda registrado.
 - `historia_clinica.integracion_externa.registrar_fallo_sincronizacion`.
 - Pruebas en `tests/cbioportal/` (sin red).
+
+## [Sin versionar] — Modelo GPT de OpenAI en lugar de Ollama
+
+### Cambiado
+
+- El LLM real del proyecto pasa de un modelo local en Ollama a un modelo GPT
+  de OpenAI (por defecto `gpt-5.4-mini`, configurable con `OPENAI_MODEL`).
+  La llave va en `OPENAI_API_KEY` del `.env` de la raíz, que no se versiona.
+  Ver `docs/llm_openai.md`.
+- `ia_clinica.notes.llm_client.OpenAILLMClient` reemplaza a
+  `OllamaLLMClient` (IA-02, IA-03 e IA-04). Mismo contrato `LLMClient`, JSON
+  garantizado por la API y `esta_disponible()` sin generar texto.
+- `tx_clinica/agent.py` usa `ChatOpenAI` en vez de `ChatOllama`.
+- `requirements.txt`: `langchain-openai`, `openai` y `python-dotenv` en vez
+  de `langchain-ollama`.
+
+### Añadido
+
+- `core/llm_config.py`: llave, modelo y tiempo de espera compartidos, leídos
+  del `.env`.
+- Pruebas en `tests/ia_clinica/notes/test_openai_llm_client.py` (sin red).
+
+### Eliminado
+
+- `OllamaLLMClient`, `OllamaConnectionError` y sus pruebas.

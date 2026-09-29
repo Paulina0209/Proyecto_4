@@ -41,7 +41,8 @@ vocabulario de cada módulo (`major_comorbidity_precluding_ici`,
 
 ## Agente conversacional
 
-`tx_clinica/agent.py` (LangChain + Ollama local). Las tools
+`tx_clinica/agent.py` (LangChain + un modelo GPT de OpenAI, ver
+`docs/llm_openai.md`). Las tools
 (`obtener_datos_paciente`, `obtener_recomendaciones_tratamiento_por_id`,
 `obtener_recomendaciones_tratamiento_con_datos`,
 `listar_variables_requeridas`) son wrappers sobre
@@ -52,7 +53,8 @@ evidencia de cada módulo candidato para que el oncólogo elija.
 
 ### Limitación observada
 
-Con `qwen2.5:14b-instruct`, en pruebas manuales: (1) en conversaciones
+Con `qwen2.5:14b-instruct` (el modelo local que se usaba antes vía
+Ollama), en pruebas manuales: (1) en conversaciones
 largas el modelo a veces reutiliza el resultado de una tool de un turno
 anterior en vez de volver a invocarla; (2) el modelo a veces usa nombres
 de variable distintos a los que `listar_variables_requeridas` devolvió.

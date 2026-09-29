@@ -2,7 +2,7 @@
 reanudar_con_decisiones (conversacion.py) hasta registrar_decision_tratamiento
 (decision_tools.py) a traves de config["configurable"], incluso despues de
 una pausa de aprobacion humana -- exactamente el flujo real del proyecto,
-solo con un modelo de chat falso en vez de Ollama."""
+solo con un modelo de chat falso en vez del modelo real de OpenAI."""
 import json
 from types import SimpleNamespace
 from typing import List

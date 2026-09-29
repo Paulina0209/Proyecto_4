@@ -4,28 +4,22 @@ Ejecútalo con (desde la raíz del repositorio):
 
     python -m ia_clinica.review.demo
 
-Usa el modelo local ya configurado con Ollama (``OllamaLLMClient``) para
-generar el borrador SOAP real que después se revisa y aprueba. Si Ollama
-no está corriendo en esta máquina (``ollama serve`` + el modelo
-descargado), el demo lo detecta y sigue funcionando con
-``RuleBasedLLMClient`` para no bloquear la demostración del flujo de
-revisión/aprobación de IA-03, que es independiente de qué generó el
-borrador.
+Usa el modelo GPT configurado en el ``.env`` (``OpenAILLMClient``) para
+generar el borrador SOAP real que después se revisa y aprueba. Si no hay
+llave de OpenAI o la API no responde, el demo lo detecta y sigue
+funcionando con ``RuleBasedLLMClient`` para no bloquear la demostración
+del flujo de revisión/aprobación de IA-03, que es independiente de qué
+generó el borrador.
 
-Se puede ajustar el modelo, la URL del servidor y el tiempo de espera sin
-tocar código, con variables de entorno (útil para probar un modelo más
-chico/rápido en una máquina sin GPU, o una URL distinta si
-``http://127.0.0.1:11434`` no es la correcta en esa máquina):
+El modelo y el tiempo de espera se ajustan sin tocar código con
+``OPENAI_MODEL`` y ``OPENAI_TIMEOUT`` (en el ``.env`` o en la terminal):
 
-    $env:OLLAMA_MODEL = "qwen2.5:7b-instruct-q4_K_M"
-    $env:OLLAMA_TIMEOUT = "900"
-    $env:OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+    $env:OPENAI_MODEL = "gpt-5.4"
     python -m ia_clinica.review.demo
 """
 
 from __future__ import annotations
 
-import os
 import tempfile
 from pathlib import Path
 
@@ -34,29 +28,20 @@ from historia_clinica_mock.db import crear_conexion as crear_conexion_historia
 from historia_clinica_mock.seed import sembrar_datos_sinteticos
 
 from ia_clinica.notes.generator import ClinicalNoteGenerator
-from ia_clinica.notes.llm_client import OllamaLLMClient, RuleBasedLLMClient
+from ia_clinica.notes.llm_client import OpenAILLMClient, RuleBasedLLMClient
 from ia_clinica.review import store
 from ia_clinica.review.models import NotaYaAprobadaError
 from ia_clinica.review.service import aprobar_nota, editar_seccion, iniciar_revision, obtener_revision
 
 
 def _construir_generador() -> ClinicalNoteGenerator:
-    kwargs = {}
-    if os.environ.get("OLLAMA_MODEL"):
-        kwargs["model"] = os.environ["OLLAMA_MODEL"]
-    if os.environ.get("OLLAMA_TIMEOUT"):
-        kwargs["timeout"] = int(os.environ["OLLAMA_TIMEOUT"])
-    if os.environ.get("OLLAMA_BASE_URL"):
-        kwargs["base_url"] = os.environ["OLLAMA_BASE_URL"]
-
-    cliente = OllamaLLMClient(**kwargs)
+    cliente = OpenAILLMClient()
     if cliente.esta_disponible():
-        print("Usando OllamaLLMClient (modelo local real) para generar el borrador.")
+        print(f"Usando OpenAILLMClient ({cliente.model}) para generar el borrador.")
         return ClinicalNoteGenerator(llm_client=cliente)
 
-    print(f"Aviso: no se detectó un servidor Ollama en {kwargs.get('base_url', 'http://127.0.0.1:11434')}.")
-    print("Se usa RuleBasedLLMClient como respaldo solo para poder demostrar IA-03 sin servidor local.")
-    print("(Corre 'ollama serve' con el modelo descargado para usar el modelo real.)")
+    print(f"Aviso: no se pudo usar el modelo de OpenAI '{cliente.model}' (¿falta OPENAI_API_KEY en el .env o no hay red?).")
+    print("Se usa RuleBasedLLMClient como respaldo solo para poder demostrar IA-03 sin el modelo real.")
     return ClinicalNoteGenerator(llm_client=RuleBasedLLMClient())
 
 

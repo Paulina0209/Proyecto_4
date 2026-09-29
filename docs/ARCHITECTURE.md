@@ -46,8 +46,8 @@ IA-02 — generación automática de notas clínicas). Ver
 `docs/ia_clinica_notas.md` para el detalle de IA-02.
 
 `ia_clinica/notes` ya conecta un proveedor de LLM real
-(`llm_client.OllamaLLMClient`), que reutiliza el mismo modelo local
-servido por Ollama que usa `tx_clinica` para TX-01, además del cliente de
+(`llm_client.OpenAILLMClient`, un modelo GPT de OpenAI, el mismo que usa
+el agente de `tx_clinica`; ver `docs/llm_openai.md`), además del cliente de
 referencia sin proveedor externo (`RuleBasedLLMClient`) usado por
 defecto en pruebas.
 
@@ -67,7 +67,7 @@ documento de cuatro secciones (diagnóstico, estadio, tratamientos
 previos, estado actual). Diagnóstico y estadio se toman directamente del
 registro estructurado del paciente, sin pasar por ningún LLM; las otras
 dos secciones reutilizan la misma interfaz `LLMClient` (y el mismo
-`OllamaLLMClient`) que IA-02/IA-03, con la misma validación de
+`OpenAILLMClient`) que IA-02/IA-03, con la misma validación de
 trazabilidad. Cualquier sección sin información suficiente queda marcada
 explícitamente, nunca inventada. Ver `docs/ia_clinica_resumen_caso.md`.
 
