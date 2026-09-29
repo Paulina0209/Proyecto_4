@@ -15,6 +15,8 @@ class TipoAccion(str, Enum):
     CONFIGURAR_POLITICA_DATOS = "configurar_politica_datos"
     REGISTRAR_AUTORIZACION = "registrar_autorizacion"
     GESTIONAR_DERECHOS_TITULAR = "gestionar_derechos_titular"
+    # CFG-01: cambio de las guías clínicas institucionales por defecto.
+    CONFIGURAR_GUIAS = "configurar_guias"
 
 
 @dataclass(frozen=True)

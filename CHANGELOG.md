@@ -340,3 +340,22 @@
   `gestionar_derechos_titular`. Cada operación de NFR-06 deja su evento en la
   misma transacción que el registro.
 - Pruebas en `tests/historia_clinica/` y `tests/privacidad/`.
+
+## [Sin versionar] — CFG-01
+
+### Añadido
+
+- Nuevo componente `configuracion/` — **CFG-01 — Configuración de guías
+  clínicas institucionales**: el administrador clínico elige las
+  organizaciones que usa la institución por defecto (NCCN, ESMO), en orden de
+  prioridad, y puede declarar un protocolo interno. Cada cambio es una versión
+  nueva (solo inserción) con motivo obligatorio, auditada en AUD-01, incluidos
+  los intentos denegados. Guardar una configuración sin módulos computables
+  exige confirmación explícita. Ver `docs/configuracion_guias.md`.
+- `seguridad`: nuevo rol `administrador_clinico` y acción
+  `configurar_guias_institucionales`.
+- `auditoria.models.TipoAccion.CONFIGURAR_GUIAS`.
+- `evidencia_clinica.EvidenceSearchService.search` / `search_for_patient`:
+  parámetro opcional `organizations` (filtra y prioriza por organización). Sin
+  él, el comportamiento no cambia. Nueva función `organization_matches`.
+- Pruebas en `tests/configuracion/`.

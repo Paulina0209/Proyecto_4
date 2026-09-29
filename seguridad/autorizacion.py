@@ -27,6 +27,7 @@ class Accion(str, Enum):
     VER_EXPEDIENTE = "ver_expediente"
     EDITAR_EXPEDIENTE = "editar_expediente"
     EXPORTAR_EXPEDIENTE = "exportar_expediente"
+    CONFIGURAR_GUIAS_INSTITUCIONALES = "configurar_guias_institucionales"  # CFG-01
 
 
 PERMISOS_POR_ROL: dict[Accion, frozenset[Rol]] = {
@@ -36,6 +37,7 @@ PERMISOS_POR_ROL: dict[Accion, frozenset[Rol]] = {
     Accion.VER_EXPEDIENTE: frozenset({Rol.ONCOLOGO, Rol.ENFERMERIA, Rol.AUDITOR}),
     Accion.EDITAR_EXPEDIENTE: frozenset({Rol.ONCOLOGO, Rol.ENFERMERIA}),
     Accion.EXPORTAR_EXPEDIENTE: frozenset({Rol.ONCOLOGO, Rol.ADMINISTRATIVO}),
+    Accion.CONFIGURAR_GUIAS_INSTITUCIONALES: frozenset({Rol.ADMINISTRADOR_CLINICO}),
 }
 
 
