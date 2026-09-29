@@ -8,6 +8,12 @@ Ejemplos:
     # Pacientes puntuales, y también en la base de búsqueda/360
     python -m cbioportal --db data/copiloto.db --pacientes P-0000015 P-0000036 \\
         --db-pacientes patients/db/pacientes.db --oncologo-id 1
+
+    # Índice: TODOS los pacientes de mama y pulmón con sus datos básicos, en
+    # segundos. El detalle de cada uno se trae al abrirlo en la API
+    # (COPILOTO_EXPEDIENTE_DB=data/copiloto.db uvicorn patients.api:app)
+    python -m cbioportal --indice --db data/copiloto.db \\
+        --db-pacientes patients/db/pacientes.db --oncologo-id 1
 """
 
 from __future__ import annotations
@@ -15,6 +21,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import time
 from datetime import date
 from pathlib import Path
 
@@ -32,8 +39,13 @@ def _argumentos(argv):
     p.add_argument("--db", type=Path, default=RUTA_DB_POR_DEFECTO, help=f"Expediente SQLite (por defecto {RUTA_DB_POR_DEFECTO}).")
     p.add_argument("--estudio", default=ESTUDIO_POR_DEFECTO, help=f"Estudio de cBioPortal (por defecto {ESTUDIO_POR_DEFECTO}).")
     p.add_argument("--pacientes", nargs="+", help="Ids de paciente del estudio. Sin esto, se eligen por tipo de cáncer.")
-    p.add_argument("--tipos", nargs="+", default=list(TIPOS_POR_DEFECTO), help="Tipos de cáncer (CANCER_TYPE de cBioPortal).")
-    p.add_argument("--por-tipo", type=int, default=25, help="Pacientes por tipo de cáncer (por defecto 25).")
+    p.add_argument("--indice", action="store_true",
+                   help="Solo datos básicos de todos los pacientes (el detalle se trae al abrir cada uno). "
+                        "Requiere --db-pacientes y --oncologo-id.")
+    p.add_argument("--tipos", nargs="+", default=list(TIPOS_POR_DEFECTO),
+                   help="Tipos de cáncer (CANCER_TYPE de cBioPortal). Con --indice, 'todos' incluye el estudio completo.")
+    p.add_argument("--por-tipo", type=int,
+                   help="Pacientes por tipo de cáncer (por defecto 25; con --indice, sin tope).")
     p.add_argument("--fecha-referencia", type=date.fromisoformat, default=date.today(),
                    help="Fecha del último evento de cada paciente (AAAA-MM-DD). Fíjela para re-importar con las mismas fechas.")
     p.add_argument("--db-pacientes", type=Path, help="Base del módulo de pacientes (PAC-02/03) donde volcarlos también.")
@@ -42,6 +54,10 @@ def _argumentos(argv):
     args = p.parse_args(argv)
     if args.db_pacientes and args.oncologo_id is None:
         p.error("--db-pacientes requiere --oncologo-id.")
+    if args.indice and (args.db_pacientes is None or args.pacientes):
+        p.error("--indice requiere --db-pacientes y --oncologo-id, y no se combina con --pacientes.")
+    if args.por_tipo is None and not args.indice:
+        args.por_tipo = 25
     return args
 
 
@@ -58,6 +74,20 @@ def main(argv=None) -> int:
 
         conn_pac = db_pacientes.conectar(args.db_pacientes)
         db_pacientes.inicializar(conn_pac)
+
+    if args.indice:
+        from .indice import importar_indice
+
+        tipos = None if [t.lower() for t in args.tipos] == ["todos"] else args.tipos
+        print(f"Cargando el índice de {args.estudio} ({', '.join(tipos) if tipos else 'todos los tipos'})...", flush=True)
+        inicio = time.monotonic()
+        r = importar_indice(conn, conn_pac, cliente, args.estudio, args.oncologo_id, args.fecha_referencia, tipos, args.por_tipo)
+        print(
+            f"Listo en {time.monotonic() - inicio:.0f} s: {r.pacientes} pacientes en el índice "
+            f"({r.nuevos_en_expediente} nuevos en el expediente, {r.nuevos_en_modulo_pacientes} en el módulo de pacientes). "
+            f"Fecha de referencia: {r.fecha_referencia}."
+        )
+        return 0
 
     def al_importar(i, total, r):
         s = r.sincronizacion

@@ -23,13 +23,13 @@ URL_PUBLICA = "https://www.cbioportal.org/api"
 _PAGINA_EVENTOS = 100_000
 
 
-def _sesion_con_reintentos():
+def _sesion_con_reintentos(total: int = 4):
     import requests
     from requests.adapters import HTTPAdapter
     from urllib3.util.retry import Retry
 
     reintentos = Retry(
-        total=4,
+        total=total,
         backoff_factor=1.0,
         status_forcelist=(429, 500, 502, 503, 504),
         allowed_methods=frozenset({"GET", "POST"}),
@@ -42,7 +42,8 @@ def _sesion_con_reintentos():
 
 class ClienteCBioPortal:
     """``token``: solo para instancias privadas de cBioPortal (portal
-    institucional); la pública no lo necesita."""
+    institucional); la pública no lo necesita. ``reintentos``: menos cuando
+    hay un médico esperando la respuesta (ver ``indice.CargadorDetalle``)."""
 
     def __init__(
         self,
@@ -50,10 +51,11 @@ class ClienteCBioPortal:
         session: Any = None,
         timeout: float = 60.0,
         token: Optional[str] = None,
+        reintentos: int = 4,
     ):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
-        self.session = session if session is not None else _sesion_con_reintentos()
+        self.session = session if session is not None else _sesion_con_reintentos(reintentos)
         self._cabeceras = {"Accept": "application/json"}
         if token:
             self._cabeceras["Authorization"] = f"Bearer {token}"
@@ -102,6 +104,22 @@ class ClienteCBioPortal:
         return [
             {"paciente": f["patientId"], "muestra": f["sampleId"], "tipo_cancer": f["value"]} for f in filas
         ]
+
+    def datos_clinicos_estudio(
+        self, estudio: str, tipo: str, atributos: Iterable[str]
+    ) -> Dict[str, Dict[str, str]]:
+        """Atributos clínicos de TODOS los pacientes (``tipo="PATIENT"``) o
+        muestras (``tipo="SAMPLE"``) del estudio, en una sola llamada:
+        ``{id: {atributo: valor}}``. Las muestras incluyen ``PATIENT_ID``."""
+        filas = self._post(
+            f"/studies/{estudio}/clinical-data/fetch", {"attributeIds": sorted(atributos)}, clinicalDataType=tipo
+        )
+        datos: Dict[str, Dict[str, str]] = {}
+        for f in filas:
+            clave = f["patientId"] if tipo == "PATIENT" else f["sampleId"]
+            fila = datos.setdefault(clave, {"PATIENT_ID": f["patientId"]} if tipo == "SAMPLE" else {})
+            fila[f["clinicalAttributeId"]] = f["value"]
+        return datos
 
     def perfiles_moleculares(self, estudio: str) -> Dict[str, str]:
         """``{tipo de alteración: id del perfil}``, p. ej.

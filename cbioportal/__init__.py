@@ -18,6 +18,8 @@ Componentes:
       por estudio.
     - ``modulo_pacientes``: volcado en la base de ``patients`` para que
       los pacientes aparezcan en la búsqueda (PAC-02) y el 360 (PAC-03).
+    - ``indice``: índice de un estudio completo (datos básicos, en
+      segundos) y carga del detalle de cada paciente al abrirlo.
 
 Uso: ``python -m cbioportal --help``. Documentación: ``docs/cbioportal.md``.
 """
@@ -31,11 +33,15 @@ from .importador import (
     importar_paciente,
     seleccionar_pacientes,
 )
+from .indice import CargadorDetalle, ResultadoIndice, importar_indice
 from .mapeo import FORMATO_CBIOPORTAL, identificacion_cbioportal
 from .modulo_pacientes import volcar_en_modulo_pacientes
 
 __all__ = [
+    "CargadorDetalle",
     "ClienteCBioPortal",
+    "ResultadoIndice",
+    "importar_indice",
     "ESTUDIO_POR_DEFECTO",
     "FORMATO_CBIOPORTAL",
     "FuenteCBioPortal",

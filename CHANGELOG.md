@@ -380,4 +380,11 @@
   con su propio traductor (`traducir`).
 - `patients.models.TipoIdentificacion.EXTERNO` para pacientes importados. El
   formulario de registro lo rechaza.
+- Modo índice (`cbioportal/indice.py`, `python -m cbioportal --indice`):
+  todos los pacientes de un estudio con datos básicos en segundos (13.159 de
+  mama y pulmón en 4 s) y detalle bajo demanda al abrir el paciente en la
+  API (`GET /pacientes/{id}` y `/resumen-360`), activado con
+  `COPILOTO_EXPEDIENTE_DB`. Si cBioPortal no responde, el 360 muestra los
+  datos básicos y el fallo queda registrado.
+- `historia_clinica.integracion_externa.registrar_fallo_sincronizacion`.
 - Pruebas en `tests/cbioportal/` (sin red).

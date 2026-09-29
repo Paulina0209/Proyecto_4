@@ -8,7 +8,60 @@ leen DX, EST, TX, IA y HC-05. Si se indica, también los crea en la base del
 módulo de pacientes, para que aparezcan en la búsqueda (PAC-02) y en el
 dashboard 360 (PAC-03).
 
-## Cómo cargar la base
+## Dos formas de cargar
+
+| | Modo índice (recomendado para la demo) | Modo completo |
+|---|---|---|
+| Qué trae | Todos los pacientes del estudio con datos básicos (sexo, edad, diagnóstico). El detalle se trae al abrir cada paciente | Todo el detalle de cada paciente, de una vez |
+| Volumen | 13.159 pacientes de mama y pulmón en **4 s** (medido) | ~5 s por paciente: sirve para decenas o cientos |
+| Búsqueda (PAC-02) | Sobre todos los pacientes: 56–114 ms con 13.159 (medido) | Sobre los importados |
+| Abrir un paciente | 1ª vez ~5,5 s (trae el detalle); después, ~10 ms | Siempre local |
+| Sin internet | Buscar sí; abrir un paciente nuevo no (se muestran sus datos básicos) | Todo |
+
+Se pueden combinar: índice para todos y modo completo para precargar los
+pacientes que se van a mostrar en la demo (así se abren al instante).
+
+### Modo índice
+
+```bash
+# 1. Índice de todos los pacientes de mama y pulmón (o --tipos todos)
+python -m cbioportal --indice --db data/copiloto.db --fecha-referencia 2026-09-29 \
+    --db-pacientes patients/db/pacientes.db --oncologo-id 1
+
+# 2. (Opcional) precargar los pacientes de la demo
+python -m cbioportal --db data/copiloto.db --pacientes P-0000015 P-0002266 \
+    --db-pacientes patients/db/pacientes.db --oncologo-id 1
+
+# 3. Levantar la API con la carga bajo demanda activada
+COPILOTO_EXPEDIENTE_DB=data/copiloto.db uvicorn patients.api:app
+```
+
+Cómo funciona (`cbioportal/indice.py`):
+
+1. **Índice.** Dos llamadas masivas a la API (atributos de paciente y de
+   muestra de todo el estudio) y una inserción en lote en ambas bases. No
+   hace ninguna llamada por paciente.
+2. **Detalle bajo demanda.** `GET /pacientes/{id}` y `GET
+   /pacientes/{id}/resumen-360` llaman a `CargadorDetalle.asegurar_detalle`.
+   Si el paciente es del índice y todavía no tiene detalle, lo trae con el
+   importador de siempre (camino de HC-01) y completa su 360. Hay un candado
+   por paciente, así que dos pestañas abriendo al mismo paciente no lo
+   importan dos veces.
+3. **Si cBioPortal falla,** el 360 responde igual con los datos del índice,
+   el fallo queda en `sincronizaciones_externas` y se reintenta la próxima
+   vez que se abra. Al haber un médico esperando, se usa un timeout de 20 s
+   y un solo reintento.
+4. **Solo se carga el detalle de pacientes del propio oncólogo:** primero se
+   verifica el acceso y después se llama a la API.
+5. **La fecha de referencia del índice se guarda** en `indices_cbioportal`.
+   El detalle que se cargue días después usa la misma, así las fechas son
+   coherentes. Re-ejecutar el índice solo agrega pacientes que falten y
+   conserva la fecha original.
+
+Sin la variable `COPILOTO_EXPEDIENTE_DB`, la API funciona exactamente como
+antes.
+
+### Modo completo
 
 ```bash
 # 25 pacientes de mama y 25 de pulmón no microcítico de MSK-CHORD
@@ -25,7 +78,8 @@ python -m cbioportal --db data/copiloto.db --pacientes P-0000015 P-0002266 \
 | `--db` | `data/copiloto.db` | Expediente clínico (esquema de `historia_clinica`). |
 | `--estudio` | `msk_chord_2024` | Cualquier estudio público de cBioPortal. |
 | `--pacientes` | — | Ids del estudio. Sin esta opción, se eligen por tipo de cáncer. |
-| `--tipos` / `--por-tipo` | mama y NSCLC / 25 | Selección reproducible: los primeros N por id. |
+| `--indice` | — | Modo índice (requiere `--db-pacientes` y `--oncologo-id`). |
+| `--tipos` / `--por-tipo` | mama y NSCLC / 25 (sin tope en modo índice) | Selección reproducible: los primeros N por id. En modo índice, `--tipos todos` trae el estudio completo. |
 | `--fecha-referencia` | hoy | Fecha en la que cae el último evento de cada paciente (ver *Fechas*). |
 | `--db-pacientes` + `--oncologo-id` | — | Crea también los pacientes en `patients/db`. |
 | `--url` | API pública | Instancia institucional de cBioPortal; el token va en `CBIOPORTAL_TOKEN`. |
@@ -141,10 +195,17 @@ El expediente de `historia_clinica` sí se actualiza en cada importación.
   importador llena ambas, pero unificarlas es un trabajo aparte.
 - Son datos de investigación de MSK: sirven para desarrollar y demostrar,
   no para atender pacientes.
+- En modo índice, un paciente sin detalle todavía no tiene `cancer_type`
+  en el expediente: HC-05 lo reporta como no evaluable hasta que se abre.
+- La primera apertura (~5,5 s) hace unas 8 llamadas en serie. Se podría
+  bajar haciéndolas en paralelo.
+- Todos los pacientes del índice quedan a cargo de un solo oncólogo
+  (`--oncologo-id`).
 
 ## Pruebas
 
 `tests/cbioportal/` no usa la red: un cliente falso responde con la misma
 forma que la API real. Hay pruebas del cliente, del mapeo (cada regla
 fail-closed), de la importación (idempotencia, fallos de red, HC-05 sobre
-pacientes importados) y del volcado a PAC-02/03.
+pacientes importados), del volcado a PAC-02/03, y del índice con carga
+bajo demanda, incluidas pruebas por la API HTTP (`test_indice.py`).

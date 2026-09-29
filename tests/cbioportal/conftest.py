@@ -125,6 +125,14 @@ class ClienteFalso:
             for p, datos in self.pacientes.items() for m, d in datos["muestras"].items()
         ]
 
+    def datos_clinicos_estudio(self, estudio, tipo, atributos):
+        if tipo == "PATIENT":
+            return {p: {k: v for k, v in d["datos_paciente"].items() if k in atributos} for p, d in self.pacientes.items()}
+        return {
+            m: dict({k: v for k, v in datos.items() if k in atributos}, PATIENT_ID=p)
+            for p, d in self.pacientes.items() for m, datos in d["muestras"].items()
+        }
+
     def perfiles_moleculares(self, estudio):
         return {"MUTATION_EXTENDED": f"{estudio}_mutations", "STRUCTURAL_VARIANT": f"{estudio}_structural_variants"}
 

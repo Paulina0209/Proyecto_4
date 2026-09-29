@@ -204,6 +204,18 @@ def importar_historia(
     return _importar(conn, paciente_id, fuente.nombre, fuente.formato, contenido, fuente.traducir, ahora)
 
 
+def registrar_fallo_sincronizacion(
+    conn: sqlite3.Connection,
+    paciente_id: int,
+    fuente: FuenteHistoriaExterna,
+    error: Exception,
+    ahora: Optional[datetime] = None,
+) -> ResultadoSincronizacion:
+    """Registra que traer la historia de ``fuente`` falló (AC3), para quien
+    la pidió por su cuenta en vez de usar ``sincronizar_paciente``."""
+    return _registrar_fallo(conn, paciente_id, fuente.nombre, fuente.formato, _describir(error), ahora)
+
+
 def importar_bundle_fhir(
     conn: sqlite3.Connection,
     paciente_id: int,

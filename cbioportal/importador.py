@@ -21,7 +21,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence
 from historia_clinica.integracion_externa import (
     ResultadoSincronizacion,
     importar_historia,
-    sincronizar_paciente,
+    registrar_fallo_sincronizacion,
 )
 
 from .cliente import ClienteCBioPortal
@@ -140,8 +140,9 @@ def importar_paciente(
         if existente is None:
             mensaje = f"No se pudo traer {identificacion} de cBioPortal ({type(exc).__name__}: {exc}). No se creó el paciente."
             return ResultadoImportacion(identificacion, None, False, ResultadoSincronizacion(False, None, mensaje=mensaje))
-        # Reintenta por el camino de HC-01, que registra el fallo si persiste.
-        return ResultadoImportacion(identificacion, existente, False, sincronizar_paciente(conn, existente, fuente))
+        return ResultadoImportacion(
+            identificacion, existente, False, registrar_fallo_sincronizacion(conn, existente, fuente, exc)
+        )
 
     ficha = ficha_paciente(contenido, fuente.fecha_referencia)
     paciente_id, nuevo = _guardar_paciente(conn, ficha)
