@@ -82,3 +82,13 @@ CREATE TABLE IF NOT EXISTS estudios (
     fecha TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_estudios_paciente ON estudios(paciente_id);
+
+-- Origen de los pacientes importados desde cBioPortal (ver cbioportal.py):
+-- evita importarlos dos veces y permite rastrear el dato hasta la fuente.
+CREATE TABLE IF NOT EXISTS pacientes_cbioportal (
+    paciente_id INTEGER PRIMARY KEY REFERENCES pacientes(id),
+    estudio_id TEXT NOT NULL,          -- p. ej. msk_chord_2024
+    paciente_externo_id TEXT NOT NULL, -- patientId en cBioPortal
+    fecha_importacion TEXT NOT NULL,
+    UNIQUE (estudio_id, paciente_externo_id)
+);

@@ -11,6 +11,8 @@ Compartido:
     api.py            API HTTP (uvicorn patients.api:app)
     schemas.py        Esquemas de entrada/salida de la API
     demo.py           Cliente de consola (python -m patients.demo)
+    cbioportal.py     Importa pacientes reales desidentificados de cBioPortal
+                      a la misma base (python -m patients.cbioportal)
 
 Usados desde fuera del módulo:
     medicacion_actual.py    tx_clinica (chequeo de interacciones)

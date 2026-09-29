@@ -4,8 +4,10 @@ resumen 360 del paciente.
     uvicorn patients.api:app          # en una terminal
     python -m patients.demo           # en otra
 
-La API carga datos de prueba al arrancar si no hay pacientes, así que
-todo se puede probar sin registrar nada.
+Todo sale de la base de pacientes a través de la API: los datos de prueba
+(que la API carga al arrancar si la base está vacía) o los pacientes
+importados de cBioPortal (python -m patients.cbioportal). Las sugerencias
+del resumen 360 se calculan con los pacientes que haya, no están fijas.
 """
 from __future__ import annotations
 
@@ -48,6 +50,10 @@ MAX_ACCESO_RAPIDO = 3
 
 # El máximo que acepta la API por página.
 TAMANO_MAXIMO_PAGINA = 100
+
+# Tope de resúmenes 360 que se consultan para elegir las sugerencias (una
+# petición por paciente): basta para encontrar ejemplos sin demorar la demo.
+MAX_PACIENTES_SUGERENCIAS = 40
 
 
 # ---------------------------------------------------------------------------
@@ -398,12 +404,49 @@ def _abrir_y_mostrar_360(paciente_id: int) -> bool:
     return True
 
 
+def _pedir_silencioso(ruta: str):
+    """GET como ONCOLOGO_DEMO; el JSON o None, sin mensajes (para datos
+    de apoyo del menú, no para la acción que pidió el usuario)."""
+    try:
+        respuesta = requests.get(
+            f"{BASE_URL}{ruta}", params={"oncologo_id": ONCOLOGO_DEMO}, timeout=10
+        )
+    except requests.RequestException:
+        return None
+    return respuesta.json() if respuesta.status_code == 200 else None
+
+
+def _sugerencias_360() -> list[str]:
+    """Pacientes de la base que sirven de ejemplo: el expediente completo
+    con más información y uno con información faltante."""
+    completo, incompleto, mas_datos = None, None, -1
+    for p in (_pedir_silencioso("/pacientes") or [])[:MAX_PACIENTES_SUGERENCIAS]:
+        resumen = _pedir_silencioso(f"/pacientes/{p['id']}/resumen-360")
+        if resumen is None:
+            continue
+        if resumen["informacion_incompleta"]:
+            incompleto = incompleto or resumen
+            continue
+        datos = sum(len(resumen[c]) for c in ("labs_recientes", "imagenes_recientes", "notas_recientes"))
+        if datos > mas_datos:
+            completo, mas_datos = resumen, datos
+
+    sugerencias = []
+    if completo:
+        sugerencias.append(f"{completo['paciente_id']} = expediente completo ({completo['nombre']})")
+    if incompleto:
+        faltan = ", ".join(CAMPOS_360_LEGIBLES.get(c, c) for c in incompleto["campos_faltantes"])
+        sugerencias.append(f"{incompleto['paciente_id']} = falta {faltan} ({incompleto['nombre']})")
+    return sugerencias
+
+
 def flujo_resumen_360() -> None:
     print("\n=== Resumen 360 del paciente ===")
-    print(
-        "Datos de prueba: 1 = historia completa · 2 = sin diagnóstico, estadio ni "
-        "tratamiento · 7 = sin estadio"
-    )
+    sugerencias = _sugerencias_360()
+    if sugerencias:
+        print("Sugeridos en la base:")
+        for sugerencia in sugerencias:
+            print(f"  {sugerencia}")
     print("(También puede abrirse desde la lista de pacientes o los resultados de búsqueda.)")
     _ofrecer_abrir_360()
 
@@ -420,6 +463,21 @@ OPCIONES_MENU = {
 }
 
 
+def _describir_base() -> str:
+    """Cuántos pacientes ve el oncólogo y de dónde vienen."""
+    pacientes = _pedir_silencioso("/pacientes")
+    if pacientes is None:
+        return "Sin conexión con la API."
+    if not pacientes:
+        return "Base sin pacientes."
+    importados = sum(p["tipo_identificacion"] == "cbioportal" for p in pacientes)
+    if importados == len(pacientes):
+        return f"Base: {len(pacientes)} paciente(s) importados de cBioPortal."
+    if importados:
+        return f"Base: {len(pacientes)} paciente(s), {importados} importados de cBioPortal."
+    return f"Base: {len(pacientes)} paciente(s) registrados localmente."
+
+
 def main() -> None:
     try:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -430,7 +488,8 @@ def main() -> None:
 
     while True:
         print("\n=== Copiloto oncológico · Pacientes (demo) ===")
-        print(f"API: {BASE_URL} · Oncólogo autenticado (demo): {ONCOLOGO_DEMO}\n")
+        print(f"API: {BASE_URL} · Oncólogo autenticado (demo): {ONCOLOGO_DEMO}")
+        print(f"{_describir_base()}\n")
         for clave, (etiqueta, _) in OPCIONES_MENU.items():
             print(f"  {clave}. {etiqueta}")
         print("  0. Salir")

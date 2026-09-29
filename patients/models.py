@@ -31,6 +31,8 @@ class TipoIdentificacion(str, Enum):
     PASAPORTE = "pasaporte"
     REGISTRO_CIVIL = "registro_civil"
     TEMPORAL = "temporal"
+    # Solo lo asigna la importación desde cBioPortal ("<estudio>:<paciente>").
+    CBIOPORTAL = "cbioportal"
 
 
 @dataclass

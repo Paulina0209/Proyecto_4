@@ -111,7 +111,12 @@ def validar_formato_y_longitud(paciente: Paciente) -> list[ErrorValidacion]:
 
     # --- numero_identificacion (según tipo) ---
     numero = (paciente.numero_identificacion or "").strip()
-    if numero and paciente.tipo_identificacion is not None:
+    if paciente.tipo_identificacion == TipoIdentificacion.CBIOPORTAL:
+        errores.append(ErrorValidacion(
+            "tipo_identificacion",
+            "El tipo cbioportal solo lo asigna la importación desde cBioPortal.",
+        ))
+    elif numero and paciente.tipo_identificacion is not None:
         if paciente.tipo_identificacion == TipoIdentificacion.TEMPORAL:
             if not numero.startswith("TEMP-"):
                 errores.append(ErrorValidacion(
