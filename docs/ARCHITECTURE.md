@@ -199,6 +199,15 @@ el expediente clínico completo directamente desde
 `historia_clinica_mock` — al modelo genérico, cada una en su propia
 función. Ver `docs/documentos_clinicos_exportacion.md`.
 
+### configuracion
+
+**CFG-01 — guías clínicas institucionales por defecto** (NCCN, ESMO y/o
+protocolo interno, en orden de prioridad). La configuración está versionada
+(solo inserción), restringida al rol `administrador_clinico` y auditada.
+Filtra EV-01 (`EvidenceSearchService.search(organizations=...)`) y expone
+`modulos_habilitados()` para los demás consumidores. Ver
+`docs/configuracion_guias.md`.
+
 ### privacidad
 
 **NFR-06 — cumplimiento de datos personales y gestión de derechos.**

@@ -12,6 +12,8 @@ class Rol(str, Enum):
     ENFERMERIA = "enfermeria"
     ADMINISTRATIVO = "administrativo"
     AUDITOR = "auditor"
+    #: CFG-01: define qué guías clínicas usa la institución por defecto.
+    ADMINISTRADOR_CLINICO = "administrador_clinico"
 
 
 @dataclass(frozen=True)

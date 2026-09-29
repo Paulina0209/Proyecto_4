@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Optional, Sequence
 
 from historia_clinica_mock.repository import Paciente
 
@@ -53,6 +53,13 @@ def _expand_clinical_query(text: str) -> str:
             additions.extend(expansions)
     return text + ' ' + ' '.join(additions)
 
+def organization_matches(organization: str, selected: str) -> bool:
+    """True si ``organization`` es ``selected`` o una guía conjunta que la
+    encabeza (p. ej. "ESMO–EURACAN" pertenece a "ESMO")."""
+    org, sel = organization.strip().casefold(), selected.strip().casefold()
+    return org == sel or (org.startswith(sel) and not org[len(sel)].isalnum())
+
+
 def _document_text(doc: EvidenceDocument) -> str:
     scope = ' '.join(f'{k} {v}' for k, v in doc.clinical_scope.items())
     return ' '.join([doc.module_id, doc.organization, doc.title, scope, doc.doi or ''])
@@ -65,13 +72,34 @@ class EvidenceSearchService:
         self.root = Path(root)
         self.documents = load_guideline_catalog(self.root)
 
-    def search(self, query: str, *, limit: int = 5) -> list[EvidenceSearchResult]:
+    def search(
+        self,
+        query: str,
+        *,
+        limit: int = 5,
+        organizations: Optional[Sequence[str]] = None,
+    ) -> list[EvidenceSearchResult]:
+        """``organizations``: si se indica (CFG-01, guías institucionales por
+        defecto), solo se buscan guías de esas organizaciones y, a igual
+        puntaje, gana la que la institución puso primero. ``None`` busca en
+        todo el catálogo, como antes."""
         query_tokens = _tokens(_expand_clinical_query(query))
         if not query_tokens:
             return []
 
+        documents = self.documents
+        priority = {}
+        if organizations is not None:
+            documents = [
+                d for d in documents if any(organization_matches(d.organization, o) for o in organizations)
+            ]
+            priority = {
+                d.module_id: min(i for i, o in enumerate(organizations) if organization_matches(d.organization, o))
+                for d in documents
+            }
+
         results: list[EvidenceSearchResult] = []
-        for doc in self.documents:
+        for doc in documents:
             doc_norm = _normalize(_document_text(doc))
             matched = []
             score = 0
@@ -88,6 +116,9 @@ class EvidenceSearchService:
             key=lambda r: (r.score, r.document.publication_year or 0, r.document.module_id),
             reverse=True,
         )
+        if priority:
+            # Orden estable: a igual puntaje, primero la organización preferida.
+            results.sort(key=lambda r: (-r.score, priority[r.document.module_id]))
         if not results:
             return []
 
@@ -104,6 +135,7 @@ class EvidenceSearchService:
         clinical_terms: Iterable[str] = (),
         *,
         limit: int = 5,
+        organizations: Optional[Sequence[str]] = None,
     ) -> list[EvidenceSearchResult]:
         query_parts = [patient.diagnostico_principal or '', patient.estadio or '', *clinical_terms]
-        return self.search(' '.join(query_parts), limit=limit)
+        return self.search(' '.join(query_parts), limit=limit, organizations=organizations)
