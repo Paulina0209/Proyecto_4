@@ -18,7 +18,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-MODELO_POR_DEFECTO = "gpt-5.4-mini"
+MODELO_POR_DEFECTO = "gpt-6-luna"
 TIMEOUT_POR_DEFECTO = 120.0
 
 _RAIZ_REPO = Path(__file__).resolve().parent.parent

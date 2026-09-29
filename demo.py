@@ -453,7 +453,7 @@ def _agente_tratamiento() -> None:
         respuesta = enviar_mensaje(agente, pregunta, f"demo-unificada-{datetime.now():%H%M%S}", 1)
     herramientas = [tc["name"] for m in respuesta.mensajes for tc in (getattr(m, "tool_calls", None) or [])]
     print(f"  (herramientas usadas: {', '.join(dict.fromkeys(herramientas)) or 'ninguna'})")
-    print(f"  Agente > {respuesta.mensajes[-1].content}")
+    print(f"  Agente > {respuesta.mensajes[-1].text}")
     nota("Si el agente intenta registrar la decisión (TX-04), la ejecución se pausa hasta que el médico apruebe.")
 
 
