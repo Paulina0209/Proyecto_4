@@ -1,0 +1,32 @@
+# Núcleo: necesario para ejecutar la suite de tests (pytest) y los módulos
+# clínicos principales.
+pytest>=9.1
+PyYAML>=6.0
+requests>=2.31
+
+# tests/patients/test_api.py (fastapi.testclient) y tests/tx_clinica/*
+# (tx_clinica/tools/*.py, tx_clinica/middleware/human_in_the_loop.py) ya
+# importan estos paquetes de forma directa, no perezosa -- sin ellos
+# `pytest` falla en la fase de colección, no solo al correr esos tests.
+fastapi>=0.115
+httpx>=0.27
+langchain>=0.3
+langchain-core>=0.3
+langchain-ollama>=0.2
+langgraph>=0.2
+
+# documentos_clinicos/pdf_export.py (DOC-02) y tx_clinica/observability.py
+# importan estos paquetes de forma directa: sin ellos falla la colección
+# de tests/documentos_clinicos y tests/tx_clinica.
+reportlab>=4.0
+langfuse>=3.0
+
+# --- Opcionales ---------------------------------------------------------------
+# Solo se necesitan para los agentes LLM / scraper de actualización de guías.
+# No los usan los tests. Instalar bajo demanda:
+#
+#   anthropic>=0.40          # ia_clinica/notes/llm_client.py, guidelineUpdate/agent/graph.py (import perezoso)
+#   pdfplumber>=0.11         # guidelineUpdate/agent/rule_agent.py (import perezoso)
+#   python-pptx>=0.6         # guidelineUpdate/agent/pptx_text.py
+#   Pillow>=10.0             # guidelineUpdate/agent/pptx_text.py
+#   playwright>=1.40         # guidelineUpdate/scraper/download_content.py (import perezoso)

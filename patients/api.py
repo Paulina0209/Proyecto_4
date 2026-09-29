@@ -20,6 +20,10 @@ from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from auditoria.models import TipoAccion
+from auditoria.registro_acceso import inicializar_schema as inicializar_schema_auditoria
+from auditoria.registro_acceso import registrar_acceso
+
 from . import db
 from .busqueda import (
     TAMANO_PAGINA_DEFECTO,
@@ -79,6 +83,7 @@ async def _lifespan(app: FastAPI):
     conn = db.conectar(DB_PATH)
     try:
         db.inicializar(conn)
+        inicializar_schema_auditoria(conn)
         if SEMBRAR_DATOS_PRUEBA:
             db.sembrar_datos_prueba(conn)
     finally:
@@ -250,8 +255,22 @@ def buscar(
     responses=_RESPUESTA_404,
     summary="Leer un paciente",
 )
-def leer_paciente(paciente_id: int, oncologo_id: int = OncologoId, conn: sqlite3.Connection = Depends(get_conn)):
-    return _a_schema(_paciente_del_oncologo_o_404(conn, paciente_id, oncologo_id))
+def leer_paciente(
+    paciente_id: int,
+    oncologo_id: int = OncologoId,
+    usuario_id: Optional[int] = Query(
+        default=None,
+        description=(
+            "ID de quien consulta el expediente. Si se provee, el acceso "
+            "queda registrado en el log de auditoría (AUD-01)."
+        ),
+    ),
+    conn: sqlite3.Connection = Depends(get_conn),
+):
+    paciente = _paciente_del_oncologo_o_404(conn, paciente_id, oncologo_id)
+    if usuario_id is not None:
+        registrar_acceso(conn, usuario_id, TipoAccion.VER, paciente_id=paciente_id)
+    return _a_schema(paciente)
 
 
 @app.patch(

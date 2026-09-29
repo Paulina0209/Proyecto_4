@@ -267,3 +267,76 @@
   no existe en este repositorio (no hay carpeta `src/cdss` ni `core/`).
   Esas pruebas ya fallaban en `main` antes de esta rama por este motivo;
   queda fuera del alcance de IA-02 resolverlo.
+
+## [Sin versionar] — SEC-01, AUD-01 y AUD-02
+
+### Añadido
+
+- Nuevo componente `seguridad/` que implementa **SEC-01 — Autenticación y
+  control de acceso por rol**: `seguridad/autenticacion.py` (alta de
+  usuarios y login con hash PBKDF2-HMAC-SHA256 con sal por usuario, sin
+  dependencias nuevas, y bloqueo temporal de la cuenta tras 5 intentos
+  fallidos consecutivos) y `seguridad/autorizacion.py` (modelo de permisos
+  por rol — oncólogo, enfermería, administrativo, auditor — con
+  `verificar_permiso`; una acción sin reglas explícitas se deniega a todos
+  los roles por diseño). Conectado de forma real y retrocompatible a
+  **TX-04**: `clinical_decision.registro.registrar_decision_tratamiento`
+  ahora acepta un `usuario: Optional[Usuario] = None`; si se provee, exige
+  el permiso de confirmar tratamiento antes de registrar accept/modify/
+  reject (si se omite, el comportamiento es idéntico al de antes de esta
+  historia). Pruebas en `tests/seguridad/` y
+  `tests/clinical_decision/test_registro_control_de_acceso.py`. Demo en
+  `seguridad/demo.py`. Ver `docs/seguridad.md`.
+- Nuevo componente `auditoria/` que implementa **AUD-01 — Registro de
+  auditoría de accesos y acciones**: `auditoria/registro_acceso.py`, tabla
+  `eventos_acceso` de solo-inserción (mismo patrón que
+  `confirmaciones_estadificacion`/`juicios_clinicos_dx`/
+  `decisiones_tratamiento`) sin ninguna función de UPDATE/DELETE expuesta.
+  Conectado de forma real y retrocompatible a la API de `patients/`: `GET
+  /pacientes/{id}` acepta un `usuario_id` opcional que, si se provee dejar
+  el acceso registrado. Pruebas en `tests/auditoria/test_registro_acceso.py`
+  y dos pruebas nuevas en `tests/patients/test_api.py`. Ver `docs/auditoria.md`.
+- `auditoria/trazabilidad_ia.py`: implementa **AUD-02 — Trazabilidad de
+  recomendaciones de IA** como una consulta unificada de solo lectura
+  (`obtener_trazabilidad_ia_paciente`) sobre los tres registros de
+  recomendación+decisión que ya existían por separado y sin punto de
+  consulta común: `dx_clinica.juicio_clinico` (DX-03),
+  `estadificacion.confirmacion` (EST-02) y `clinical_decision.registro`
+  (TX-04) — este último sin ninguna función de lectura hasta ahora, se le
+  agregaron `obtener_decision_por_id`, `obtener_historial_decisiones`,
+  `obtener_decision_vigente` y `crear_conexion`. No persiste nada nuevo.
+  Pruebas en `tests/auditoria/test_trazabilidad_ia.py`. Demo conjunta con
+  AUD-01 en `auditoria/demo.py`. Ver `docs/auditoria.md`.
+
+## [Sin versionar] — HC-01, HC-05 y NFR-06
+
+### Añadido
+
+- Nuevo componente `historia_clinica/` sobre la misma base de datos de
+  `historia_clinica_mock`:
+  - **HC-01 — Integración de historia clínica externa**
+    (`integracion_externa.py`): importación desde FHIR R4 (`FuenteFHIR`,
+    `importar_bundle_fhir`) y HL7 v2 ORU^R01 (`importar_mensaje_hl7`) hacia
+    `laboratorios`, `imagenologia` y la nueva tabla `antecedentes_externos`.
+    Si no hay integración, `cargar_historia_pdf` asocia el PDF vía DOC-01.
+    Verifica la identidad del paciente, importa todo o nada, es idempotente
+    (`registros_importados`) y registra los fallos en
+    `sincronizaciones_externas` sin bloquear el expediente. Ver
+    `docs/historia_clinica_integracion.md`.
+  - **HC-05 — Detección de información faltante**
+    (`informacion_faltante.py`): checklist configurable por tipo de cáncer y
+    fase (`checklists_informacion.yaml`) con resultado `COMPLETA`,
+    `INCOMPLETA` (cada ítem faltante o no concluyente, con la fila de
+    origen) o `NO_EVALUABLE`. Nunca asume completitud. Ver
+    `docs/historia_clinica_informacion_faltante.md`.
+- Nuevo componente `privacidad/` — **NFR-06 — Cumplimiento de datos
+  personales y gestión de derechos**: políticas versionadas y configurables
+  por jurisdicción, sin normas escritas en el código; autorizaciones con
+  evidencia, estado y finalidad; solicitudes de derechos del titular con
+  plazo, ciclo de vida y `recopilar_informacion_titular` (exportable a
+  JSON). Tablas de solo inserción con triggers. Ver `docs/privacidad.md`.
+- `auditoria.models.TipoAccion`: nuevas acciones
+  `configurar_politica_datos`, `registrar_autorizacion` y
+  `gestionar_derechos_titular`. Cada operación de NFR-06 deja su evento en la
+  misma transacción que el registro.
+- Pruebas en `tests/historia_clinica/` y `tests/privacidad/`.
