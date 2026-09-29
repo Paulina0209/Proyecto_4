@@ -124,6 +124,24 @@ y `dx_clinica` de forma end-to-end. No implementa HC-01 a HC-06
 prueba/demo. Ver `docs/historia_clinica_mock.md`.
 Se extendió con dos tablas para TX-01: datos_clinicos_estructurados (variable/valor genérico, para el vocabulario categórico que cada módulo de guidelines/ necesita — estadio TNM, biomarcadores, ECOG, etc., que no existía en ninguna tabla de texto libre previa) y comorbilidades (registro clínico de condiciones del paciente, con una columna separada tipo_contraindicacion_ici para el juicio explícito del oncólogo sobre si esa condición contraindica inmunoterapia).
 
+### historia_clinica
+
+Épica Historia Clínica, sobre la **misma** base de datos de
+`historia_clinica_mock` (`historia_clinica.db.crear_conexion` aplica ambos
+esquemas), así que lo que se integra aquí lo leen DX, EST, TX e IA sin
+adaptadores adicionales.
+
+- `integracion_externa.py` — **HC-01**: importa historia previa desde FHIR
+  R4 y HL7 v2 ORU^R01, o asocia un PDF no estructurado reutilizando DOC-01.
+  Verifica la identidad antes de importar, importa cada mensaje en una sola
+  transacción, es idempotente y registra los fallos en
+  `sincronizaciones_externas` sin bloquear el expediente. Ver
+  `docs/historia_clinica_integracion.md`.
+- `informacion_faltante.py` — **HC-05**: evalúa el expediente contra un
+  checklist configurable por tipo de cáncer y fase
+  (`checklists_informacion.yaml`). Nunca devuelve "completo" si no hay
+  checklist. Ver `docs/historia_clinica_informacion_faltante.md`.
+
 ### dx_clinica
 
 Contiene las capacidades de la épica Diagnóstico. Implementa **DX-02** —
@@ -180,6 +198,15 @@ las dos fuentes que permite la historia — el resumen de caso de IA-04 y
 el expediente clínico completo directamente desde
 `historia_clinica_mock` — al modelo genérico, cada una en su propia
 función. Ver `docs/documentos_clinicos_exportacion.md`.
+
+### privacidad
+
+**NFR-06 — cumplimiento de datos personales y gestión de derechos.**
+Políticas de tratamiento configurables por jurisdicción (la norma es un
+dato, no código), autorizaciones con evidencia y finalidad, solicitudes de
+derechos del titular con plazo y recopilación de su información, todo con
+traza en `auditoria.eventos_acceso` (AUD-01). Tablas de solo inserción.
+Ver `docs/privacidad.md`.
 
 ### tx_clinica
 Contiene las capacidades de la épica Tratamientos (TX-01, TX-02...). Implementa TX-01 — recomendación de tratamiento: evalúa cada régimen conocido de guidelines/<módulo>/regimens.yaml de forma hipotética contra las reglas del módulo aplicable, para generar sugerencias desde estadio/biomarcadores en vez de solo auditar concordancia (que es para lo que esas reglas fueron escritas originalmente). Implementa también TX-02 — nivel de evidencia por recomendación, leyendo evidence.native.* y source/module_version directamente de la regla y el módulo reales. No reescribe ninguna regla existente. 

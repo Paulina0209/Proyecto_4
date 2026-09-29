@@ -9,7 +9,9 @@ sobre cada expediente, para poder reconstruir quién hizo qué y cuándo.
 
 ### Qué implementa
 
-- `auditoria/models.py`: `TipoAccion` (ver/editar/exportar), `EventoAcceso`.
+- `auditoria/models.py`: `TipoAccion` (ver/editar/exportar, más las acciones de privacidad de
+  NFR-06: `configurar_politica_datos`, `registrar_autorizacion`,
+  `gestionar_derechos_titular`), `EventoAcceso`.
 - `auditoria/registro_acceso.py`: `registrar_acceso` (solo-inserción) y
   las consultas `obtener_eventos_de_paciente` / `obtener_eventos_de_usuario`.
 

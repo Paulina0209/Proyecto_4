@@ -307,3 +307,36 @@
   `obtener_decision_vigente` y `crear_conexion`. No persiste nada nuevo.
   Pruebas en `tests/auditoria/test_trazabilidad_ia.py`. Demo conjunta con
   AUD-01 en `auditoria/demo.py`. Ver `docs/auditoria.md`.
+
+## [Sin versionar] — HC-01, HC-05 y NFR-06
+
+### Añadido
+
+- Nuevo componente `historia_clinica/` sobre la misma base de datos de
+  `historia_clinica_mock`:
+  - **HC-01 — Integración de historia clínica externa**
+    (`integracion_externa.py`): importación desde FHIR R4 (`FuenteFHIR`,
+    `importar_bundle_fhir`) y HL7 v2 ORU^R01 (`importar_mensaje_hl7`) hacia
+    `laboratorios`, `imagenologia` y la nueva tabla `antecedentes_externos`.
+    Si no hay integración, `cargar_historia_pdf` asocia el PDF vía DOC-01.
+    Verifica la identidad del paciente, importa todo o nada, es idempotente
+    (`registros_importados`) y registra los fallos en
+    `sincronizaciones_externas` sin bloquear el expediente. Ver
+    `docs/historia_clinica_integracion.md`.
+  - **HC-05 — Detección de información faltante**
+    (`informacion_faltante.py`): checklist configurable por tipo de cáncer y
+    fase (`checklists_informacion.yaml`) con resultado `COMPLETA`,
+    `INCOMPLETA` (cada ítem faltante o no concluyente, con la fila de
+    origen) o `NO_EVALUABLE`. Nunca asume completitud. Ver
+    `docs/historia_clinica_informacion_faltante.md`.
+- Nuevo componente `privacidad/` — **NFR-06 — Cumplimiento de datos
+  personales y gestión de derechos**: políticas versionadas y configurables
+  por jurisdicción, sin normas escritas en el código; autorizaciones con
+  evidencia, estado y finalidad; solicitudes de derechos del titular con
+  plazo, ciclo de vida y `recopilar_informacion_titular` (exportable a
+  JSON). Tablas de solo inserción con triggers. Ver `docs/privacidad.md`.
+- `auditoria.models.TipoAccion`: nuevas acciones
+  `configurar_politica_datos`, `registrar_autorizacion` y
+  `gestionar_derechos_titular`. Cada operación de NFR-06 deja su evento en la
+  misma transacción que el registro.
+- Pruebas en `tests/historia_clinica/` y `tests/privacidad/`.

@@ -11,6 +11,10 @@ class TipoAccion(str, Enum):
     VER = "ver"
     EDITAR = "editar"
     EXPORTAR = "exportar"
+    # NFR-06: acciones sobre políticas, autorizaciones y derechos del titular.
+    CONFIGURAR_POLITICA_DATOS = "configurar_politica_datos"
+    REGISTRAR_AUTORIZACION = "registrar_autorizacion"
+    GESTIONAR_DERECHOS_TITULAR = "gestionar_derechos_titular"
 
 
 @dataclass(frozen=True)
