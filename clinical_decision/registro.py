@@ -17,8 +17,17 @@ from typing import Optional
 
 from tx_clinica.justificaciones import confirmar_tratamiento
 from clinical_decision.models import DecisionTratamiento, ResultadoRegistroDecision
+from seguridad.autorizacion import Accion, verificar_permiso
+from seguridad.models import Usuario
 
 _TIPOS_VALIDOS = {"accept", "modify", "reject"}
+
+
+def crear_conexion(ruta: str = ":memory:") -> sqlite3.Connection:
+    conn = sqlite3.connect(ruta)
+    conn.row_factory = sqlite3.Row
+    inicializar_schema(conn)
+    return conn
 
 
 def inicializar_schema(conn: sqlite3.Connection) -> None:
@@ -99,6 +108,7 @@ def registrar_decision_tratamiento(
     motivo_rechazo: Optional[str] = None,
     chequeo_interacciones=None,  # interacciones_clinica.models.ResultadoChequeoInteracciones
     textos_justificacion: Optional[dict[str, str]] = None,
+    usuario: Optional[Usuario] = None,
 ) -> ResultadoRegistroDecision:
     """
     regimenes_candidatos_ids: los regimen_id de TODOS los candidatos que
@@ -112,6 +122,13 @@ def registrar_decision_tratamiento(
         (el sugerido en "accept", el elegido en "modify") -- esta función
         no lo recalcula, así decision_clinica no depende de los
         detalles de cómo se resuelve un chequeo de interacciones.
+    usuario: si se provee, se exige (SEC-01) que su rol tenga permiso de
+        CONFIRMAR_TRATAMIENTO antes de registrar nada -- accept/modify/
+        reject quedan igualmente restringidos, porque las tres son la
+        forma en que TX-04 deja constancia oficial de la decisión clínica.
+        Si se omite (comportamiento por defecto), no se aplica ningún
+        control de acceso, para no romper llamadas existentes que todavía
+        no pasan un usuario autenticado.
     """
     ahora = datetime.now(timezone.utc).isoformat()
 
@@ -119,6 +136,11 @@ def registrar_decision_tratamiento(
         return ResultadoRegistroDecision(
             exito=False, motivo_rechazo=f"tipo_decision inválido: {tipo_decision!r}"
         )
+
+    if usuario is not None:
+        autorizacion = verificar_permiso(usuario, Accion.CONFIRMAR_TRATAMIENTO)
+        if not autorizacion.permitido:
+            return ResultadoRegistroDecision(exito=False, motivo_rechazo=autorizacion.motivo_rechazo)
 
     # C4: todo lo que sigue escribe en la base (la decisión y, si aplica,
     # sus justificaciones) dentro de UNA sola transacción -- o se
@@ -228,3 +250,51 @@ def registrar_decision_tratamiento(
     except Exception:
         conn.rollback()
         raise
+
+
+def _fila_a_decision(fila: sqlite3.Row) -> DecisionTratamiento:
+    return DecisionTratamiento(
+        id=fila["id"],
+        paciente_id=fila["paciente_id"],
+        oncologo_id=fila["oncologo_id"],
+        fecha=fila["fecha"],
+        tipo_decision=fila["tipo_decision"],
+        regimen_sugerido_id=fila["regimen_sugerido_id"],
+        regimen_final_id=fila["regimen_final_id"],
+        motivo_rechazo=fila["motivo_rechazo"],
+        recomendacion_ia_snapshot=json.loads(fila["recomendacion_ia_snapshot"]),
+        justificaciones_ids=json.loads(fila["justificaciones_ids"]),
+    )
+
+
+def obtener_decision_por_id(conn: sqlite3.Connection, decision_id: int) -> DecisionTratamiento:
+    fila = conn.execute(
+        "SELECT * FROM decisiones_tratamiento WHERE id = ?", (decision_id,)
+    ).fetchone()
+    if fila is None:
+        raise KeyError(f"No existe ninguna decisión de tratamiento con id={decision_id}.")
+    return _fila_a_decision(fila)
+
+
+def obtener_historial_decisiones(
+    conn: sqlite3.Connection, paciente_id: int
+) -> tuple[DecisionTratamiento, ...]:
+    """Todo el historial de decisiones de tratamiento del paciente, de la más
+    reciente a la más antigua -- insumo de lectura para AUD-02 (trazabilidad
+    de recomendaciones de IA), junto con el historial equivalente de DX-03
+    (``dx_clinica.juicio_clinico``) y EST-02 (``estadificacion.confirmacion``).
+    """
+    filas = conn.execute(
+        "SELECT * FROM decisiones_tratamiento WHERE paciente_id = ? ORDER BY id DESC",
+        (paciente_id,),
+    ).fetchall()
+    return tuple(_fila_a_decision(f) for f in filas)
+
+
+def obtener_decision_vigente(
+    conn: sqlite3.Connection, paciente_id: int
+) -> Optional[DecisionTratamiento]:
+    """La decisión de tratamiento más reciente del paciente, o ``None`` si
+    nunca se registró una."""
+    filas = obtener_historial_decisiones(conn, paciente_id)
+    return filas[0] if filas else None

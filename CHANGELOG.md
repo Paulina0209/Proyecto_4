@@ -267,3 +267,43 @@
   no existe en este repositorio (no hay carpeta `src/cdss` ni `core/`).
   Esas pruebas ya fallaban en `main` antes de esta rama por este motivo;
   queda fuera del alcance de IA-02 resolverlo.
+
+## [Sin versionar] — SEC-01, AUD-01 y AUD-02
+
+### Añadido
+
+- Nuevo componente `seguridad/` que implementa **SEC-01 — Autenticación y
+  control de acceso por rol**: `seguridad/autenticacion.py` (alta de
+  usuarios y login con hash PBKDF2-HMAC-SHA256 con sal por usuario, sin
+  dependencias nuevas, y bloqueo temporal de la cuenta tras 5 intentos
+  fallidos consecutivos) y `seguridad/autorizacion.py` (modelo de permisos
+  por rol — oncólogo, enfermería, administrativo, auditor — con
+  `verificar_permiso`; una acción sin reglas explícitas se deniega a todos
+  los roles por diseño). Conectado de forma real y retrocompatible a
+  **TX-04**: `clinical_decision.registro.registrar_decision_tratamiento`
+  ahora acepta un `usuario: Optional[Usuario] = None`; si se provee, exige
+  el permiso de confirmar tratamiento antes de registrar accept/modify/
+  reject (si se omite, el comportamiento es idéntico al de antes de esta
+  historia). Pruebas en `tests/seguridad/` y
+  `tests/clinical_decision/test_registro_control_de_acceso.py`. Demo en
+  `seguridad/demo.py`. Ver `docs/seguridad.md`.
+- Nuevo componente `auditoria/` que implementa **AUD-01 — Registro de
+  auditoría de accesos y acciones**: `auditoria/registro_acceso.py`, tabla
+  `eventos_acceso` de solo-inserción (mismo patrón que
+  `confirmaciones_estadificacion`/`juicios_clinicos_dx`/
+  `decisiones_tratamiento`) sin ninguna función de UPDATE/DELETE expuesta.
+  Conectado de forma real y retrocompatible a la API de `patients/`: `GET
+  /pacientes/{id}` acepta un `usuario_id` opcional que, si se provee dejar
+  el acceso registrado. Pruebas en `tests/auditoria/test_registro_acceso.py`
+  y dos pruebas nuevas en `tests/patients/test_api.py`. Ver `docs/auditoria.md`.
+- `auditoria/trazabilidad_ia.py`: implementa **AUD-02 — Trazabilidad de
+  recomendaciones de IA** como una consulta unificada de solo lectura
+  (`obtener_trazabilidad_ia_paciente`) sobre los tres registros de
+  recomendación+decisión que ya existían por separado y sin punto de
+  consulta común: `dx_clinica.juicio_clinico` (DX-03),
+  `estadificacion.confirmacion` (EST-02) y `clinical_decision.registro`
+  (TX-04) — este último sin ninguna función de lectura hasta ahora, se le
+  agregaron `obtener_decision_por_id`, `obtener_historial_decisiones`,
+  `obtener_decision_vigente` y `crear_conexion`. No persiste nada nuevo.
+  Pruebas en `tests/auditoria/test_trazabilidad_ia.py`. Demo conjunta con
+  AUD-01 en `auditoria/demo.py`. Ver `docs/auditoria.md`.
