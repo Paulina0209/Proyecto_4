@@ -7,6 +7,7 @@ from typing import Any, Union
 from langchain_core.tools import tool
 
 from expediente.repository import obtener_paciente
+from historia_clinica.biopsias_biomarcadores import PENDIENTE_CONFIRMACION, biomarcadores_clave
 from tx_clinica.patient_facts import construir_facts_paciente
 from tx_clinica.tools._db import conn_lock, obtener_conexion
 
@@ -62,7 +63,13 @@ def obtener_datos_paciente(patient_id: int) -> str:
     guías: estadio TNM, biomarcadores, ECOG, etc.). Usa esta tool cuando
     el oncólogo pregunte qué datos tiene un paciente, o antes de generar
     una recomendación por id de paciente, para poder mencionar sus datos
-    reales en la respuesta."""
+    reales en la respuesta.
+
+    Incluye `biomarcadores_clave` (HC-04): biomarcadores relevantes para una
+    terapia dirigida. Los `confirmado: false` vienen de una fuente externa y
+    el oncólogo todavía no los confirmó: menciónalos como pendientes de
+    confirmación y NO los uses como si fueran un resultado confirmado (su
+    variable no está en `facts_clinicos`)."""
     resuelto = obtener_paciente_o_error(patient_id)
     if isinstance(resuelto, ErrorPacienteNoEncontrado):
         return resuelto.a_json()
@@ -70,6 +77,7 @@ def obtener_datos_paciente(patient_id: int) -> str:
     conn = obtener_conexion()
     with conn_lock:
         facts = construir_facts_paciente(conn, patient_id)
+        clave = biomarcadores_clave(conn, patient_id)
 
     paciente = resuelto.paciente
     return json.dumps(
@@ -79,6 +87,17 @@ def obtener_datos_paciente(patient_id: int) -> str:
             "diagnostico_principal": paciente.diagnostico_principal,
             "estadio_registrado": paciente.estadio,
             "facts_clinicos": facts,
+            "biomarcadores_clave": [
+                {
+                    "biomarcador": b.biomarcador,
+                    "resultado": b.resultado,
+                    "terapia_dirigida": b.terapia_asociada,
+                    "confirmado": b.relevancia != PENDIENTE_CONFIRMACION,
+                    "variable_tratamiento": b.variable_tx,
+                    "fecha": b.fecha,
+                }
+                for b in clave
+            ],
         },
         ensure_ascii=False,
     )

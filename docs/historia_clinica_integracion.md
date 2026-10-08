@@ -36,6 +36,10 @@ pruebas no dependen de un servidor real.
   del mensaje (`Patient.identifier` o `PID-3`) con la del expediente. Si no
   coincide, el mensaje se rechaza completo. Si el servidor FHIR devuelve más de
   un paciente con la misma identificación, tampoco se importa nada.
+- **Doble validación para laboratorios (HC-02).** Un mensaje HL7 o FHIR que
+  trae resultados de laboratorio debe traer también el nombre del paciente
+  (`PID-5` o `Patient.name`), y debe coincidir con el del expediente. Sin
+  nombre, o con otro nombre, se rechaza completo.
 - **Todo o nada.** Cada mensaje se importa en una sola transacción. Si falla a
   mitad de camino, se hace rollback y queda registrado el fallo.
 - **Idempotencia.** `registros_importados` guarda `(fuente, identificador
@@ -46,10 +50,10 @@ pruebas no dependen de un servidor real.
 ## Fuera de alcance
 
 - Las alertas por valor crítico y los conflictos de marcador de laboratorio son
-  de **HC-02**. Aquí los laboratorios se guardan tal como llegan y `alterado` se
-  marca según su rango de referencia.
+  de **HC-02** (`docs/historia_clinica_laboratorios.md`). Los laboratorios que
+  importa HC-01 pasan por HC-02 dentro de la misma transacción.
 - La visualización DICOM/PACS es de **HC-03**, y el registro validado de
-  biopsias y biomarcadores es de **HC-04**.
+  biopsias y biomarcadores es de **HC-04** (`docs/historia_clinica_biomarcadores.md`).
 - La nota técnica del backlog recomienda dividir la historia por tipo de fuente,
   porque cada EHR es distinto. Esta primera entrega cubre los dos estándares
   (FHIR R4 y HL7 v2 ORU) y el PDF como alternativa. Los perfiles de cada

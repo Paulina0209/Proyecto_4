@@ -147,14 +147,19 @@ def completar_datos_paciente_y_recomendar(patient_id: int, variables_adicionales
     """Usa esta tool DESPUÉS de que obtener_recomendaciones_tratamiento_por_id
     haya devuelto requiere_mas_datos=true y el oncólogo haya respondido
     las variables que se le preguntaron. variables_adicionales es un
-    objeto (no un string) con SOLO esas variables -- nombre exacto tal
-    como se pidieron, valor que dio el oncólogo. No inventes ni asumas
-    ninguna variable que el oncólogo no haya mencionado explícitamente.
+    objeto (no un string) con TODAS las variables que el oncólogo haya
+    dado explícitamente en esta conversación para este paciente (no solo
+    las de la última pregunta) -- nombre exacto de la variable, valor que
+    dio el oncólogo. No inventes ni asumas ninguna variable que el
+    oncólogo no haya mencionado explícitamente.
 
-    Esta tool combina esos valores con los datos YA REGISTRADOS del
-    paciente (los nuevos valores ganan si hay conflicto) y vuelve a
-    intentar la Fase 1 + Fase 2 completas -- puede volver a pedir más
-    datos si lo que se dio todavía no alcanza."""
+    Los valores NO quedan guardados entre llamadas: cada llamada combina
+    solo lo que recibe en variables_adicionales con los datos YA
+    REGISTRADOS del paciente (los nuevos valores ganan si hay conflicto) y
+    vuelve a intentar la Fase 1 + Fase 2 completas. Si la respuesta pide
+    variables que el oncólogo YA te dio en la conversación, vuelve a
+    llamar esta tool de inmediato con todas ellas, sin preguntarle de
+    nuevo; pregunta solo por las que de verdad no te haya dado."""
     resuelto = obtener_paciente_o_error(patient_id)
     if isinstance(resuelto, ErrorPacienteNoEncontrado):
         return resuelto.a_json()

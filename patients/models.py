@@ -155,7 +155,9 @@ class TratamientoReciente:
 
 @dataclass(frozen=True)
 class AlertaActiva:
-    tipo: str  # "interaccion" | "estudio_pendiente"
+    #: "interaccion" | "estudio_pendiente" | "laboratorio_critico" (HC-02) |
+    #: "conflicto_laboratorio" (HC-02) | "biomarcador_pendiente" (HC-04)
+    tipo: str
     severidad: str  # "alta" | "media" | "baja"
     descripcion: str
     fecha: str
@@ -168,6 +170,17 @@ class AccesoRapido:
     resumen: str
     #: Nombre de la prueba (labs) o modalidad (imágenes); None en notas.
     titulo: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class BiomarcadorClave:
+    """HC-04 AC2: biomarcador relevante para una terapia dirigida."""
+    biomarcador: str
+    resultado: str
+    terapia: Optional[str]
+    #: False = viene de una fuente externa y el oncólogo aún no lo confirma.
+    confirmado: bool
+    fecha: str
 
 
 @dataclass(frozen=True)
@@ -184,6 +197,8 @@ class ResumenPaciente360:
     #: AC2: campos clínicos clave que faltan. Nunca se infieren ni se
     #: rellenan; la UI muestra un indicador por cada uno.
     campos_faltantes: tuple[str, ...] = ()
+    #: HC-04: información molecular clave para decidir tratamiento.
+    biomarcadores_clave: tuple[BiomarcadorClave, ...] = ()
 
     @property
     def informacion_incompleta(self) -> bool:

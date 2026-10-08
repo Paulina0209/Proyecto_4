@@ -33,6 +33,7 @@ def conn():
 def client(tmp_path, monkeypatch):
     """API sobre una base vacía: para pruebas que registran sus propios pacientes."""
     monkeypatch.setattr(api_module, "DB_PATH", tmp_path / "pacientes_test.db")
+    monkeypatch.setattr(api_module, "EXPEDIENTE_PATH", tmp_path / "expediente_test.db")
     with TestClient(api_module.app) as c:
         yield c
 
@@ -46,5 +47,6 @@ def client_con_datos(tmp_path, monkeypatch):
     cargar_datos_prueba(conexion)
     conexion.close()
     monkeypatch.setattr(api_module, "DB_PATH", ruta)
+    monkeypatch.setattr(api_module, "EXPEDIENTE_PATH", tmp_path / "expediente_test.db")
     with TestClient(api_module.app) as c:
         yield c

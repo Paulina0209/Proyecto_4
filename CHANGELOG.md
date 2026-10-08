@@ -1,5 +1,57 @@
 # Changelog
 
+## [Sin versionar] — Rama `laboratory-integration`
+
+### Añadido
+
+- **HC-02 — Integración de resultados de laboratorio** (`historia_clinica/laboratorios.py`):
+  - registro manual con doble validación (identificación + nombre);
+  - alertas por valor crítico, con rangos configurables en `rangos_criticos_laboratorio.yaml`;
+  - conflictos de mismo marcador y momento, sin sobrescribir ninguno de los resultados;
+  - tendencias por marcador, agrupando alias y separando unidades.
+  - Ver `docs/historia_clinica_laboratorios.md`.
+- **HC-04 — Integración de biopsias y biomarcadores** (`historia_clinica/biopsias_biomarcadores.py`):
+  - episodios diagnósticos, y biopsias vinculadas a ellos;
+  - registro de biomarcadores con validación estricta contra `catalogo_biomarcadores.yaml` y doble ingreso;
+  - biomarcadores accionables destacados como información clave, con su variable escrita en `datos_clinicos_estructurados` para TX-01;
+  - los importados quedan pendientes hasta que el oncólogo los confirma.
+  - Ver `docs/historia_clinica_biomarcadores.md`.
+- `cbioportal.importador.vincular_biopsias`: los pacientes importados quedan con episodio, biopsias por muestra y biomarcadores accionables pendientes de confirmación.
+- `patients/expediente.py`: puente entre la base de `patients` y el expediente clínico.
+- **Endpoints nuevos:**
+  - laboratorios, interfaz HL7, tendencias, alertas y conflictos;
+  - episodios, biopsias y biomarcadores.
+- **Resumen 360:**
+  - alertas de laboratorio crítico, de conflicto y de biomarcadores por confirmar;
+  - campo `biomarcadores_clave`;
+  - el diagnóstico se toma del episodio cuando no hay otro registrado.
+- **Demo** (`python -m patients.demo`): opciones 5 (laboratorios), 6 (alertas y conflictos) y 7 (biopsias y biomarcadores).
+- **TX-01:** `obtener_datos_paciente` incluye `biomarcadores_clave`. Los pendientes se marcan como no confirmados y no entran en `facts_clinicos`.
+
+- **TX: el agente puede guardar datos con aprobación del oncólogo.** Tools `registrar_datos_clinicos_paciente` y `registrar_conciliacion_medicamentos` (`tx_clinica/tools/registro_tools.py`):
+  - están bajo el middleware de aprobación humana: el grafo se pausa y nada se guarda sin aprobar;
+  - validan contra `guidelines/*/variables.yaml` antes de escribir;
+  - excluyen los biomarcadores (van por HC-04);
+  - firman con el oncólogo de la sesión.
+
+  Con esto, el flujo TX-01 → TX-03 → TX-04 funciona completo desde el chat. Ver `docs/tx_clinica.md`.
+
+### Cambiado
+
+- **HC-01:**
+  - los laboratorios importados (FHIR, HL7, cBioPortal) pasan por HC-02 en la misma transacción;
+  - los mensajes con laboratorios exigen el nombre del paciente (doble validación);
+  - la hora de la toma (OBX-14/OBR-7, `effectiveDateTime`) se conserva.
+- `privacidad.tratamiento_datos`: las tablas nuevas forman parte de la información del titular.
+
+### Corregido
+
+- `tx_clinica.observability`: la máscara de datos del paciente (`LANGFUSE_MASK_DATOS_PACIENTE`) no se aplicaba cuando el agente se construía sin haber cargado antes el `.env`, porque `construir_agente` inicializaba Langfuse antes de leerlo. En ese caso el nombre del paciente llegaba a Langfuse sin redactar. Ahora `inicializar_langfuse` carga el `.env` primero. Verificado con una traza real.
+
+- `completar_datos_paciente_y_recomendar` (TX-01): la descripción de la herramienta pedía "solo las variables preguntadas", y `gpt-6-luna` la seguía al pie de la letra. Si el oncólogo daba seis datos en un mensaje, el modelo pasaba dos y volvía a preguntar. Ahora pide pasar todas las variables que el oncólogo ya dio, y aclara que los valores no se guardan entre llamadas. Sigue prohibido inventar valores.
+
+- `tx_clinica.conversacion`: con `gpt-6-luna` el contenido del mensaje final es una lista de bloques. Ahora `RespuestaAgente.texto` es siempre un `str` (se usa `.text`), y la traza de Langfuse registra el texto en lugar de la lista. Ver `docs/llm_openai.md`.
+
 ## [Sin versionar] — Rama `NatiMejia`
 
 ### Añadido

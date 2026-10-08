@@ -67,7 +67,7 @@ def _acciones_pendientes(respuesta: RespuestaAgente) -> list[Any]:
     """
     acciones: list[Any] = []
     for interrupcion in respuesta.pendientes_aprobacion:
-        print("\n~~~ DECISIÓN PENDIENTE DE APROBACIÓN ~~~")
+        print("\n~~~ ACCIÓN PENDIENTE DE APROBACIÓN (guardaría datos en el expediente) ~~~")
         print(interrupcion)  # forma cruda, por si difiere de lo esperado
         valor = getattr(interrupcion, "value", interrupcion)
         encontradas = None

@@ -1,0 +1,97 @@
+# HC-02 — Rangos críticos de laboratorio, configurables por institución.
+#
+# Un valor CRÍTICO es distinto de un valor "fuera de rango": exige acción
+# inmediata y genera una alerta visible en el dashboard 360 (AC2). El
+# "fuera de rango" (columna `alterado` de `laboratorios`) lo sigue
+# marcando HC-01 con el rango de referencia de cada resultado.
+#
+# Cada prueba define:
+#   - nombre:       cómo se muestra.
+#   - alias:        nombres con los que puede llegar (manual, HL7, FHIR...).
+#                   Se comparan exactos tras normalizar (minúsculas, sin
+#                   tildes), así "hemoglobina glicosilada" NO cuenta como
+#                   hemoglobina.
+#   - unidades:     grafías aceptadas de LA MISMA unidad. Un resultado en
+#                   otra unidad no se evalúa (no se convierte): se reporta
+#                   en la tendencia en vez de arriesgar una alerta falsa o
+#                   una alerta perdida.
+#   - critico_bajo / critico_alto: límites (al menos uno). Un valor menor
+#                   que critico_bajo o mayor que critico_alto es crítico.
+#
+# Los marcadores tumorales (CEA, CA 15-3, CA 19-9, PSA) no están aquí a
+# propósito: no tienen valores críticos de laboratorio; se interpretan por
+# tendencia.
+#
+# Valores ilustrativos para el prototipo, tomados de listas de valores
+# críticos habituales en adultos. Cada institución debe reemplazarlos por
+# los de su laboratorio clínico antes de usarlo.
+
+version: "1.0"
+
+pruebas:
+  hemoglobina:
+    nombre: Hemoglobina
+    alias: [hemoglobina, hb, hgb, hemoglobin]
+    unidades: [g/dL]
+    critico_bajo: 7.0
+    critico_alto: 20.0
+
+  neutrofilos:
+    nombre: Neutrófilos absolutos
+    alias: [neutrofilos, neutrofilos absolutos, recuento absoluto de neutrofilos, anc, neutrophils, absolute neutrophil count]
+    unidades: [10^3/uL, 10*3/uL, x10^3/uL, K/uL, 10^9/L]
+    critico_bajo: 0.5
+
+  plaquetas:
+    nombre: Plaquetas
+    alias: [plaquetas, plt, platelets, recuento de plaquetas]
+    unidades: [10^3/uL, 10*3/uL, x10^3/uL, K/uL, 10^9/L]
+    critico_bajo: 20
+    critico_alto: 1000
+
+  leucocitos:
+    nombre: Leucocitos
+    alias: [leucocitos, wbc, globulos blancos, white blood cells, recuento de leucocitos]
+    unidades: [10^3/uL, 10*3/uL, x10^3/uL, K/uL, 10^9/L]
+    critico_bajo: 1.0
+    critico_alto: 50.0
+
+  potasio:
+    nombre: Potasio
+    alias: [potasio, k, potassium, potasio serico]
+    unidades: [mmol/L, mEq/L]
+    critico_bajo: 2.5
+    critico_alto: 6.5
+
+  sodio:
+    nombre: Sodio
+    alias: [sodio, na, sodium, sodio serico]
+    unidades: [mmol/L, mEq/L]
+    critico_bajo: 120
+    critico_alto: 160
+
+  calcio:
+    nombre: Calcio total
+    alias: [calcio, calcio total, ca total, calcium]
+    unidades: [mg/dL]
+    critico_bajo: 6.0
+    critico_alto: 13.0
+
+  glucosa:
+    nombre: Glucosa
+    alias: [glucosa, glicemia, glucemia, glucose]
+    unidades: [mg/dL]
+    critico_bajo: 40
+    critico_alto: 450
+
+  creatinina:
+    nombre: Creatinina
+    alias: [creatinina, creatinina serica, creatinine]
+    unidades: [mg/dL]
+    critico_alto: 5.0
+
+  bilirrubina_total:
+    nombre: Bilirrubina total
+    alias: [bilirrubina total, bilirrubina, total bilirubin, bilirubin]
+    unidades: [mg/dL]
+    critico_alto: 15.0

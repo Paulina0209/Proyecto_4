@@ -188,6 +188,19 @@ Si el paciente ya existe en esa base, no se modifica. El oncólogo pudo
 haber agregado datos a mano, y esa base no guarda de dónde viene cada fila.
 El expediente de `historia_clinica` sí se actualiza en cada importación.
 
+## Biopsias y biomarcadores (HC-04)
+
+Después de cada importación exitosa, `importador.vincular_biopsias`:
+
+- crea el episodio diagnóstico, a partir del único diagnóstico primario (con dos primarios no crea nada);
+- crea una biopsia por cada muestra secuenciada, vinculada a ese episodio;
+- destaca como **pendientes de confirmación** las variantes que el catálogo de HC-04 considera accionables (EGFR L858R, KRAS G12C, fusiones de ALK/ROS1/RET/NTRK…).
+
+Las reglas fail-closed del mapeo se mantienen: no se escribe ninguna variable
+de TX hasta que el oncólogo confirma el resultado. Si la vinculación falla, la
+historia ya importada se conserva y la vinculación se reintenta en la próxima
+importación. Ver `docs/historia_clinica_biomarcadores.md`.
+
 ## Limitaciones
 
 - No hay consultas ni notas clínicas: cBioPortal no las publica. IA-02

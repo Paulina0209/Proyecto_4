@@ -1,11 +1,12 @@
-"""Cliente de consola de la API de pacientes: búsqueda y filtros, y
-resumen 360 del paciente.
+"""Cliente de consola de la API de pacientes: búsqueda y filtros, resumen
+360 del paciente, laboratorios (HC-02) y biopsias y biomarcadores (HC-04).
 
     uvicorn patients.api:app          # en una terminal
     python -m patients.demo           # en otra
 
-La API carga datos de prueba al arrancar si no hay pacientes, así que
-todo se puede probar sin registrar nada.
+Los pacientes son los registrados y los importados de cBioPortal (ver
+docs/cbioportal.md). Los laboratorios, biopsias y biomarcadores se guardan
+en el expediente clínico, que es lo que también lee TX-01.
 """
 from __future__ import annotations
 
@@ -34,6 +35,9 @@ ETIQUETAS_ESTADO = {
 ETIQUETAS_ALERTA = {
     "interaccion": "Interacción",
     "estudio_pendiente": "Estudio pendiente",
+    "laboratorio_critico": "Laboratorio crítico",
+    "conflicto_laboratorio": "Conflicto de laboratorio",
+    "biomarcador_pendiente": "Biomarcador por confirmar",
 }
 
 CAMPOS_360_LEGIBLES = {
@@ -102,7 +106,7 @@ def _recortar(texto: str, ancho: int) -> str:
 # Llamadas a la API
 # ---------------------------------------------------------------------------
 
-def _llamar(metodo: str, ruta: str, params: Optional[dict] = None):
+def _llamar(metodo: str, ruta: str, params: Optional[dict] = None, json: Optional[dict] = None):
     """Petición a la API como ONCOLOGO_DEMO; None si no hay conexión (ya
     avisa en pantalla)."""
     try:
@@ -110,7 +114,8 @@ def _llamar(metodo: str, ruta: str, params: Optional[dict] = None):
             metodo,
             f"{BASE_URL}{ruta}",
             params={"oncologo_id": ONCOLOGO_DEMO, **(params or {})},
-            timeout=10,
+            json=json,
+            timeout=30,
         )
     except requests.ConnectionError:
         print("\n✘ No se pudo conectar con la API.")
@@ -136,7 +141,7 @@ def _datos_o_error(response):
     hubo conexión."""
     if response is None:
         return None
-    if response.status_code != 200:
+    if response.status_code not in (200, 201):
         _mostrar_errores_api(response)
         return None
     return response.json()
@@ -362,6 +367,15 @@ def mostrar_resumen_360(d: dict) -> None:
     print(f"  Estadio       {d['estadio'] or sin_dato}")
     print(f"  Tratamiento   {tratamiento}")
 
+    # HC-04: información molecular clave para decidir tratamiento.
+    clave = d.get("biomarcadores_clave") or []
+    if clave:
+        print("\n  BIOMARCADORES CLAVE")
+        for b in clave:
+            estado = "★" if b["confirmado"] else "? por confirmar"
+            terapia = f" → {b['terapia']}" if b["terapia"] else ""
+            print(f"    {estado} {b['biomarcador']}: {b['resultado']}{terapia}")
+
     alertas = d["alertas_activas"]
     print(f"\n  ALERTAS ACTIVAS ({len(alertas)})")
     if not alertas:
@@ -400,12 +414,270 @@ def _abrir_y_mostrar_360(paciente_id: int) -> bool:
 
 def flujo_resumen_360() -> None:
     print("\n=== Resumen 360 del paciente ===")
-    print(
-        "Datos de prueba: 1 = historia completa · 2 = sin diagnóstico, estadio ni "
-        "tratamiento · 7 = sin estadio"
-    )
     print("(También puede abrirse desde la lista de pacientes o los resultados de búsqueda.)")
     _ofrecer_abrir_360()
+
+
+# ---------------------------------------------------------------------------
+# HC-02 · Laboratorios
+# ---------------------------------------------------------------------------
+
+def _marca_punto(p: dict) -> str:
+    if p["en_conflicto"]:
+        return "⚠ en conflicto"
+    if p["critico"]:
+        return "‼ crítico"
+    return "↑↓ fuera de rango" if p["alterado"] else ""
+
+
+def _barra(valor: Optional[float], maximo: float, ancho: int = 24) -> str:
+    if valor is None or maximo <= 0:
+        return ""
+    return "█" * max(1, round(ancho * valor / maximo))
+
+
+def mostrar_tendencia(t: dict) -> None:
+    print(f"\n  Tendencia de {t['prueba']}")
+    for advertencia in t["advertencias"]:
+        print(f"  ⚠ {advertencia}")
+    if not t["series"]:
+        print("  Sin resultados para este marcador.")
+        return
+    for serie in t["series"]:
+        puntos = serie["puntos"]
+        maximo = max((p["valor_numerico"] or 0) for p in puntos)
+        print(f"\n  Unidad: {serie['unidad'] or 'sin unidad'}")
+        for p in puntos:
+            momento = (p["fecha_hora"] or p["fecha"]).replace("T", " ")
+            print(f"    {momento:<16}  {p['valor']:>8}  {_barra(p['valor_numerico'], maximo):<24}  {_marca_punto(p)}")
+
+
+def _registrar_laboratorio(paciente_id: int) -> None:
+    print("\n  Registrar resultado (doble validación: identificación y nombre de la orden)")
+    datos = {
+        "identificacion": pedir("  Identificación del paciente en la orden: "),
+        "nombre": pedir("  Nombre del paciente en la orden: "),
+        "prueba": pedir("  Prueba (p. ej. Potasio, Hemoglobina, CEA): "),
+        "valor": pedir("  Valor: "),
+        "unidad": pedir("  Unidad (p. ej. mmol/L): ") or None,
+        "fecha": _pedir_fecha("  Fecha de la toma (YYYY-MM-DD, Enter = hoy): ") or date.today().isoformat(),
+    }
+    hora = pedir("  Hora de la toma (HH:MM, Enter si no se sabe): ")
+    if hora:
+        datos["hora"] = hora
+    rango = pedir("  Rango de referencia (bajo-alto, Enter si no viene): ")
+    if rango:
+        datos["rango_referencia"] = rango
+
+    r = _datos_o_error(_llamar("POST", f"/pacientes/{paciente_id}/laboratorios", json=datos))
+    if r is None:
+        return
+    print(f"\n  ✔ Resultado guardado (laboratorio #{r['laboratorio_id']}).")
+    if r["alerta"]:
+        print(f"  ‼ VALOR CRÍTICO: {r['alerta']['limite_superado']}. Quedó como alerta en el resumen 360.")
+    for c in r["conflictos"]:
+        print(f"  ⚠ CONFLICTO: ya había un resultado del mismo momento con otro valor "
+              f"({c['valor_a']} y {c['valor_b']}). Ninguno se sobrescribió; revíselo en la opción 6.")
+
+
+def flujo_laboratorios() -> None:
+    print("\n=== Laboratorios (HC-02) ===")
+    paciente_id = _pedir_id("Id del paciente (Enter para volver): ")
+    if paciente_id is None:
+        return
+    while True:
+        marcadores = _datos_o_error(_llamar("GET", f"/pacientes/{paciente_id}/laboratorios/marcadores"))
+        if marcadores is None:
+            return
+        print(f"\n  {len(marcadores)} marcador(es), el medido más recientemente primero")
+        for i, m in enumerate(marcadores, 1):
+            print(f"  {i:>3}. {_recortar(m['prueba'], 28):<28} {m['cantidad']:>3} resultado(s) · último "
+                  f"{m['ultimo_valor']} {m['unidad'] or ''} ({m['ultima_fecha']})")
+        print("\n  N° = ver tendencia · R = registrar resultado · Enter = volver")
+        opcion = pedir("  Opción: ").lower()
+        if not opcion:
+            return
+        if opcion == "r":
+            _registrar_laboratorio(paciente_id)
+        elif opcion.isdigit() and 1 <= int(opcion) <= len(marcadores):
+            prueba = marcadores[int(opcion) - 1]["prueba"]
+            tendencia = _datos_o_error(_llamar("GET", f"/pacientes/{paciente_id}/laboratorios/tendencia",
+                                               {"prueba": prueba}))
+            if tendencia:
+                mostrar_tendencia(tendencia)
+        else:
+            print("  Opción inválida.")
+
+
+def flujo_alertas_conflictos() -> None:
+    print("\n=== Alertas críticas y conflictos de laboratorio (HC-02) ===")
+    paciente_id = _pedir_id("Id del paciente (Enter para volver): ")
+    if paciente_id is None:
+        return
+    while True:
+        alertas = _datos_o_error(_llamar("GET", f"/pacientes/{paciente_id}/alertas-laboratorio"))
+        conflictos = _datos_o_error(_llamar("GET", f"/pacientes/{paciente_id}/conflictos-laboratorio"))
+        if alertas is None or conflictos is None:
+            return
+        print(f"\n  ALERTAS CRÍTICAS ACTIVAS ({len(alertas)})")
+        for a in alertas:
+            print(f"    A{a['id']}  {a['fecha']}  {a['prueba']} {a['valor']} {a['unidad'] or ''} · {a['limite_superado']}")
+        print(f"\n  CONFLICTOS PENDIENTES ({len(conflictos)})")
+        for c in conflictos:
+            print(f"    C{c['id']}  {c['momento'].replace('T', ' ')}  {c['prueba']}: "
+                  f"A = {c['valor_a']} {c['unidad_a'] or ''} · B = {c['valor_b']} {c['unidad_b'] or ''}")
+        if not alertas and not conflictos:
+            print("\n  Nada pendiente de revisión.")
+            return
+
+        opcion = pedir("\n  A<n> = marcar alerta revisada · C<n> = resolver conflicto · Enter = volver: ").upper()
+        if not opcion:
+            return
+        if opcion[0] == "A" and opcion[1:].isdigit():
+            quien = pedir("  Revisada por: ")
+            r = _datos_o_error(_llamar("POST", f"/pacientes/{paciente_id}/alertas-laboratorio/{opcion[1:]}/revisar",
+                                       json={"revisada_por": quien}))
+            if r:
+                print("  ✔ Alerta revisada.")
+        elif opcion[0] == "C" and opcion[1:].isdigit():
+            print("  1. Válido A   2. Válido B   3. Ambos válidos   4. Ninguno válido")
+            resolucion = {"1": "valido_a", "2": "valido_b", "3": "ambos_validos", "4": "ninguno_valido"}.get(pedir("  Resolución: "))
+            if resolucion is None:
+                print("  Opción inválida.")
+                continue
+            cuerpo = {"resolucion": resolucion, "resuelto_por": pedir("  Resuelto por: "), "nota": pedir("  Nota (opcional): ") or None}
+            r = _datos_o_error(_llamar("POST", f"/pacientes/{paciente_id}/conflictos-laboratorio/{opcion[1:]}/resolver",
+                                       json=cuerpo))
+            if r:
+                print("  ✔ Conflicto resuelto. Los dos resultados se conservan en el expediente.")
+        else:
+            print("  Opción inválida.")
+
+
+# ---------------------------------------------------------------------------
+# HC-04 · Biopsias y biomarcadores
+# ---------------------------------------------------------------------------
+
+ETIQUETAS_RELEVANCIA = {
+    "accionable_confirmado": "★ accionable",
+    "pendiente_confirmacion": "? pendiente de confirmar",
+    "informativo": "informativo",
+    "descartado": "descartado",
+}
+
+
+def _mostrar_biomarcadores(biomarcadores: list) -> None:
+    print(f"\n  BIOMARCADORES ({len(biomarcadores)})")
+    if not biomarcadores:
+        print("    —")
+    for b in biomarcadores:
+        print(f"    #{b['biomarcador_id']:<4} {b['fecha']}  {b['biomarcador']}: {b['resultado']}")
+        linea = f"          {ETIQUETAS_RELEVANCIA.get(b['relevancia'], b['relevancia'])}"
+        if b["terapia_asociada"]:
+            linea += f" · {b['terapia_asociada']}"
+        if b["variable_tx"] and b["relevancia"] != "pendiente_confirmacion":
+            linea += f" · TX-01: {b['variable_tx']}={b['valor_tx']}"
+        print(linea)
+
+
+def _registrar_episodio_y_biopsia(paciente_id: int) -> None:
+    episodios = _datos_o_error(_llamar("GET", f"/pacientes/{paciente_id}/episodios")) or []
+    episodio_id = None
+    if not episodios or pedir("  ¿Registrar un episodio diagnóstico nuevo? (s/N): ").lower() == "s":
+        cuerpo = {
+            "descripcion": pedir("  Diagnóstico: "),
+            "tipo_cancer": pedir("  Tipo de cáncer (NSCLC, breast, melanoma...): ") or None,
+            "fecha_diagnostico": _pedir_fecha("  Fecha del diagnóstico (YYYY-MM-DD, opcional): "),
+        }
+        episodio = _datos_o_error(_llamar("POST", f"/pacientes/{paciente_id}/episodios", json=cuerpo))
+        if episodio is None:
+            return
+        episodio_id = episodio["id"]
+    elif len(episodios) > 1:
+        for e in episodios:
+            print(f"    {e['id']}. {e['descripcion']} ({e['tipo_cancer'] or 'tipo sin indicar'})")
+        episodio_id = _pedir_id("  Episodio de la biopsia: ")
+    cuerpo = {
+        "fecha": _pedir_fecha("  Fecha de la biopsia (YYYY-MM-DD, Enter = hoy): ") or date.today().isoformat(),
+        "sitio": pedir("  Sitio: "),
+        "procedimiento": pedir("  Procedimiento: "),
+        "diagnostico_histologico": pedir("  Diagnóstico histológico (opcional): ") or None,
+        "episodio_id": episodio_id,
+    }
+    biopsia = _datos_o_error(_llamar("POST", f"/pacientes/{paciente_id}/biopsias", json=cuerpo))
+    if biopsia:
+        print(f"  ✔ Biopsia #{biopsia['id']} vinculada al episodio {biopsia['episodio_id']}.")
+
+
+def _registrar_biomarcador(paciente_id: int) -> None:
+    biopsias = _datos_o_error(_llamar("GET", f"/pacientes/{paciente_id}/biopsias")) or []
+    if not biopsias:
+        print("  Primero registre la biopsia (opción B).")
+        return
+    for b in biopsias:
+        print(f"    {b['id']}. {b['fecha']} · {b['sitio']} · {b['procedimiento']}")
+    biopsia_id = _pedir_id("  Biopsia: ")
+    if biopsia_id is None:
+        return
+    print("  Estados según el biomarcador: detectada/no_detectada (EGFR, BRAF, KRAS, MET), "
+          "reordenado/no_reordenado (ALK, ROS1, RET, NTRK), positivo/negativo/equivoco (HER2, RE, RP), "
+          "cuantificado (PD-L1 TPS).")
+    cuerpo = {"biopsia_id": biopsia_id, "biomarcador": pedir("  Biomarcador: "), "estado": pedir("  Estado: "),
+              "metodo": pedir("  Método (NGS, PCR, IHC, FISH, 22C3...): ")}
+    variante = pedir("  Variante (si se detectó, p. ej. L858R): ")
+    valor = pedir("  Valor (% para PD-L1 o receptores, opcional): ")
+    ihc = pedir("  Puntaje IHC (HER2: 0, 1+, 2+, 3+; opcional): ")
+    ish = pedir("  ISH (amplificado / no_amplificado; opcional): ")
+    if variante:
+        cuerpo["variante"] = variante
+    if valor:
+        cuerpo["valor"] = valor
+    if ihc:
+        cuerpo["ihc_score"] = ihc
+    if ish:
+        cuerpo["ish"] = ish
+    cuerpo["confirmacion"] = pedir("  Vuelva a escribir el resultado clave (el estado, o el valor en PD-L1): ")
+    r = _datos_o_error(_llamar("POST", f"/pacientes/{paciente_id}/biomarcadores", json=cuerpo))
+    if r:
+        print(f"  ✔ Guardado como {ETIQUETAS_RELEVANCIA.get(r['relevancia'], r['relevancia'])}"
+              + (f". TX-01 recibe {r['variable_tx']}={r['valor_tx']}." if r["variable_tx"] else "."))
+
+
+def flujo_biomarcadores() -> None:
+    print("\n=== Biopsias y biomarcadores (HC-04) ===")
+    paciente_id = _pedir_id("Id del paciente (Enter para volver): ")
+    if paciente_id is None:
+        return
+    while True:
+        biopsias = _datos_o_error(_llamar("GET", f"/pacientes/{paciente_id}/biopsias"))
+        biomarcadores = _datos_o_error(_llamar("GET", f"/pacientes/{paciente_id}/biomarcadores"))
+        if biopsias is None or biomarcadores is None:
+            return
+        print(f"\n  BIOPSIAS ({len(biopsias)})")
+        for b in biopsias:
+            print(f"    #{b['id']:<4} {b['fecha']}  {b['sitio']} · {b['procedimiento']} (episodio {b['episodio_id']})")
+        _mostrar_biomarcadores(biomarcadores)
+
+        opcion = pedir("\n  B = registrar biopsia · M = registrar biomarcador · C<n> = confirmar · "
+                       "D<n> = descartar · Enter = volver: ").upper()
+        if not opcion:
+            return
+        if opcion == "B":
+            _registrar_episodio_y_biopsia(paciente_id)
+        elif opcion == "M":
+            _registrar_biomarcador(paciente_id)
+        elif opcion[0] in "CD" and opcion[1:].isdigit():
+            ruta = f"/pacientes/{paciente_id}/biomarcadores/{opcion[1:]}"
+            if opcion[0] == "C":
+                cuerpo = {"confirmado_por": pedir("  Confirmado por: "),
+                          "confirmacion": pedir("  Escriba el resultado que confirma (p. ej. reordenado): ")}
+                r = _datos_o_error(_llamar("POST", f"{ruta}/confirmar", json=cuerpo))
+            else:
+                r = _datos_o_error(_llamar("POST", f"{ruta}/descartar", json={"revisado_por": pedir("  Revisado por: ")}))
+            if r:
+                print(f"  ✔ Ahora: {ETIQUETAS_RELEVANCIA.get(r['relevancia'], r['relevancia'])}.")
+        else:
+            print("  Opción inválida.")
 
 
 # ---------------------------------------------------------------------------
@@ -417,6 +689,9 @@ OPCIONES_MENU = {
     "2": ("Buscar paciente por nombre", busqueda_por_nombre),
     "3": ("Buscar con filtros (uno o varios)", busqueda_con_filtros),
     "4": ("Abrir resumen 360 de un paciente", flujo_resumen_360),
+    "5": ("Laboratorios: tendencias y registro (HC-02)", flujo_laboratorios),
+    "6": ("Alertas críticas y conflictos de laboratorio (HC-02)", flujo_alertas_conflictos),
+    "7": ("Biopsias y biomarcadores (HC-04)", flujo_biomarcadores),
 }
 
 

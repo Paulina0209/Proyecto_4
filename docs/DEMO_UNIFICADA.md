@@ -49,9 +49,33 @@ símbolo ✎.
 | `aud` | AUD-01/02 | Accesos registrados y trazabilidad IA vs. médico de lo que hizo la demo |
 | `priv` | NFR-06 | Autorización de tratamiento de datos por finalidad (otorgar y revocar) |
 
-Para explorar a mano: `python demo_ia01.py` (preguntas, recomendaciones y
-evidencia) y `python demo_tx.py` (agente de tratamiento), ambos sobre la
-base real.
+Para explorar a mano:
+
+- `python demo_ia01.py`: preguntas, recomendaciones y evidencia.
+- `python demo_tx.py`: agente de tratamiento.
+- `python -m patients.demo`: búsqueda, 360, laboratorios (HC-02: valores críticos, conflictos y tendencias) y biopsias y biomarcadores (HC-04). Ver `docs/PACIENTES_DEMO.md`.
+
+Las tres trabajan sobre la base real.
+
+### Qué esperar de `demo_tx.py`
+
+El agente usa GPT y trabaja sobre los pacientes con historia cargada (por
+ejemplo 6788 = P-0012063, 7328 = P-0016350). Preguntas que funcionan:
+
+- *"¿Qué biomarcadores clave tiene el paciente 7328 y están confirmados?"*: distingue un biomarcador pendiente (HC-04) de uno confirmado.
+- *"Para el paciente 6788: disease_setting metastatic, molecular_pathway_status non_oncogene_addicted, treatment_line 1, immunotherapy_contraindication no, major_comorbidity_precluding_ici no, prior_ici no. Dame las opciones de tratamiento con su nivel de evidencia."*: las opciones de la guía con su evidencia (TX-01/02).
+
+**Guardar datos, revisar interacciones y registrar la decisión (TX-03/TX-04).**
+El agente puede guardar en el expediente los datos que le da el oncólogo, pero
+solo con su aprobación. Cada vez que va a guardar algo, la demo muestra la
+acción y pregunta *"¿Aprobar (a) o rechazar (r)?"*. Flujo de ejemplo:
+
+1. *"Para el paciente 6788 guarda estos datos: disease_setting metastatic, molecular_pathway_status non_oncogene_addicted, treatment_line 1, immunotherapy_contraindication no, major_comorbidity_precluding_ici no, prior_ici no."* → pausa, aprobar (`a`).
+2. *"El paciente no toma ninguna medicación concomitante, guárdalo. Luego dame las opciones de tratamiento y revisa interacciones de la primera opción."* → pausa por la conciliación, aprobar; después muestra las opciones y las interacciones.
+3. *"Registra como decisión final que acepto la primera opción."* → pausa; aprobar la registra y rechazar (`r`, con un motivo) no guarda nada.
+
+Lo que se aprueba queda en la base real. Los biomarcadores no se guardan por
+chat: se registran con su biopsia (HC-04, `python -m patients.demo`).
 
 ## Qué necesita
 

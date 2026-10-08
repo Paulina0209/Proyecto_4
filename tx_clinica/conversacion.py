@@ -35,8 +35,18 @@ def _armar_respuesta(resultado: dict[str, Any], trace_id: Optional[str]) -> Resp
             texto=None, pendientes_aprobacion=pendientes, trace_id=trace_id, mensajes=mensajes
         )
 
-    texto = getattr(mensajes[-1], "content", None) if mensajes else None
-    return RespuestaAgente(texto=texto, trace_id=trace_id, mensajes=mensajes)
+    return RespuestaAgente(texto=_texto_de(mensajes[-1]) if mensajes else None, trace_id=trace_id, mensajes=mensajes)
+
+
+def _texto_de(mensaje: Any) -> Optional[str]:
+    """Texto plano del mensaje. Con modelos que responden por la API de
+    Responses (p. ej. gpt-6-luna), ``content`` es una lista de bloques
+    (``[{"type": "text", "text": ...}]``), no un str: ``.text`` los une."""
+    texto = getattr(mensaje, "text", None)
+    if isinstance(texto, str):
+        return str(texto) or None  # .text es una subclase de str (TextAccessor)
+    contenido = getattr(mensaje, "content", None)
+    return contenido if isinstance(contenido, str) else None
 
 
 def enviar_mensaje(

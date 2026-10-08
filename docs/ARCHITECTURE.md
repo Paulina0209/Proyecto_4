@@ -141,6 +141,44 @@ adaptadores adicionales.
   checklist configurable por tipo de cáncer y fase
   (`checklists_informacion.yaml`). Nunca devuelve "completo" si no hay
   checklist. Ver `docs/historia_clinica_informacion_faltante.md`.
+- `laboratorios.py` — **HC-02**:
+  - todo laboratorio que entra (HL7, FHIR, cBioPortal o manual) pasa por `procesar_resultados` en la misma transacción;
+  - alerta por valor crítico (`rangos_criticos_laboratorio.yaml`);
+  - conflicto cuando hay dos resultados del mismo marcador y momento con valores distintos, sin sobrescribir ninguno;
+  - tendencias por marcador;
+  - doble validación de identidad (identificación + nombre).
+
+  Tablas laterales: `recepcion_laboratorio`, `alertas_laboratorio` y `conflictos_laboratorio`. Ver `docs/historia_clinica_laboratorios.md`.
+- `biopsias_biomarcadores.py` — **HC-04**:
+  - episodios diagnósticos, con las biopsias vinculadas a ellos;
+  - biomarcadores validados contra `catalogo_biomarcadores.yaml` (que a su vez se valida contra `guidelines/*/variables.yaml`), con doble ingreso;
+  - los accionables se destacan y su variable se escribe en `datos_clinicos_estructurados` para TX-01;
+  - los importados quedan pendientes hasta que el oncólogo los confirma.
+
+  Tablas: `episodios_diagnosticos`, `biopsias` y `detalle_biomarcador`. Ver `docs/historia_clinica_biomarcadores.md`.
+
+### cbioportal
+
+Importa pacientes reales desidentificados de cBioPortal (MSK-CHORD) al
+expediente por el camino de HC-01, y opcionalmente a la base de `patients`.
+Tiene dos modos:
+
+- **Índice:** todos los pacientes con datos básicos; el detalle se trae al abrir cada uno.
+- **Completo:** todo el detalle de cada paciente, de una vez.
+
+Después de importar, vincula las muestras con HC-04 (episodio, biopsias y
+biomarcadores pendientes de confirmación). Ver `docs/cbioportal.md`.
+
+### patients
+
+Módulo de pacientes:
+
+- registro, búsqueda (PAC-02) y resumen 360 (PAC-03), sobre su propia base (`patients/db`);
+- API HTTP (`patients/api.py`) que también expone HC-02 y HC-04 sobre el expediente;
+- `patients/expediente.py` vincula las dos bases por identificación;
+- cliente de consola: `python -m patients.demo`.
+
+Ver `docs/pacientes.md` y `docs/PACIENTES_DEMO.md`.
 
 ### dx_clinica
 
