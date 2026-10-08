@@ -17,18 +17,24 @@ from tx_clinica.middleware.human_in_the_loop import (
 from tx_clinica.tools import TOOLS
 
 
-def test_tools_trae_las_8_tools_esperadas():
-    nombres = {t.name for t in TOOLS}
-    assert nombres == {
-        "obtener_datos_paciente",
-        "obtener_recomendaciones_tratamiento_por_id",
-        "completar_datos_paciente_y_recomendar",
-        "obtener_recomendaciones_tratamiento_con_datos",
-        "listar_variables_requeridas",
-        "consultar_medicacion_actual",
-        "chequear_interacciones_tratamiento",
-        "registrar_decision_tratamiento",
-    }
+TOOLS_DE_LECTURA = {
+    "obtener_datos_paciente",
+    "obtener_recomendaciones_tratamiento_por_id",
+    "completar_datos_paciente_y_recomendar",
+    "obtener_recomendaciones_tratamiento_con_datos",
+    "listar_variables_requeridas",
+    "consultar_medicacion_actual",
+    "chequear_interacciones_tratamiento",
+}
+TOOLS_QUE_ESCRIBEN = {
+    "registrar_decision_tratamiento",
+    "registrar_datos_clinicos_paciente",
+    "registrar_conciliacion_medicamentos",
+}
+
+
+def test_tools_trae_las_10_tools_esperadas():
+    assert {t.name for t in TOOLS} == TOOLS_DE_LECTURA | TOOLS_QUE_ESCRIBEN
 
 
 def test_todas_las_tools_tienen_docstring_no_vacio():
@@ -39,11 +45,12 @@ def test_todas_las_tools_tienen_docstring_no_vacio():
         assert t.description and len(t.description.strip()) > 20, f"{t.name} sin descripción útil"
 
 
-def test_solo_registrar_decision_tratamiento_requiere_aprobacion_humana():
-    """Las tools de solo lectura NUNCA deben quedar bajo aprobación
-    humana -- eso sería fricción sin ningún beneficio de seguridad."""
-    assert set(TOOLS_QUE_REQUIEREN_APROBACION_HUMANA.keys()) == {"registrar_decision_tratamiento"}
-    assert TOOLS_QUE_REQUIEREN_APROBACION_HUMANA["registrar_decision_tratamiento"] is True
+def test_toda_tool_que_escribe_requiere_aprobacion_y_ninguna_de_lectura():
+    """Todo lo que escribe en el expediente pasa por aprobación humana; las
+    tools de solo lectura NUNCA -- eso sería fricción sin beneficio."""
+    assert set(TOOLS_QUE_REQUIEREN_APROBACION_HUMANA) == TOOLS_QUE_ESCRIBEN
+    assert all(v is True for v in TOOLS_QUE_REQUIEREN_APROBACION_HUMANA.values())
+    assert not TOOLS_DE_LECTURA & set(TOOLS_QUE_REQUIEREN_APROBACION_HUMANA)
 
 
 def test_middleware_se_construye_sin_error():

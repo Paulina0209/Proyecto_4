@@ -27,6 +27,12 @@ que usan DX, EST, TX, IA, HC-05 y DOC. Antes se llamaba
   contexto de "esta consulta" y no "todo el historial del paciente",
   que es justo el recorte que exige el criterio de aceptación de IA-02.
 
+Tablas laterales de `historia_clinica` (no modifican las anteriores):
+
+- **HC-01:** `sincronizaciones_externas`, `registros_importados` y `antecedentes_externos`.
+- **HC-02** (`docs/historia_clinica_laboratorios.md`): `recepcion_laboratorio` (hora de la toma y vía), `alertas_laboratorio` y `conflictos_laboratorio`.
+- **HC-04** (`docs/historia_clinica_biomarcadores.md`): `episodios_diagnosticos`, `biopsias` y `detalle_biomarcador` (dato validado y relevancia para el tratamiento de cada fila de `biomarcadores`).
+
 ## El puente hacia IA-02 (`adapters.construir_contexto_clinico`)
 
 Recibe un `consulta_id` y devuelve un `ia_clinica.notes.ClinicalContext`

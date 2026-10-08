@@ -17,6 +17,11 @@ from .interaction_tools import (
 
 from .patients_tools import obtener_datos_paciente
 
+from .registro_tools import (
+    registrar_conciliacion_medicamentos,
+    registrar_datos_clinicos_paciente,
+)
+
 
 TOOLS = [
     obtener_datos_paciente,
@@ -27,4 +32,6 @@ TOOLS = [
     consultar_medicacion_actual,
     chequear_interacciones_tratamiento,
     registrar_decision_tratamiento,
+    registrar_datos_clinicos_paciente,
+    registrar_conciliacion_medicamentos,
 ]

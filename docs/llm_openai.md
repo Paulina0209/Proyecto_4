@@ -32,6 +32,45 @@ python demo.py --solo ia tx          # IA-02/03/04 y agente de tratamiento con G
 python demo_tx.py                    # agente de tratamiento, conversación libre
 ```
 
+## Verificar la conexión
+
+```powershell
+python -c "from ia_clinica.notes.llm_client import OpenAILLMClient; print(OpenAILLMClient().esta_disponible())"
+```
+
+Devuelve `True` si la llave del `.env` es válida y tiene acceso al modelo
+configurado. Es una consulta de metadatos (`models.retrieve`): no genera texto
+ni envía datos.
+
+## Particularidades de gpt-6-luna
+
+- **Respuestas en bloques.** Las respuestas del agente llegan como una lista de bloques (`[{"type": "text", "text": ...}]`), no como un `str`.
+  - `tx_clinica.conversacion` usa `.text` para que `RespuestaAgente.texto` sea siempre un `str`.
+  - Al leer mensajes del agente, use `.text` y no `.content`.
+- **Sin parámetros especiales.** Las llamadas no envían `temperature` ni `max_tokens`, así que no hay parámetros que el modelo pueda rechazar.
+- **Dependencia.** El agente necesita `langchain-openai` (está en `requirements.txt`).
+
+## Trazas (Langfuse)
+
+El agente de TX envía una traza por mensaje a Langfuse (`LANGFUSE_HOST`,
+`LANGFUSE_PUBLIC_KEY` y `LANGFUSE_SECRET_KEY` en el `.env`). Cada traza tiene:
+
+- la sesión (`thread_id` de la conversación) y el usuario (oncólogo);
+- las llamadas a `gpt-6-luna` y las herramientas usadas;
+- la respuesta final como texto.
+
+**Máscara de datos.** Con `LANGFUSE_MASK_DATOS_PACIENTE=true`, el campo
+`nombre` que devuelven las herramientas llega como `[REDACTADO]`.
+`inicializar_langfuse` lee el `.env` antes de crear el cliente, así que la
+máscara se aplica aunque quien construye el agente no lo haya cargado.
+Limitación: un nombre escrito en texto libre (en el chat o en la respuesta del
+modelo) no se detecta.
+
+**Servidor local.** El `.env` apunta a un Langfuse v4 en Docker
+(`http://localhost:3000`).
+- **Si no está corriendo:** el agente funciona igual, pero al terminar aparece `Failed to export span batch due to timeout`. Levántelo, o ponga `LANGFUSE_TRACING_ENABLED=false` en el `.env`.
+- **Para consultar trazas por API:** Langfuse v4 en modo `events_only` no ofrece `/api/public/traces`. Use `/api/public/v2/observations?traceId=<id>&fields=core,basic,io,model`.
+
 ## Salvaguardas que no cambian
 
 - El modelo solo redacta. `ClinicalNoteGenerator` y `CaseSummaryGenerator`

@@ -75,6 +75,13 @@ TABLAS_EXPEDIENTE: Tuple[Tuple[str, str], ...] = (
     ("comorbilidades", "paciente_id"),
     ("antecedentes_externos", "paciente_id"),
     ("sincronizaciones_externas", "paciente_id"),
+    # HC-02 y HC-04
+    ("recepcion_laboratorio", "paciente_id"),
+    ("alertas_laboratorio", "paciente_id"),
+    ("conflictos_laboratorio", "paciente_id"),
+    ("episodios_diagnosticos", "paciente_id"),
+    ("biopsias", "paciente_id"),
+    ("detalle_biomarcador", "paciente_id"),
 )
 
 
@@ -533,7 +540,8 @@ def recopilar_informacion_titular(
         for tabla, columna in TABLAS_EXPEDIENTE:
             if tabla in existentes:
                 secciones[f"{nombre_fuente}.{tabla}"] = _filas(
-                    conexion, f"SELECT * FROM {tabla} WHERE {columna} = ? ORDER BY id", paciente_id
+                    # rowid: algunas tablas laterales (HC-02/HC-04) no tienen columna `id`.
+                    conexion, f"SELECT * FROM {tabla} WHERE {columna} = ? ORDER BY rowid", paciente_id
                 )
 
     informacion = InformacionTitular(paciente_id=paciente_id, generado_en=momento.isoformat(), secciones=secciones)

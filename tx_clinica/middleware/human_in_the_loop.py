@@ -18,7 +18,9 @@ from __future__ import annotations
 
 from langchain.agents.middleware import HumanInTheLoopMiddleware
 
-#: Solo las tools que ESCRIBEN una decisión clínica van acá. Las de solo
+#: Solo las tools que ESCRIBEN en el expediente van acá (la decisión
+#: clínica, y los datos clínicos o la conciliación que el oncólogo dicta
+#: por chat: ver tools/registro_tools.py). Las de solo
 #: lectura (obtener_datos_paciente, obtener_recomendaciones_tratamiento_*,
 #: chequear_interacciones_tratamiento, consultar_medicacion_actual,
 #: listar_variables_requeridas, completar_datos_paciente_y_recomendar)
@@ -30,11 +32,14 @@ TOOLS_QUE_REQUIEREN_APROBACION_HUMANA = {
     # argumento mal interpretado (ej. tipo_decision incorrecto) en vez de
     # solo aprobar o rechazar en bloque.
     "registrar_decision_tratamiento": True,
+    # El oncólogo puede editar un valor mal interpretado antes de guardarlo.
+    "registrar_datos_clinicos_paciente": True,
+    "registrar_conciliacion_medicamentos": True,
 }
 
 
 def construir_middleware_aprobacion_humana() -> HumanInTheLoopMiddleware:
     return HumanInTheLoopMiddleware(
         interrupt_on=TOOLS_QUE_REQUIEREN_APROBACION_HUMANA,
-        description_prefix="Decisión de tratamiento pendiente de aprobación del oncólogo",
+        description_prefix="Acción que guarda datos en el expediente: requiere aprobación del oncólogo",
     )

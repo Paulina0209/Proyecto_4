@@ -118,6 +118,13 @@ def inicializar_langfuse() -> None:
     with _init_lock:
         if _inicializado:
             return
+        # El .env se lee ANTES de decidir la máscara: si no, quien construye
+        # el agente sin haberlo cargado (solo demo_tx.py llama load_dotenv)
+        # crearía el cliente sin máscara y el nombre del paciente llegaría
+        # a Langfuse sin redactar.
+        from core import llm_config
+
+        llm_config.cargar_env()
         if _env_activo("LANGFUSE_MASK_DATOS_PACIENTE"):
             Langfuse(mask=_mascara_langfuse)
         _inicializado = True

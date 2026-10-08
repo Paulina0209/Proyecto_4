@@ -1,0 +1,198 @@
+# HC-04 — Catálogo de biomarcadores: formato válido de cada resultado y su
+# relevancia para el tratamiento (insumo de TX-01).
+#
+# Riesgo clínico de la historia: un biomarcador mal registrado (p. ej.
+# positivo/negativo invertido) puede llevar a una decisión de tratamiento
+# equivocada. Por eso cada resultado se valida contra este catálogo: solo se
+# aceptan los estados, métodos y rangos definidos aquí, y no texto libre.
+#
+# Campos de cada biomarcador:
+#   - nombre:        cómo se guarda en `biomarcadores` (lo leen HC-05, DX e
+#                    IA; coincide con los alias del checklist de HC-05).
+#   - alias:         nombres con los que se puede registrar o importar.
+#   - formato:       define los estados válidos (ver FORMATOS en
+#                    biopsias_biomarcadores.py):
+#                      alteracion      detectada | no_detectada | no_concluyente
+#                                      (con variante obligatoria si se detecta)
+#                      reordenamiento  reordenado | no_reordenado | no_concluyente
+#                      ihc_her2        positivo | negativo | equivoco | no_concluyente
+#                                      (el estado debe ser coherente con IHC/ISH)
+#                      receptor        positivo | negativo | no_concluyente
+#                                      (con % de células: >= 1 % es positivo)
+#                      porcentaje      cuantificado | no_concluyente
+#                                      (valor obligatorio entre 0 y 100)
+#   - tipos_cancer:  códigos de `cancer_type` en los que el resultado es
+#                    accionable. En otro tipo de cáncer se guarda como
+#                    informativo, sin escribir variables de tratamiento.
+#   - metodos:       métodos de laboratorio aceptados.
+#   - accionable:    reglas para el estado "positivo" del formato. Si hay
+#                    `variantes` (expresiones regulares), la variante debe
+#                    coincidir con alguna. Cada regla dice la terapia dirigida
+#                    y, si TX-01 tiene una variable para ella, cuál escribir
+#                    (`variable_tx` / `valor_tx`; en `porcentaje`, valor_tx:
+#                    "{valor}" toma el valor registrado).
+#   - otros_tx:      variable de TX para estados no positivos (p. ej. EGFR
+#                    no detectada -> egfr_status=wild_type).
+#
+# Cada `variable_tx` / `valor_tx` se valida al cargar contra
+# guidelines/*/variables.yaml: el catálogo no puede apuntar a algo que
+# TX-01 no entiende.
+#
+# Contenido ilustrativo para el prototipo; cada institución debe revisarlo
+# con su comité de tumores y su laboratorio de patología molecular.
+
+version: "1.0"
+
+biomarcadores:
+  EGFR:
+    nombre: EGFR
+    alias: [egfr, her1, erbb1]
+    formato: alteracion
+    tipos_cancer: [NSCLC]
+    metodos: [NGS, PCR, Sanger]
+    accionable:
+      - variantes:
+          - '^L858R$'
+          - '^L861Q$'
+          - '^G719[ACSX]$'
+          - '^S768I$'
+          - 'exon ?19 ?(del|deleci)'
+          - '^[A-Z]7[45]\d_[A-Z]7[45]\d(del|delins)'
+        terapia: Inhibidor de tirosina quinasa de EGFR (p. ej. osimertinib)
+        variable_tx: egfr_status
+        valor_tx: sensitizing_mutation
+    otros_tx:
+      no_detectada: {variable_tx: egfr_status, valor_tx: wild_type}
+
+  ALK:
+    nombre: ALK
+    alias: [alk]
+    formato: reordenamiento
+    tipos_cancer: [NSCLC]
+    metodos: [IHC, FISH, NGS]
+    accionable:
+      - terapia: Inhibidor de ALK (p. ej. alectinib, lorlatinib)
+        variable_tx: alk_status
+        valor_tx: rearranged
+    otros_tx:
+      no_reordenado: {variable_tx: alk_status, valor_tx: negative}
+
+  ROS1:
+    nombre: ROS1
+    alias: [ros1]
+    formato: reordenamiento
+    tipos_cancer: [NSCLC]
+    metodos: [IHC, FISH, NGS]
+    accionable:
+      - terapia: Inhibidor de ROS1 (p. ej. crizotinib, entrectinib)
+
+  RET:
+    nombre: RET
+    alias: [ret]
+    formato: reordenamiento
+    tipos_cancer: [NSCLC]
+    metodos: [FISH, NGS]
+    accionable:
+      - terapia: Inhibidor selectivo de RET (p. ej. selpercatinib)
+
+  NTRK:
+    nombre: NTRK
+    alias: [ntrk, ntrk1, ntrk2, ntrk3]
+    formato: reordenamiento
+    tipos_cancer: [NSCLC]
+    metodos: [IHC, FISH, NGS]
+    accionable:
+      - terapia: Inhibidor de TRK (p. ej. larotrectinib, entrectinib)
+
+  BRAF:
+    nombre: BRAF
+    alias: [braf, braf v600]
+    formato: alteracion
+    tipos_cancer: [NSCLC, melanoma, cutaneous_melanoma]
+    metodos: [NGS, PCR, IHC]
+    accionable:
+      - variantes: ['^V600E$']
+        terapia: Inhibidor de BRAF + MEK (p. ej. dabrafenib + trametinib)
+        variable_tx: braf_v600_status
+        valor_tx: V600E
+      - variantes: ['^V600K$']
+        terapia: Inhibidor de BRAF + MEK (p. ej. dabrafenib + trametinib)
+        variable_tx: braf_v600_status
+        valor_tx: V600K
+      - variantes: ['^V600[A-Z]$']
+        terapia: Inhibidor de BRAF + MEK (evaluar según la variante V600)
+        variable_tx: braf_v600_status
+        valor_tx: V600_other
+    otros_tx:
+      no_detectada: {variable_tx: braf_v600_status, valor_tx: not_detected}
+
+  KRAS:
+    nombre: KRAS
+    alias: [kras]
+    formato: alteracion
+    tipos_cancer: [NSCLC]
+    metodos: [NGS, PCR]
+    accionable:
+      - variantes: ['^G12C$']
+        terapia: Inhibidor de KRAS G12C (p. ej. sotorasib, adagrasib)
+
+  MET:
+    nombre: MET
+    alias: [met]
+    formato: alteracion
+    tipos_cancer: [NSCLC]
+    metodos: [NGS]
+    accionable:
+      - variantes: ['exon ?14', '^X10\d\d_splice$', '^D1010']
+        terapia: Inhibidor de MET (p. ej. capmatinib, tepotinib)
+
+  HER2:
+    nombre: HER2
+    alias: [her2, her2 neu, her2/neu]
+    formato: ihc_her2
+    tipos_cancer: [breast]
+    metodos: [IHC, ISH]
+    accionable:
+      - terapia: Terapia anti-HER2 (p. ej. trastuzumab, pertuzumab)
+        variable_tx: her2_status
+        valor_tx: positive
+    otros_tx:
+      negativo: {variable_tx: her2_status, valor_tx: negative}
+      equivoco: {variable_tx: her2_status, valor_tx: equivocal}
+
+  RE:
+    nombre: Receptor de estrógeno (RE)
+    alias: [re, er, receptor de estrogeno, estrogen receptor]
+    formato: receptor
+    tipos_cancer: [breast]
+    metodos: [IHC]
+    accionable:
+      - terapia: Hormonoterapia
+        variable_tx: er_status
+        valor_tx: positive
+    otros_tx:
+      negativo: {variable_tx: er_status, valor_tx: negative}
+
+  RP:
+    nombre: Receptor de progesterona (RP)
+    alias: [rp, pr, receptor de progesterona, progesterone receptor]
+    formato: receptor
+    tipos_cancer: [breast]
+    metodos: [IHC]
+    accionable:
+      - terapia: Hormonoterapia
+        variable_tx: pr_status
+        valor_tx: positive
+    otros_tx:
+      negativo: {variable_tx: pr_status, valor_tx: negative}
+
+  PDL1_TPS:
+    nombre: PD-L1 TPS
+    alias: [pd l1, pdl1, pd l1 tps, pdl1 tps]
+    formato: porcentaje
+    tipos_cancer: [NSCLC]
+    metodos: [22C3, SP263, SP142, 28-8]
+    accionable:
+      - terapia: Inmunoterapia anti-PD-1/PD-L1 (la indicación depende del TPS)
+        variable_tx: pdl1_tps
+        valor_tx: "{valor}"

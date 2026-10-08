@@ -34,8 +34,13 @@ Decisiones de diseño:
       ``registros_importados`` con su identificador de origen y no se
       vuelve a insertar.
     - Los laboratorios se guardan tal como llegan (con ``alterado`` según
-      su rango de referencia). Las alertas por valor crítico y los
-      conflictos de marcador son responsabilidad de HC-02.
+      su rango de referencia) y, en la misma transacción, pasan por HC-02
+      (``historia_clinica.laboratorios.procesar_resultados``): alertas por
+      valor crítico y conflictos de marcador.
+    - Doble validación de identidad para resultados de laboratorio (riesgo
+      de HC-02): un mensaje HL7 o FHIR que trae laboratorios debe traer
+      también el nombre del paciente, y debe coincidir con el del
+      expediente además de la identificación.
 """
 
 from __future__ import annotations
@@ -43,12 +48,13 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Protocol, Tuple, Union
 
 from historia_clinica.db import ahora_iso
+from historia_clinica.laboratorios import nombres_coinciden, procesar_resultados, registrar_recepcion
 from expediente.repository import Paciente, obtener_paciente
 
 FORMATO_FHIR = "fhir"
@@ -324,6 +330,9 @@ class RegistroExterno:
     #: laboratorios | imagenologia | biomarcadores | datos_clinicos_estructurados | antecedentes_externos
     tabla: str
     valores: Dict[str, Any]
+    #: Solo laboratorios: momento exacto de la toma (ISO con hora), si la
+    #: fuente lo trae. Lo usa HC-02 para detectar conflictos (AC3).
+    fecha_hora: Optional[str] = field(default=None, compare=False)
 
 
 _Registro = RegistroExterno
@@ -339,6 +348,7 @@ def _importar(conn, paciente_id, fuente, formato, contenido, traductor, ahora) -
     try:
         sincronizacion_id = _insertar_sincronizacion(conn, paciente_id, fuente, formato, "exitosa", 0, 0, None, ahora)
         importados = 0
+        laboratorios_nuevos: List[int] = []
         for registro in registros:
             ya_importado = conn.execute(
                 "SELECT 1 FROM registros_importados WHERE fuente = ? AND identificador_externo = ?",
@@ -348,12 +358,18 @@ def _importar(conn, paciente_id, fuente, formato, contenido, traductor, ahora) -
                 omitidos += 1
                 continue
             fila_id = _insertar_registro(conn, paciente_id, fuente, registro)
+            if registro.tabla == "laboratorios":
+                registrar_recepcion(conn, fila_id, paciente_id, registro.fecha_hora, formato, ahora)
+                laboratorios_nuevos.append(fila_id)
             conn.execute(
                 "INSERT INTO registros_importados "
                 "(sincronizacion_id, fuente, identificador_externo, tabla_destino, fila_id) VALUES (?, ?, ?, ?, ?)",
                 (sincronizacion_id, fuente, registro.identificador_externo, registro.tabla, fila_id),
             )
             importados += 1
+        # HC-02 (AC2, AC3) dentro de la misma transacción: si falla, no
+        # queda ni el resultado ni su alerta a medias.
+        procesar_resultados(conn, laboratorios_nuevos, ahora=ahora)
         mensaje = (
             f"Historia sincronizada desde {fuente}: {importados} registro(s) nuevo(s) "
             f"cargado(s) al expediente, {omitidos} omitido(s)."
@@ -423,12 +439,33 @@ def _describir(exc: Exception) -> str:
     return f"{type(exc).__name__}: {texto}" if texto else type(exc).__name__
 
 
-def _verificar_identidad(paciente: Paciente, identificaciones_externas: List[str]) -> None:
+def _verificar_identidad(
+    paciente: Paciente,
+    identificaciones_externas: List[str],
+    nombres_externos: Optional[List[str]] = None,
+    exigir_nombre: bool = False,
+) -> None:
+    """Identificación siempre; además el nombre (doble validación de HC-02)
+    cuando el mensaje lo trae o cuando ``exigir_nombre`` (mensajes con
+    resultados de laboratorio)."""
     if paciente.identificacion not in {i.strip() for i in identificaciones_externas if i}:
         raise PacienteNoCoincideError(
             "El mensaje externo corresponde a otro paciente (identificación "
             f"{', '.join(identificaciones_externas) or 'ausente'}; se esperaba {paciente.identificacion}). "
             "No se importó ningún dato."
+        )
+    nombres = [n for n in (nombres_externos or []) if n and n.strip()]
+    if not nombres:
+        if exigir_nombre:
+            raise PacienteNoCoincideError(
+                "El mensaje trae resultados de laboratorio pero no el nombre del paciente; sin doble "
+                "validación (identificación + nombre) no se importa ningún dato."
+            )
+        return
+    if not any(nombres_coinciden(paciente.nombre, n) for n in nombres):
+        raise PacienteNoCoincideError(
+            f"El nombre del mensaje externo ({'; '.join(nombres)}) no coincide con el del paciente "
+            f"{paciente.identificacion} en el expediente. No se importó ningún dato."
         )
 
 
@@ -496,7 +533,11 @@ def _registros_desde_fhir(contenido, paciente: Paciente) -> Tuple[List[_Registro
     if not pacientes:
         raise ErrorIntegracion("El Bundle FHIR no incluye el recurso Patient; no se puede verificar la identidad.")
     identificaciones = [i.get("value", "") for p in pacientes for i in p.get("identifier") or []]
-    _verificar_identidad(paciente, identificaciones)
+    nombres = [_nombre_fhir(n) for p in pacientes for n in p.get("name") or []]
+    trae_laboratorios = any(
+        r.get("resourceType") == "Observation" and "laboratory" in _codigos_categoria(r) for r in recursos
+    )
+    _verificar_identidad(paciente, identificaciones, nombres, exigir_nombre=trae_laboratorios)
 
     registros: List[_Registro] = []
     omitidos = 0
@@ -522,9 +563,23 @@ def _registros_desde_fhir(contenido, paciente: Paciente) -> Tuple[List[_Registro
     return registros, omitidos
 
 
+def _nombre_fhir(nombre: Dict[str, Any]) -> str:
+    if nombre.get("text"):
+        return nombre["text"]
+    return " ".join([*(nombre.get("given") or []), nombre.get("family") or ""]).strip()
+
+
+def _fecha_hora_iso(valor: Optional[str]) -> Optional[str]:
+    """``AAAA-MM-DDTHH:MM`` si el valor trae hora; si no, ``None``."""
+    if not valor or "T" not in valor or len(valor) < 16:
+        return None
+    return valor[:16]
+
+
 def _laboratorio_fhir(externo: str, obs: Dict[str, Any]) -> Optional[_Registro]:
     prueba = _texto_codigo(obs.get("code"))
-    fecha = _fecha(obs.get("effectiveDateTime") or obs.get("issued"))
+    momento = obs.get("effectiveDateTime") or obs.get("issued")
+    fecha = _fecha(momento)
     cantidad = obs.get("valueQuantity") or {}
     if "value" in cantidad:
         valor, unidad = str(cantidad["value"]), cantidad.get("unit") or cantidad.get("code")
@@ -549,6 +604,7 @@ def _laboratorio_fhir(externo: str, obs: Dict[str, Any]) -> Optional[_Registro]:
         externo,
         "laboratorios",
         dict(fecha=fecha, prueba=prueba, valor=valor, unidad=unidad, rango_referencia=rango, alterado=int(alterado)),
+        fecha_hora=_fecha_hora_iso(momento),
     )
 
 
@@ -615,6 +671,14 @@ def _fecha_hl7(valor: str) -> Optional[str]:
     return f"{digitos[0:4]}-{digitos[4:6]}-{digitos[6:8]}"
 
 
+def _fecha_hora_hl7(valor: str) -> Optional[str]:
+    """``AAAA-MM-DDTHH:MM`` si el TS de HL7 trae hora y minuto."""
+    digitos = re.sub(r"\D", "", valor or "")
+    if len(digitos) < 12:
+        return None
+    return f"{digitos[0:4]}-{digitos[4:6]}-{digitos[6:8]}T{digitos[8:10]}:{digitos[10:12]}"
+
+
 _ESCAPES_HL7 = {"\\F\\": "|", "\\S\\": "^", "\\T\\": "&", "\\R\\": "~", "\\E\\": "\\"}
 
 
@@ -647,15 +711,22 @@ def _registros_desde_hl7(contenido, paciente: Paciente) -> Tuple[List[_Registro]
     identificaciones = [
         repeticion.split(componente)[0] for repeticion in campo(pids[0], 3).split("~")
     ]
-    _verificar_identidad(paciente, identificaciones)
+    # PID-5: Apellido^Nombre. Un ORU trae resultados: el nombre es obligatorio.
+    nombres = [
+        " ".join(reversed([p for p in repeticion.split(componente)[:2] if p]))
+        for repeticion in campo(pids[0], 5).split("~")
+    ]
+    _verificar_identidad(paciente, identificaciones, [_desescapar_hl7(n) for n in nombres], exigir_nombre=True)
 
     registros: List[_Registro] = []
     omitidos = 0
     fecha_obr: Optional[str] = None
+    fecha_hora_obr: Optional[str] = None
     for segmento in segmentos:
         partes = segmento.split(separador)
         if partes[0] == "OBR":
             fecha_obr = _fecha_hl7(campo(partes, 7))
+            fecha_hora_obr = _fecha_hora_hl7(campo(partes, 7))
         elif partes[0] == "OBX":
             identificador = campo(partes, 3).split(componente)
             prueba = _desescapar_hl7(
@@ -663,6 +734,7 @@ def _registros_desde_hl7(contenido, paciente: Paciente) -> Tuple[List[_Registro]
             )
             valor = _desescapar_hl7(campo(partes, 5))
             fecha = _fecha_hl7(campo(partes, 14)) or fecha_obr
+            fecha_hora = _fecha_hora_hl7(campo(partes, 14)) if campo(partes, 14) else fecha_hora_obr
             if not prueba or not valor or not fecha:
                 omitidos += 1
                 continue
@@ -681,6 +753,7 @@ def _registros_desde_hl7(contenido, paciente: Paciente) -> Tuple[List[_Registro]
                         rango_referencia=rango,
                         alterado=int(alterado),
                     ),
+                    fecha_hora=fecha_hora,
                 )
             )
     return registros, omitidos

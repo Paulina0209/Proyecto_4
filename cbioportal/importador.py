@@ -7,17 +7,21 @@ verificación de identidad, transacción todo-o-nada, idempotencia por
 ``sincronizaciones_externas``.
 
 Lo único que agrega este módulo es lo que HC-01 no hace: crear (o
-actualizar) la fila del paciente y elegir qué pacientes traer de un
-estudio.
+actualizar) la fila del paciente, elegir qué pacientes traer de un
+estudio y vincular sus muestras con HC-04 (``vincular_biopsias``):
+episodio diagnóstico, una biopsia por muestra y biomarcadores
+potencialmente accionables pendientes de confirmación.
 """
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from dataclasses import dataclass
 from datetime import date
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence
 
+from historia_clinica.biopsias_biomarcadores import marcar_potencialmente_accionables
 from historia_clinica.integracion_externa import (
     ResultadoSincronizacion,
     importar_historia,
@@ -29,12 +33,15 @@ from .mapeo import (
     FORMATO_CBIOPORTAL,
     GENES_POR_TIPO,
     FichaPaciente,
+    calendario,
     ficha_paciente,
     identificacion_cbioportal,
     partes_identificacion,
     registros_desde_cbioportal,
     tipo_cancer,
 )
+
+log = logging.getLogger(__name__)
 
 ESTUDIO_POR_DEFECTO = "msk_chord_2024"
 TIPOS_POR_DEFECTO = ("Breast Cancer", "Non-Small Cell Lung Cancer")
@@ -147,7 +154,66 @@ def importar_paciente(
     ficha = ficha_paciente(contenido, fuente.fecha_referencia)
     paciente_id, nuevo = _guardar_paciente(conn, ficha)
     resultado = importar_historia(conn, paciente_id, contenido, fuente)
+    if resultado.exito:
+        try:
+            vincular_biopsias(conn, paciente_id, contenido, fuente.fecha_referencia)
+        except Exception:  # noqa: BLE001 -- la historia ya quedó importada; HC-04 se reintenta al re-importar
+            conn.rollback()
+            log.exception("No se pudieron vincular las biopsias de %s (HC-04).", identificacion)
     return ResultadoImportacion(identificacion, paciente_id, nuevo, resultado, contenido, ficha)
+
+
+def vincular_biopsias(conn: sqlite3.Connection, paciente_id: int, contenido: Dict[str, Any], fecha_referencia: date) -> None:
+    """HC-04 para un paciente importado. Idempotente (``identificador_externo``).
+
+    - Un episodio diagnóstico por el diagnóstico primario. Con más de un
+      primario no se crea ninguno: no se puede saber a cuál pertenece cada
+      muestra (la misma regla fail-closed que el mapeo aplica al estadio).
+    - Una biopsia por muestra secuenciada, vinculada a ese episodio.
+    - Los biomarcadores accionables quedan pendientes de confirmación, sin
+      escribir variables de tratamiento (ver ``mapeo``: una variante no es
+      un "positivo" hasta que el oncólogo lo confirma).
+    """
+    estudio, paciente = contenido["estudio"], contenido["paciente"]
+    primarios = [
+        e for e in contenido.get("eventos") or []
+        if e["tipo"] == "Diagnosis" and e["atributos"].get("SUBTYPE") == "Primary"
+    ]
+    if len(primarios) == 1:
+        fecha = calendario(contenido, fecha_referencia)
+        primario = primarios[0]
+        clave_episodio = f"cbioportal:{estudio}:{paciente}:primario"
+        episodio = conn.execute(
+            "SELECT id FROM episodios_diagnosticos WHERE identificador_externo = ?", (clave_episodio,)
+        ).fetchone()
+        if episodio is None:
+            ficha = ficha_paciente(contenido, fecha_referencia)
+            cursor = conn.execute(
+                "INSERT INTO episodios_diagnosticos (paciente_id, descripcion, tipo_cancer, fecha_diagnostico, origen, "
+                "identificador_externo) VALUES (?, ?, ?, ?, ?, ?)",
+                (paciente_id, ficha.diagnostico_principal or primario["atributos"].get("DX_DESCRIPTION") or "Diagnóstico primario",
+                 tipo_cancer(contenido), fecha(primario.get("inicio")), FORMATO_CBIOPORTAL, clave_episodio),
+            )
+            episodio_id = cursor.lastrowid
+        else:
+            episodio_id = episodio[0]
+
+        dia_muestra = {
+            e["atributos"].get("SAMPLE_ID"): e.get("inicio")
+            for e in contenido.get("eventos") or [] if e["tipo"] == "Sample acquisition"
+        }
+        for muestra in contenido.get("muestras") or []:
+            datos = muestra["datos"]
+            conn.execute(
+                "INSERT OR IGNORE INTO biopsias (paciente_id, episodio_id, fecha, sitio, procedimiento, "
+                "diagnostico_histologico, muestra_externa, origen, identificador_externo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (paciente_id, episodio_id, fecha(dia_muestra.get(muestra["id"])),
+                 datos.get("PRIMARY_SITE") or datos.get("SAMPLE_TYPE") or "no especificado",
+                 "Muestra tumoral secuenciada (cBioPortal)", datos.get("CANCER_TYPE_DETAILED"),
+                 muestra["id"], FORMATO_CBIOPORTAL, f"cbioportal:{estudio}:{muestra['id']}"),
+            )
+    marcar_potencialmente_accionables(conn, paciente_id, commit=False)
+    conn.commit()
 
 
 def seleccionar_pacientes(

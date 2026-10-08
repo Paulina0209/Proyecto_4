@@ -29,11 +29,18 @@ IDENTIFICACION = "EXT-1"
 
 
 def _bundle(identificacion=IDENTIFICACION):
+    # Trae laboratorios: el nombre es obligatorio (doble validación de HC-02).
+    paciente = {
+        "resourceType": "Patient",
+        "id": "p1",
+        "identifier": [{"value": identificacion}],
+        "name": [{"family": "Prueba", "given": ["Paciente"]}],
+    }
     return {
         "resourceType": "Bundle",
         "type": "searchset",
         "entry": [
-            {"resource": {"resourceType": "Patient", "id": "p1", "identifier": [{"value": identificacion}]}},
+            {"resource": paciente},
             {
                 "resource": {
                     "resourceType": "Observation",

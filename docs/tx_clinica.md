@@ -42,14 +42,41 @@ vocabulario de cada módulo (`major_comorbidity_precluding_ici`,
 ## Agente conversacional
 
 `tx_clinica/agent.py` (LangChain + un modelo GPT de OpenAI, ver
-`docs/llm_openai.md`). Las tools
-(`obtener_datos_paciente`, `obtener_recomendaciones_tratamiento_por_id`,
-`obtener_recomendaciones_tratamiento_con_datos`,
-`listar_variables_requeridas`) son wrappers sobre
-`builder.py`/`patient_facts.py`; el modelo redacta la respuesta a partir
-del JSON que devuelven. Cuando varios módulos podrían aplicar,
+`docs/llm_openai.md`). Tiene 10 tools (`tx_clinica/tools/__init__.py`):
+
+- **De lectura:** `obtener_datos_paciente` (incluye los biomarcadores clave de HC-04), `obtener_recomendaciones_tratamiento_por_id`, `completar_datos_paciente_y_recomendar`, `obtener_recomendaciones_tratamiento_con_datos`, `listar_variables_requeridas`, `consultar_medicacion_actual` y `chequear_interacciones_tratamiento`.
+- **De escritura, con aprobación humana:** `registrar_decision_tratamiento` (TX-04), `registrar_datos_clinicos_paciente` y `registrar_conciliacion_medicamentos`.
+
+Las de recomendación son wrappers sobre `builder.py`/`patient_facts.py`; el
+modelo redacta la respuesta a partir del JSON que devuelven. Cuando varios módulos podrían aplicar,
 `listar_variables_requeridas` devuelve el alcance clínico y un resumen de
 evidencia de cada módulo candidato para que el oncólogo elija.
+
+### Guardar datos desde el chat (con aprobación del oncólogo)
+
+Los valores que el oncólogo da en el chat sirven para evaluar
+(`completar_datos_paciente_y_recomendar`), pero no quedan guardados. La
+revisión de interacciones (TX-03) y el registro de la decisión (TX-04) leen
+**solo lo guardado**. Para que el flujo no se corte, el agente tiene dos tools
+que escriben (`tx_clinica/tools/registro_tools.py`):
+
+| Tool | Qué guarda |
+|---|---|
+| `registrar_datos_clinicos_paciente(patient_id, datos)` | Variables de la guía en `datos_clinicos_estructurados` (por ejemplo `disease_setting`, `treatment_line`, `smoking_status`) |
+| `registrar_conciliacion_medicamentos(patient_id, medicamentos \| sin_medicacion_concomitante)` | La medicación concomitante, que es la entrada del chequeo de interacciones |
+
+**Salvaguardas:**
+
+- **Aprobación humana estructural.** Las dos tools están en `TOOLS_QUE_REQUIEREN_APROBACION_HUMANA`, igual que `registrar_decision_tratamiento`. El grafo se pausa y nada se escribe hasta que el oncólogo aprueba, edita los valores o rechaza. No depende de que el modelo siga el prompt.
+- **Validación después de aprobar, antes de escribir:**
+  - solo se aceptan variables que existen en `guidelines/*/variables.yaml`, con valores permitidos y rangos numéricos;
+  - si un dato es inválido, no se guarda ninguno.
+- **Biomarcadores excluidos.** `egfr_status`, `her2_status`, `pdl1_tps`… no se guardan así: pasan por HC-04 (biopsia, validación estricta y doble ingreso) o por la confirmación del biomarcador pendiente.
+- **Conciliación sin ambigüedad.** Una lista vacía no significa "sin medicación": hace falta `sin_medicacion_concomitante=true`, que el oncólogo debe haber dicho de forma explícita.
+- **Firma.** El oncólogo que registra sale de la sesión (`config["configurable"]["oncologo_id"]`), nunca de un argumento del modelo.
+
+Pruebas: `tests/tx_clinica/test_registro_tools.py`. Cubren la pausa (nada se
+guarda antes de aprobar), el rechazo, la edición y la validación.
 
 ### Limitación observada
 
