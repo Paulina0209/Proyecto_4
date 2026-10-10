@@ -1,6 +1,6 @@
 """API HTTP del módulo de pacientes: HC-01 (registro), PAC-02 (búsqueda y
-datos clínicos), PAC-03 (resumen 360), HC-02 (laboratorios) y HC-04
-(biopsias y biomarcadores).
+datos clínicos), PAC-03 (resumen 360), HC-02 (laboratorios), HC-04
+(biopsias y biomarcadores) y HC-03 (imágenes diagnósticas del PACS).
 
     uvicorn patients.api:app
 
@@ -37,6 +37,7 @@ from auditoria.models import TipoAccion
 from auditoria.registro_acceso import inicializar_schema as inicializar_schema_auditoria
 from auditoria.registro_acceso import registrar_acceso
 from historia_clinica import biopsias_biomarcadores as hc04
+from historia_clinica import imagenes_pacs as hc03
 from historia_clinica import laboratorios as hc02
 from historia_clinica.db import conectar_expediente, ruta_expediente
 from historia_clinica.integracion_externa import importar_mensaje_hl7
@@ -77,6 +78,9 @@ from .schemas import (
     DescartarBiomarcadorSchema,
     EpisodioCreateSchema,
     EpisodioSchema,
+    VisorNoDisponibleSchema,
+    VisorSchema,
+    VistaImagenesSchema,
     LaboratorioCreateSchema,
     LaboratorioRegistradoSchema,
     MensajeHL7Schema,
@@ -87,6 +91,7 @@ from .schemas import (
     TendenciaMarcadorSchema,
     CompletarRegistroSchema,
     ConsultaCreateSchema,
+    ConsultaPACSSchema,
     ConsultaSchema,
     DiagnosticoCreateSchema,
     DiagnosticoSchema,
@@ -108,6 +113,12 @@ EXPEDIENTE_PATH: Optional[Path] = None
 #: CargadorDetalle). None = desactivada; se crea al arrancar si existe el
 #: expediente real, y los tests pueden asignarla directamente.
 CARGADOR_DETALLE = None
+#: PACS de la institución (HC-03): una ``historia_clinica.imagenes_pacs.FuentePACS``.
+#: None = la que configuren ``COPILOTO_PACS_URL`` y compañía; sin ninguna, la
+#: integración se informa como no disponible. Los tests asignan un doble.
+PACS_FUENTE = None
+#: Plantilla de URL del visor incrustable (``{study_uid}``). None = ``COPILOTO_VISOR_URL``.
+VISOR_PLANTILLA: Optional[str] = None
 
 
 def get_conn():
@@ -893,3 +904,96 @@ def descartar_biomarcador(
     except hc04.ErrorBiomarcador as exc:
         raise _error_400_hc(exc)
     return BiomarcadorSchema.model_validate(registrado)
+
+
+# ---------------------------------------------------------------------------
+# HC-03: imágenes diagnósticas (DICOM/PACS)
+# ---------------------------------------------------------------------------
+
+def _fuente_pacs():
+    return PACS_FUENTE if PACS_FUENTE is not None else hc03.fuente_desde_entorno()
+
+
+def _plantilla_visor() -> Optional[str]:
+    try:
+        return VISOR_PLANTILLA if VISOR_PLANTILLA is not None else hc03.plantilla_visor_desde_entorno()
+    except hc03.ErrorConfiguracionVisor:
+        return None  # visor mal configurado: se informa como "sin visor", no se cae la API
+
+
+_USUARIO_AUDITORIA = Query(
+    default=None,
+    description="ID de quien consulta. Si se provee, el acceso queda registrado en el log de auditoría (AUD-01).",
+)
+
+
+@app.get(
+    "/pacientes/{paciente_id}/imagenes",
+    response_model=VistaImagenesSchema,
+    responses=_RESPUESTA_404,
+    summary="HC-03: estudios de imagen del PACS y sus informes (aviso explícito si el PACS no responde)",
+)
+def ver_imagenes(
+    paciente_id: int,
+    oncologo_id: int = OncologoId,
+    usuario_id: Optional[int] = _USUARIO_AUDITORIA,
+    conn: sqlite3.Connection = Depends(get_conn),
+    conn_exp: sqlite3.Connection = Depends(get_conn_expediente),
+):
+    # Se crea en el expediente (``crear=True``) porque el índice de estudios cuelga de él.
+    expediente_id = _id_en_expediente(conn, conn_exp, paciente_id, oncologo_id, crear=True)
+    if usuario_id is not None:
+        registrar_acceso(conn, usuario_id, TipoAccion.VER, paciente_id=paciente_id, detalle="imagenes_pacs")
+    vista = hc03.estudios_del_expediente(
+        conn_exp, expediente_id, _fuente_pacs(), plantilla_visor=_plantilla_visor()
+    )
+    return VistaImagenesSchema.model_validate(vista)
+
+
+@app.get(
+    "/pacientes/{paciente_id}/imagenes/{study_uid}/visor",
+    response_model=VisorSchema,
+    responses={
+        **_RESPUESTA_404,
+        503: {"model": VisorNoDisponibleSchema, "description": "La integración con el PACS no está disponible (AC2)"},
+    },
+    summary="HC-03: abrir un estudio en el visor incrustado (503 explícito si el PACS no está disponible)",
+)
+def abrir_visor_imagen(
+    paciente_id: int,
+    study_uid: str,
+    oncologo_id: int = OncologoId,
+    usuario_id: Optional[int] = _USUARIO_AUDITORIA,
+    conn: sqlite3.Connection = Depends(get_conn),
+    conn_exp: sqlite3.Connection = Depends(get_conn_expediente),
+):
+    expediente_id = _id_en_expediente(conn, conn_exp, paciente_id, oncologo_id, crear=True)
+    if usuario_id is not None:
+        registrar_acceso(
+            conn, usuario_id, TipoAccion.VER, paciente_id=paciente_id, detalle=f"visor_pacs:{study_uid}"
+        )
+    resultado = hc03.abrir_visor(
+        conn_exp, expediente_id, study_uid, _fuente_pacs(), plantilla_visor=_plantilla_visor()
+    )
+    if not resultado.disponible:
+        cuerpo = VisorNoDisponibleSchema.model_validate(resultado).model_dump(mode="json")
+        return JSONResponse(status_code=503, content=cuerpo)
+    return VisorSchema.model_validate(resultado)
+
+
+@app.get(
+    "/pacientes/{paciente_id}/imagenes/consultas",
+    response_model=list[ConsultaPACSSchema],
+    responses=_RESPUESTA_404,
+    summary="HC-03: bitácora de intentos de consulta al PACS (incluye los fallidos)",
+)
+def consultas_pacs(
+    paciente_id: int,
+    oncologo_id: int = OncologoId,
+    conn: sqlite3.Connection = Depends(get_conn),
+    conn_exp: sqlite3.Connection = Depends(get_conn_expediente),
+):
+    expediente_id = _id_en_expediente(conn, conn_exp, paciente_id, oncologo_id, crear=False)
+    if expediente_id is None:
+        return []
+    return [ConsultaPACSSchema.model_validate(c) for c in hc03.historial_consultas(conn_exp, expediente_id)]

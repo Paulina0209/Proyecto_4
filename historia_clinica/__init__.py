@@ -2,6 +2,9 @@
 
     - ``integracion_externa``: HC-01 — historia clínica externa (FHIR R4,
       HL7 v2 ORU^R01 o PDF vía DOC-01).
+    - ``imagenes_pacs``: HC-03 — imágenes diagnósticas del PACS (DICOMweb),
+      enlazadas a su informe y abiertas en un visor de terceros; avisa
+      explícitamente si la integración no está disponible.
     - ``informacion_faltante``: HC-05 — qué información falta para
       diagnosticar, estadificar o tratar, según un checklist configurable
       por tipo de cáncer.

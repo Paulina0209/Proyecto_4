@@ -137,6 +137,12 @@ adaptadores adicionales.
   transacción, es idempotente y registra los fallos en
   `sincronizaciones_externas` sin bloquear el expediente. Ver
   `docs/historia_clinica_integracion.md`.
+- `imagenes_pacs.py` — **HC-03**: lista los estudios de imagen del PACS por
+  DICOMweb (QIDO-RS), los enlaza a su informe de `imagenologia` solo si el
+  enlace es único y entrega el `StudyInstanceUID` a un visor de terceros
+  (no hay visor propio). Verifica la identidad de cada estudio y, si el PACS
+  no está disponible, lo informa de forma explícita (tablas `estudios_pacs` y
+  `consultas_pacs`). Ver `docs/historia_clinica_imagenes_pacs.md`.
 - `informacion_faltante.py` — **HC-05**: evalúa el expediente contra un
   checklist configurable por tipo de cáncer y fase
   (`checklists_informacion.yaml`). Nunca devuelve "completo" si no hay
@@ -174,7 +180,7 @@ biomarcadores pendientes de confirmación). Ver `docs/cbioportal.md`.
 Módulo de pacientes:
 
 - registro, búsqueda (PAC-02) y resumen 360 (PAC-03), sobre su propia base (`patients/db`);
-- API HTTP (`patients/api.py`) que también expone HC-02 y HC-04 sobre el expediente;
+- API HTTP (`patients/api.py`) que también expone HC-02, HC-03 y HC-04 sobre el expediente;
 - `patients/expediente.py` vincula las dos bases por identificación;
 - cliente de consola: `python -m patients.demo`.
 
