@@ -17,6 +17,9 @@ class TipoAccion(str, Enum):
     GESTIONAR_DERECHOS_TITULAR = "gestionar_derechos_titular"
     # CFG-01: cambio de las guías clínicas institucionales por defecto.
     CONFIGURAR_GUIAS = "configurar_guias"
+    # ADM-01: alta, cambio, baja y cambio de rol de usuarios institucionales
+    # (también los intentos denegados).
+    GESTIONAR_USUARIOS = "gestionar_usuarios"
 
 
 @dataclass(frozen=True)

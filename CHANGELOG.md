@@ -4,6 +4,15 @@
 
 ### Añadido
 
+- **ADM-01 — Gestión de usuarios, roles y permisos** (`administracion/`):
+  - alta, consulta, listado con filtros, edición, cambio de rol, baja lógica (desactivar/reactivar) y restablecimiento de contraseña;
+  - solo el nuevo rol `administrador` (`Accion.GESTIONAR_USUARIOS`); el actor se relee de la base en cada operación;
+  - salvaguardas: nadie cambia su propio rol ni se desactiva, nunca se pierde el último administrador activo, no hay borrado;
+  - cada operación y cada intento denegado queda en AUD-01 (`TipoAccion.GESTIONAR_USUARIOS`), sin contraseñas ni hashes; el cambio y su auditoría se confirman juntos;
+  - permisos = los del rol (`PERMISOS_POR_ROL`, `matriz_de_permisos`); tabla lateral `perfiles_usuario`;
+  - API `uvicorn administracion.api:app` con HTTP Basic sobre el login de SEC-01, y `python -m administracion crear-admin` para el primer administrador.
+  - Cambios aditivos en `seguridad/` (`Rol.ADMINISTRADOR`, `permisos_del_rol`, `insertar_usuario`, `establecer_contrasena`) y `auditoria/`.
+  - Ver `docs/administracion_usuarios.md`; demo: `python -m administracion.demo`.
 - **HC-03 — Integración de imágenes diagnósticas (DICOM/PACS)** (`historia_clinica/imagenes_pacs.py`):
   - cliente DICOMweb (QIDO-RS) con sesión inyectable (`FuenteDICOMweb`) y contrato `FuentePACS`;
   - visor de terceros incrustado por plantilla de URL (`COPILOTO_VISOR_URL`) en vez de un visor propio (evaluación en el doc);

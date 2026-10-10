@@ -61,6 +61,9 @@ python -m seguridad.demo
 
 ## Alcance y limitaciones
 
+- La gestión de usuarios (alta, cambio de rol, baja, restablecer contraseña)
+  es **ADM-01**: ver `docs/administracion_usuarios.md`. El rol
+  `administrador` que la ejecuta no tiene permisos clínicos.
 - No incluye MFA (mencionado como "ideal" en el backlog, no obligatorio en
   los criterios de aceptación).
 - No hay todavía una capa HTTP de login (endpoint `/login`) ni gestión de

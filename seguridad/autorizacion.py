@@ -28,6 +28,7 @@ class Accion(str, Enum):
     EDITAR_EXPEDIENTE = "editar_expediente"
     EXPORTAR_EXPEDIENTE = "exportar_expediente"
     CONFIGURAR_GUIAS_INSTITUCIONALES = "configurar_guias_institucionales"  # CFG-01
+    GESTIONAR_USUARIOS = "gestionar_usuarios"  # ADM-01
 
 
 PERMISOS_POR_ROL: dict[Accion, frozenset[Rol]] = {
@@ -38,7 +39,15 @@ PERMISOS_POR_ROL: dict[Accion, frozenset[Rol]] = {
     Accion.EDITAR_EXPEDIENTE: frozenset({Rol.ONCOLOGO, Rol.ENFERMERIA}),
     Accion.EXPORTAR_EXPEDIENTE: frozenset({Rol.ONCOLOGO, Rol.ADMINISTRATIVO}),
     Accion.CONFIGURAR_GUIAS_INSTITUCIONALES: frozenset({Rol.ADMINISTRADOR_CLINICO}),
+    Accion.GESTIONAR_USUARIOS: frozenset({Rol.ADMINISTRADOR}),
 }
+
+
+def permisos_del_rol(rol: Rol) -> tuple[Accion, ...]:
+    """Acciones que un rol puede ejecutar, en el orden de ``Accion`` (para
+    mostrarlas al administrador, ADM-01). Es la misma tabla que usa
+    ``verificar_permiso``: no hay una segunda fuente de verdad."""
+    return tuple(a for a in Accion if rol in PERMISOS_POR_ROL.get(a, frozenset()))
 
 
 def verificar_permiso(usuario: Usuario, accion: Accion) -> ResultadoAutorizacion:
