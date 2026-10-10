@@ -1,5 +1,19 @@
 # Changelog
 
+## [Sin versionar] — Rama `NatiMejia`
+
+### Añadido
+
+- **HC-03 — Integración de imágenes diagnósticas (DICOM/PACS)** (`historia_clinica/imagenes_pacs.py`):
+  - cliente DICOMweb (QIDO-RS) con sesión inyectable (`FuenteDICOMweb`) y contrato `FuentePACS`;
+  - visor de terceros incrustado por plantilla de URL (`COPILOTO_VISOR_URL`) en vez de un visor propio (evaluación en el doc);
+  - cada estudio se enlaza a su informe de `imagenologia` solo cuando el enlace es único;
+  - verificación de identidad por estudio (PatientID + nombre); los de otro paciente se descartan;
+  - sin PACS o sin conexión: aviso explícito (`503` en el visor), última sincronización y bitácora `consultas_pacs`.
+  - Tablas `estudios_pacs` y `consultas_pacs` (aditivas). Endpoints `GET /pacientes/{id}/imagenes`, `.../imagenes/{study_uid}/visor` y `.../imagenes/consultas`.
+  - Autenticación Bearer o HTTP Basic hacia el PACS (`COPILOTO_PACS_USUARIO`/`COPILOTO_PACS_PASSWORD`).
+  - Ver `docs/historia_clinica_imagenes_pacs.md`; demos: `python -m historia_clinica.demo_imagenes_pacs` (PACS simulado) y `python -m historia_clinica.demo_orthanc` (Orthanc + OHIF reales en Docker).
+
 ## [Sin versionar] — Rama `laboratory-integration`
 
 ### Añadido

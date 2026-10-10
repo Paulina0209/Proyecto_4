@@ -27,6 +27,7 @@ langfuse>=3.0
 # Solo se necesitan para los agentes LLM / scraper de actualización de guías.
 # No los usan los tests. Instalar bajo demanda:
 #
+#   pydicom>=2.4             # historia_clinica/demo_orthanc.py (genera el DICOM sintético de la demo)
 #   anthropic>=0.40          # ia_clinica/notes/llm_client.py, guidelineUpdate/agent/graph.py (import perezoso)
 #   pdfplumber>=0.11         # guidelineUpdate/agent/rule_agent.py (import perezoso)
 #   python-pptx>=0.6         # guidelineUpdate/agent/pptx_text.py

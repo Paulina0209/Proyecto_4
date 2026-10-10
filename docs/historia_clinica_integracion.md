@@ -52,7 +52,7 @@ pruebas no dependen de un servidor real.
 - Las alertas por valor crítico y los conflictos de marcador de laboratorio son
   de **HC-02** (`docs/historia_clinica_laboratorios.md`). Los laboratorios que
   importa HC-01 pasan por HC-02 dentro de la misma transacción.
-- La visualización DICOM/PACS es de **HC-03**, y el registro validado de
+- La visualización DICOM/PACS es de **HC-03** (`docs/historia_clinica_imagenes_pacs.md`), y el registro validado de
   biopsias y biomarcadores es de **HC-04** (`docs/historia_clinica_biomarcadores.md`).
 - La nota técnica del backlog recomienda dividir la historia por tipo de fuente,
   porque cada EHR es distinto. Esta primera entrega cubre los dos estándares

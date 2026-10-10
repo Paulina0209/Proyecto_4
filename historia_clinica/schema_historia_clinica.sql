@@ -148,3 +148,41 @@ CREATE TABLE IF NOT EXISTS detalle_biomarcador (
     origen TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_detalle_biomarcador_paciente ON detalle_biomarcador (paciente_id, relevancia);
+
+-- HC-03: índice local de los estudios de imagen del PACS. No guarda píxeles
+-- (eso es del PACS): guarda lo necesario para listar el estudio, enlazarlo a
+-- su informe y, si el PACS cae, seguir mostrando que el estudio existe.
+CREATE TABLE IF NOT EXISTS estudios_pacs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    paciente_id INTEGER NOT NULL REFERENCES pacientes(id),
+    pacs TEXT NOT NULL,
+    study_uid TEXT NOT NULL,
+    accession_number TEXT,
+    fecha TEXT,
+    modalidad TEXT,
+    descripcion TEXT,
+    series INTEGER,
+    instancias INTEGER,
+    -- Informe asociado (fila de `imagenologia`); NULL si no hay uno único.
+    imagenologia_id INTEGER REFERENCES imagenologia(id),
+    sincronizado_en TEXT NOT NULL,
+    UNIQUE (pacs, study_uid)
+);
+CREATE INDEX IF NOT EXISTS idx_estudios_pacs_paciente ON estudios_pacs (paciente_id, fecha);
+
+-- HC-03: bitácora de solo inserción de cada intento de hablar con el PACS
+-- (listado o apertura del visor). Es lo que impide que un fallo de la
+-- integración pase en silencio (AC2).
+CREATE TABLE IF NOT EXISTS consultas_pacs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    paciente_id INTEGER NOT NULL REFERENCES pacientes(id),
+    pacs TEXT NOT NULL,
+    tipo TEXT NOT NULL,             -- listado | visor
+    estado TEXT NOT NULL,           -- exitosa | fallida
+    estudios INTEGER NOT NULL DEFAULT 0,
+    rechazados INTEGER NOT NULL DEFAULT 0,
+    study_uid TEXT,
+    mensaje TEXT,
+    fecha TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_consultas_pacs_paciente ON consultas_pacs (paciente_id, fecha);

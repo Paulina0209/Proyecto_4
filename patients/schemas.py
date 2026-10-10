@@ -396,3 +396,62 @@ class ConfirmarBiomarcadorSchema(_Esquema):
 
 class DescartarBiomarcadorSchema(_Esquema):
     revisado_por: str
+
+
+# --- HC-03: imágenes diagnósticas (PACS) -------------------------------------
+
+
+class InformeImagenSchema(_Esquema):
+    imagenologia_id: int
+    fecha: str
+    modalidad: str
+    region: str
+    texto: str
+
+
+class EstudioPACSSchema(_Esquema):
+    study_uid: str
+    pacs: str
+    fecha: Optional[str]
+    modalidad: Optional[str]
+    descripcion: Optional[str]
+    series: Optional[int]
+    instancias: Optional[int]
+    sincronizado_en: str
+    informe: Optional[InformeImagenSchema] = None
+    visor_url: Optional[str] = None
+
+
+class VistaImagenesSchema(_Esquema):
+    """AC1/AC2: ``integracion_disponible=False`` + ``mensaje`` cuando el PACS
+    no responde; los informes del expediente siguen en ``informes_sin_estudio``."""
+    integracion_disponible: bool
+    desde_indice_local: bool
+    mensaje: str
+    estudios: list[EstudioPACSSchema]
+    informes_sin_estudio: list[InformeImagenSchema]
+
+
+class VisorSchema(_Esquema):
+    study_uid: str
+    url: str
+    mensaje: str
+    informe: Optional[InformeImagenSchema] = None
+
+
+class VisorNoDisponibleSchema(_Esquema):
+    study_uid: str
+    mensaje: str
+    informe: Optional[InformeImagenSchema] = None
+
+
+class ConsultaPACSSchema(_Esquema):
+    id: int
+    pacs: str
+    tipo: str
+    estado: str
+    estudios: int
+    rechazados: int
+    study_uid: Optional[str]
+    mensaje: Optional[str]
+    fecha: str
