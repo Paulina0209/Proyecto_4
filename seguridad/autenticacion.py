@@ -64,6 +64,17 @@ def registrar_usuario(
     No es parte del flujo del oncólogo en consulta -- la ejecuta un
     administrador del sistema.
     """
+    usuario = insertar_usuario(conn, nombre_usuario, contrasena, rol)
+    conn.commit()
+    return usuario
+
+
+def insertar_usuario(
+    conn: sqlite3.Connection, nombre_usuario: str, contrasena: str, rol: Rol
+) -> Usuario:
+    """Igual que ``registrar_usuario`` pero sin confirmar la transacción: la
+    usa ``administracion.usuarios`` para dar de alta al usuario y registrar
+    su auditoría juntos."""
     if not nombre_usuario or not nombre_usuario.strip():
         raise ValueError("El nombre de usuario no puede estar vacío.")
     if not contrasena:
@@ -78,9 +89,22 @@ def registrar_usuario(
         """,
         (nombre_usuario.strip(), rol.value, _hash_contrasena(contrasena, sal), sal.hex()),
     )
-    conn.commit()
     fila = conn.execute("SELECT * FROM usuarios WHERE id = ?", (cursor.lastrowid,)).fetchone()
     return _fila_a_usuario(fila)
+
+
+def establecer_contrasena(conn: sqlite3.Connection, usuario_id: int, contrasena: str) -> None:
+    """Fija una contraseña nueva (sal nueva) y levanta el bloqueo por intentos
+    fallidos. No hace control de acceso ni valida la política de contraseñas:
+    quien llama (``administracion.usuarios``) es el que lo hace. No hace
+    commit: la transacción es de quien llama."""
+    if not contrasena:
+        raise ValueError("La contraseña no puede estar vacía.")
+    sal = os.urandom(16)
+    conn.execute(
+        "UPDATE usuarios SET hash_contrasena = ?, sal = ?, intentos_fallidos = 0, bloqueado_hasta = NULL WHERE id = ?",
+        (_hash_contrasena(contrasena, sal), sal.hex(), usuario_id),
+    )
 
 
 def autenticar(

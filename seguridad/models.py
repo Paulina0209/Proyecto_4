@@ -14,6 +14,9 @@ class Rol(str, Enum):
     AUDITOR = "auditor"
     #: CFG-01: define qué guías clínicas usa la institución por defecto.
     ADMINISTRADOR_CLINICO = "administrador_clinico"
+    #: ADM-01: administrador del sistema; gestiona usuarios, roles y permisos.
+    #: Es un rol de administración: no tiene acceso clínico a los expedientes.
+    ADMINISTRADOR = "administrador"
 
 
 @dataclass(frozen=True)

@@ -252,6 +252,15 @@ Filtra EV-01 (`EvidenceSearchService.search(organizations=...)`) y expone
 `modulos_habilitados()` para los demás consumidores. Ver
 `docs/configuracion_guias.md`.
 
+### administracion
+
+**ADM-01 — gestión de usuarios, roles y permisos.** CRUD de los usuarios de
+SEC-01 con baja lógica (nunca se borra), asignación de rol (los permisos son
+los del rol), restablecimiento de contraseña y una API HTTP con
+autenticación Basic. Solo el rol `administrador` (sin acceso clínico);
+cada operación y cada intento denegado queda en AUD-01, y el sistema nunca
+se queda sin administrador activo. Ver `docs/administracion_usuarios.md`.
+
 ### privacidad
 
 **NFR-06 — cumplimiento de datos personales y gestión de derechos.**
