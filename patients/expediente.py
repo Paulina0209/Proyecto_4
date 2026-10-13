@@ -67,10 +67,14 @@ def identificacion_coincide(numero_identificacion: str, recibida: str) -> bool:
     """La identificación escrita en la orden de laboratorio corresponde al
     paciente. Para un paciente de cBioPortal basta el id del estudio
     (``P-0000036`` para ``CBIO:msk_chord_2024:P-0000036``), como en
-    ``expediente.repository.buscar_paciente_por_identificacion``."""
-    recibida = (recibida or "").strip()
+    ``expediente.repository.buscar_paciente_por_identificacion``.
+
+    No distingue mayúsculas ni espacios en los extremos (``p-0000036`` es
+    el mismo identificador): la doble validación con el nombre se mantiene."""
+    recibida = (recibida or "").strip().casefold()
+    numero = (numero_identificacion or "").strip().casefold()
     if not recibida:
         return False
-    if recibida == numero_identificacion:
+    if recibida == numero:
         return True
-    return numero_identificacion.startswith("CBIO:") and numero_identificacion.endswith(f":{recibida}")
+    return numero.startswith("cbio:") and numero.endswith(f":{recibida}")

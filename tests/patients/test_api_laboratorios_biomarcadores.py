@@ -271,3 +271,14 @@ def test_el_360_sin_expediente_funciona_como_antes(client_con_datos):
     resumen = _resumen(client_con_datos)
     assert resumen["biomarcadores_clave"] == []
     assert not api_module.EXPEDIENTE_PATH.exists()
+
+
+def test_la_identificacion_no_distingue_mayusculas(client_con_datos):
+    from patients.expediente import identificacion_coincide
+
+    assert identificacion_coincide("CBIO:msk_chord_2024:P-0016350", " p-0016350 ")
+    assert identificacion_coincide("CBIO:msk_chord_2024:P-0016350", "cbio:MSK_CHORD_2024:p-0016350")
+    assert not identificacion_coincide("CBIO:msk_chord_2024:P-0016350", "P-001635")
+    # La doble validación con el nombre sigue igual.
+    assert _lab(client_con_datos, identificacion=" 91000001 ").status_code == 201
+    assert _lab(client_con_datos, identificacion="91000001", nombre="Carlos Ruiz").status_code == 409

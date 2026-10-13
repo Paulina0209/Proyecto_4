@@ -50,6 +50,34 @@ CAMPOS_360_LEGIBLES = {
 # sobrecargar la pantalla.
 MAX_ACCESO_RAPIDO = 3
 
+# Resaltado: negrilla y color (ANSI) en vez de símbolos. Solo si la salida
+# es una terminal; redirigida a un archivo (o con NO_COLOR) sale texto plano.
+_ESTILOS = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+
+
+def _estilo(texto: str, codigo: str) -> str:
+    return f"\033[{codigo}m{texto}\033[0m" if _ESTILOS else texto
+
+
+def negrita(texto: str) -> str:
+    return _estilo(texto, "1")
+
+
+def resaltar_ok(texto: str) -> str:
+    """Negrilla verde: algo se guardó o se cumplió."""
+    return _estilo(texto, "1;32")
+
+
+def resaltar_error(texto: str) -> str:
+    """Negrilla roja: rechazos, errores y valores críticos."""
+    return _estilo(texto, "1;31")
+
+
+def resaltar_aviso(texto: str) -> str:
+    """Negrilla amarilla: requiere atención (conflictos, pendientes, faltantes)."""
+    return _estilo(texto, "1;33")
+
+
 # El máximo que acepta la API por página.
 TAMANO_MAXIMO_PAGINA = 100
 
@@ -118,7 +146,7 @@ def _llamar(metodo: str, ruta: str, params: Optional[dict] = None, json: Optiona
             timeout=30,
         )
     except requests.ConnectionError:
-        print("\n✘ No se pudo conectar con la API.")
+        print(f"\n{resaltar_error('ERROR:')} No se pudo conectar con la API.")
         print(f"  Verifique que el backend esté corriendo en {BASE_URL}")
         return None
 
@@ -131,9 +159,9 @@ def _mostrar_errores_api(response) -> None:
 
     if isinstance(detalle, dict) and "errores" in detalle:
         for error in detalle["errores"]:
-            print(f"  ✘ {error['campo']}: {error['mensaje']}")
+            print(f"  {resaltar_error('RECHAZADO')} {error['campo']}: {error['mensaje']}")
     else:
-        print(f"  ✘ ({response.status_code}) {detalle}")
+        print(f"  {resaltar_error('ERROR')} ({response.status_code}) {detalle}")
 
 
 def _datos_o_error(response):
@@ -200,7 +228,7 @@ def mostrar_resultados(resultado: dict) -> None:
     # Con cero resultados se muestra el mensaje de la API, nunca una tabla
     # vacía sin explicación.
     if resultado["total"] == 0:
-        print(f"\n  ⓘ {resultado['mensaje']}")
+        print(f"\n  {negrita('Sin resultados:')} {resultado['mensaje']}")
         return
 
     print(
@@ -342,7 +370,7 @@ def busqueda_con_filtros() -> None:
 
 def mostrar_resumen_360(d: dict) -> None:
     linea = "═" * 72
-    sin_dato = "⚠ sin registrar"
+    sin_dato = resaltar_aviso("SIN REGISTRAR")
 
     print(f"\n{linea}")
     print(f"  RESUMEN 360 · {d['nombre']}   (id {d['paciente_id']})")
@@ -351,7 +379,7 @@ def mostrar_resumen_360(d: dict) -> None:
     # El hueco se señala arriba, antes que nada.
     if d["informacion_incompleta"]:
         faltan = ", ".join(CAMPOS_360_LEGIBLES.get(c, c) for c in d["campos_faltantes"])
-        print(f"  ⚠ INFORMACIÓN FALTANTE: {faltan}")
+        print(f"  {resaltar_aviso('INFORMACIÓN FALTANTE:')} {faltan}")
         print(f"  {'─' * 70}")
 
     # Lo esencial, en la misma pantalla.
@@ -372,7 +400,7 @@ def mostrar_resumen_360(d: dict) -> None:
     if clave:
         print("\n  BIOMARCADORES CLAVE")
         for b in clave:
-            estado = "★" if b["confirmado"] else "? por confirmar"
+            estado = resaltar_ok("CONFIRMADO") if b["confirmado"] else resaltar_aviso("POR CONFIRMAR")
             terapia = f" → {b['terapia']}" if b["terapia"] else ""
             print(f"    {estado} {b['biomarcador']}: {b['resultado']}{terapia}")
 
@@ -424,10 +452,10 @@ def flujo_resumen_360() -> None:
 
 def _marca_punto(p: dict) -> str:
     if p["en_conflicto"]:
-        return "⚠ en conflicto"
+        return resaltar_aviso("EN CONFLICTO")
     if p["critico"]:
-        return "‼ crítico"
-    return "↑↓ fuera de rango" if p["alterado"] else ""
+        return resaltar_error("CRÍTICO")
+    return negrita("FUERA DE RANGO") if p["alterado"] else ""
 
 
 def _barra(valor: Optional[float], maximo: float, ancho: int = 24) -> str:
@@ -439,7 +467,7 @@ def _barra(valor: Optional[float], maximo: float, ancho: int = 24) -> str:
 def mostrar_tendencia(t: dict) -> None:
     print(f"\n  Tendencia de {t['prueba']}")
     for advertencia in t["advertencias"]:
-        print(f"  ⚠ {advertencia}")
+        print(f"  {resaltar_aviso('Advertencia:')} {advertencia}")
     if not t["series"]:
         print("  Sin resultados para este marcador.")
         return
@@ -472,11 +500,11 @@ def _registrar_laboratorio(paciente_id: int) -> None:
     r = _datos_o_error(_llamar("POST", f"/pacientes/{paciente_id}/laboratorios", json=datos))
     if r is None:
         return
-    print(f"\n  ✔ Resultado guardado (laboratorio #{r['laboratorio_id']}).")
+    print(f"\n  {resaltar_ok('GUARDADO:')} resultado de laboratorio #{r['laboratorio_id']}.")
     if r["alerta"]:
-        print(f"  ‼ VALOR CRÍTICO: {r['alerta']['limite_superado']}. Quedó como alerta en el resumen 360.")
+        print(f"  {resaltar_error('VALOR CRÍTICO:')} {r['alerta']['limite_superado']}. Quedó como alerta en el resumen 360.")
     for c in r["conflictos"]:
-        print(f"  ⚠ CONFLICTO: ya había un resultado del mismo momento con otro valor "
+        print(f"  {resaltar_aviso('CONFLICTO:')} ya había un resultado del mismo momento con otro valor "
               f"({c['valor_a']} y {c['valor_b']}). Ninguno se sobrescribió; revíselo en la opción 6.")
 
 
@@ -493,7 +521,10 @@ def flujo_laboratorios() -> None:
         for i, m in enumerate(marcadores, 1):
             print(f"  {i:>3}. {_recortar(m['prueba'], 28):<28} {m['cantidad']:>3} resultado(s) · último "
                   f"{m['ultimo_valor']} {m['unidad'] or ''} ({m['ultima_fecha']})")
-        print("\n  N° = ver tendencia · R = registrar resultado · Enter = volver")
+        if marcadores:
+            print(f"\n  1-{len(marcadores)} = ver la tendencia de ese marcador · R = registrar resultado · Enter = volver")
+        else:
+            print("\n  Este paciente aún no tiene resultados. R = registrar resultado · Enter = volver")
         opcion = pedir("  Opción: ").lower()
         if not opcion:
             return
@@ -505,8 +536,10 @@ def flujo_laboratorios() -> None:
                                                {"prueba": prueba}))
             if tendencia:
                 mostrar_tendencia(tendencia)
+        elif marcadores:
+            print(f"  Opción inválida: escriba un número del 1 al {len(marcadores)}, R o Enter.")
         else:
-            print("  Opción inválida.")
+            print("  Opción inválida: escriba R para registrar un resultado, o Enter para volver.")
 
 
 def flujo_alertas_conflictos() -> None:
@@ -530,7 +563,12 @@ def flujo_alertas_conflictos() -> None:
             print("\n  Nada pendiente de revisión.")
             return
 
-        opcion = pedir("\n  A<n> = marcar alerta revisada · C<n> = resolver conflicto · Enter = volver: ").upper()
+        partes = []
+        if alertas:
+            partes.append(f"A + número (p. ej. A{alertas[0]['id']}) = marcar alerta revisada")
+        if conflictos:
+            partes.append(f"C + número (p. ej. C{conflictos[0]['id']}) = resolver conflicto")
+        opcion = pedir("\n  " + " · ".join(partes + ["Enter = volver"]) + ": ").upper().replace(" ", "")
         if not opcion:
             return
         if opcion[0] == "A" and opcion[1:].isdigit():
@@ -538,7 +576,7 @@ def flujo_alertas_conflictos() -> None:
             r = _datos_o_error(_llamar("POST", f"/pacientes/{paciente_id}/alertas-laboratorio/{opcion[1:]}/revisar",
                                        json={"revisada_por": quien}))
             if r:
-                print("  ✔ Alerta revisada.")
+                print(f"  {resaltar_ok('LISTO:')} alerta revisada.")
         elif opcion[0] == "C" and opcion[1:].isdigit():
             print("  1. Válido A   2. Válido B   3. Ambos válidos   4. Ninguno válido")
             resolucion = {"1": "valido_a", "2": "valido_b", "3": "ambos_validos", "4": "ninguno_valido"}.get(pedir("  Resolución: "))
@@ -549,7 +587,7 @@ def flujo_alertas_conflictos() -> None:
             r = _datos_o_error(_llamar("POST", f"/pacientes/{paciente_id}/conflictos-laboratorio/{opcion[1:]}/resolver",
                                        json=cuerpo))
             if r:
-                print("  ✔ Conflicto resuelto. Los dos resultados se conservan en el expediente.")
+                print(f"  {resaltar_ok('LISTO:')} conflicto resuelto. Los dos resultados se conservan en el expediente.")
         else:
             print("  Opción inválida.")
 
@@ -559,11 +597,17 @@ def flujo_alertas_conflictos() -> None:
 # ---------------------------------------------------------------------------
 
 ETIQUETAS_RELEVANCIA = {
-    "accionable_confirmado": "★ accionable",
-    "pendiente_confirmacion": "? pendiente de confirmar",
+    "accionable_confirmado": "ACCIONABLE",
+    "pendiente_confirmacion": "PENDIENTE DE CONFIRMAR",
     "informativo": "informativo",
     "descartado": "descartado",
 }
+_ESTILO_RELEVANCIA = {"accionable_confirmado": resaltar_ok, "pendiente_confirmacion": resaltar_aviso}
+
+
+def _relevancia(clave: str) -> str:
+    texto = ETIQUETAS_RELEVANCIA.get(clave, clave)
+    return _ESTILO_RELEVANCIA.get(clave, lambda t: t)(texto)
 
 
 def _mostrar_biomarcadores(biomarcadores: list) -> None:
@@ -572,7 +616,7 @@ def _mostrar_biomarcadores(biomarcadores: list) -> None:
         print("    —")
     for b in biomarcadores:
         print(f"    #{b['biomarcador_id']:<4} {b['fecha']}  {b['biomarcador']}: {b['resultado']}")
-        linea = f"          {ETIQUETAS_RELEVANCIA.get(b['relevancia'], b['relevancia'])}"
+        linea = f"          {_relevancia(b['relevancia'])}"
         if b["terapia_asociada"]:
             linea += f" · {b['terapia_asociada']}"
         if b["variable_tx"] and b["relevancia"] != "pendiente_confirmacion":
@@ -606,7 +650,7 @@ def _registrar_episodio_y_biopsia(paciente_id: int) -> None:
     }
     biopsia = _datos_o_error(_llamar("POST", f"/pacientes/{paciente_id}/biopsias", json=cuerpo))
     if biopsia:
-        print(f"  ✔ Biopsia #{biopsia['id']} vinculada al episodio {biopsia['episodio_id']}.")
+        print(f"  {resaltar_ok('GUARDADO:')} biopsia #{biopsia['id']} vinculada al episodio {biopsia['episodio_id']}.")
 
 
 def _registrar_biomarcador(paciente_id: int) -> None:
@@ -639,7 +683,7 @@ def _registrar_biomarcador(paciente_id: int) -> None:
     cuerpo["confirmacion"] = pedir("  Vuelva a escribir el resultado clave (el estado, o el valor en PD-L1): ")
     r = _datos_o_error(_llamar("POST", f"/pacientes/{paciente_id}/biomarcadores", json=cuerpo))
     if r:
-        print(f"  ✔ Guardado como {ETIQUETAS_RELEVANCIA.get(r['relevancia'], r['relevancia'])}"
+        print(f"  {resaltar_ok('GUARDADO')} como {_relevancia(r['relevancia'])}"
               + (f". TX-01 recibe {r['variable_tx']}={r['valor_tx']}." if r["variable_tx"] else "."))
 
 
@@ -658,8 +702,12 @@ def flujo_biomarcadores() -> None:
             print(f"    #{b['id']:<4} {b['fecha']}  {b['sitio']} · {b['procedimiento']} (episodio {b['episodio_id']})")
         _mostrar_biomarcadores(biomarcadores)
 
-        opcion = pedir("\n  B = registrar biopsia · M = registrar biomarcador · C<n> = confirmar · "
-                       "D<n> = descartar · Enter = volver: ").upper()
+        partes = ["B = registrar biopsia", "M = registrar biomarcador"]
+        pendientes = [b for b in biomarcadores if b["relevancia"] == "pendiente_confirmacion"]
+        if pendientes:
+            n = pendientes[0]["biomarcador_id"]
+            partes += [f"C + número (p. ej. C{n}) = confirmar", f"D + número (p. ej. D{n}) = descartar"]
+        opcion = pedir("\n  " + " · ".join(partes + ["Enter = volver"]) + ": ").upper().replace(" ", "")
         if not opcion:
             return
         if opcion == "B":
@@ -670,12 +718,13 @@ def flujo_biomarcadores() -> None:
             ruta = f"/pacientes/{paciente_id}/biomarcadores/{opcion[1:]}"
             if opcion[0] == "C":
                 cuerpo = {"confirmado_por": pedir("  Confirmado por: "),
-                          "confirmacion": pedir("  Escriba el resultado que confirma (p. ej. reordenado): ")}
+                          "confirmacion": pedir("  Escriba el resultado que confirma "
+                                                "(detectada, reordenado o positivo, según el biomarcador): ")}
                 r = _datos_o_error(_llamar("POST", f"{ruta}/confirmar", json=cuerpo))
             else:
                 r = _datos_o_error(_llamar("POST", f"{ruta}/descartar", json={"revisado_por": pedir("  Revisado por: ")}))
             if r:
-                print(f"  ✔ Ahora: {ETIQUETAS_RELEVANCIA.get(r['relevancia'], r['relevancia'])}.")
+                print(f"  {resaltar_ok('LISTO.')} Ahora: {_relevancia(r['relevancia'])}.")
         else:
             print("  Opción inválida.")
 
