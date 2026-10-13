@@ -23,6 +23,11 @@ langgraph>=0.2
 reportlab>=4.0
 langfuse>=3.0
 
+# SEC-02: cifrado en reposo (AES-256-GCM), certificados de prueba y el
+# servidor con TLS (seguridad/servidor_tls.py, tests/seguridad/test_tls.py).
+cryptography>=42.0
+uvicorn>=0.30
+
 # --- Opcionales ---------------------------------------------------------------
 # Solo se necesitan para los agentes LLM / scraper de actualización de guías.
 # No los usan los tests. Instalar bajo demanda:

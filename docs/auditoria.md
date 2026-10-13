@@ -21,7 +21,9 @@ DX-03, `decisiones_tratamiento` de TX-04): la tabla `eventos_acceso` es de
 solo-inserción y el módulo, a propósito, **no expone ninguna función de
 UPDATE ni DELETE** — es lo que sostiene el criterio de aceptación "de
 forma no editable" (`tests/auditoria/test_registro_acceso.py` verifica
-explícitamente que esas funciones no existen en el módulo).
+explícitamente que esas funciones no existen en el módulo). Desde NFR-04
+también lo garantiza la base: los triggers `eventos_acceso_no_update` y
+`eventos_acceso_no_delete` abortan cualquier UPDATE o DELETE.
 
 ### Criterio de aceptación
 

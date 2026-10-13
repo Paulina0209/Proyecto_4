@@ -1,8 +1,12 @@
 """Cliente de consola de la API de pacientes: búsqueda y filtros, resumen
 360 del paciente, laboratorios (HC-02) y biopsias y biomarcadores (HC-04).
 
-    uvicorn patients.api:app          # en una terminal
-    python -m patients.demo           # en otra
+    python -m seguridad.servidor_tls --generar-certificado-local certs   # una sola vez
+    python -m seguridad.servidor_tls --cert certs/localhost.pem --key certs/localhost-clave.pem   # terminal 1
+    python -m patients.demo                                                                       # terminal 2
+
+La API solo atiende HTTPS (SEC-02). La demo confía en ``certs/localhost.pem``
+(o en el certificado de ``COPILOTO_TLS_CA``).
 
 Los pacientes son los registrados y los importados de cBioPortal (ver
 docs/cbioportal.md). Los laboratorios, biopsias y biomarcadores se guardan
@@ -15,11 +19,18 @@ import sys
 from datetime import date, datetime
 from typing import Optional
 
+from pathlib import Path
+
 import requests
 
 # 127.0.0.1 y no "localhost": en Windows, "localhost" intenta primero IPv6
 # (::1) y uvicorn solo escucha en IPv4, así que cada petición tardaría ~2 s.
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "https://127.0.0.1:8443"
+
+#: Certificado en el que confía la demo (SEC-02): el de COPILOTO_TLS_CA, el
+#: autofirmado de certs/ si existe, o las autoridades del sistema.
+_CERT_LOCAL = Path(__file__).resolve().parent.parent / "certs" / "localhost.pem"
+VERIFICAR_TLS = os.environ.get("COPILOTO_TLS_CA") or (str(_CERT_LOCAL) if _CERT_LOCAL.is_file() else True)
 
 # TODO(SEC-01): mientras no haya autenticación real, la demo actúa como
 # este oncólogo. La API solo le devuelve SUS pacientes.
@@ -144,6 +155,7 @@ def _llamar(metodo: str, ruta: str, params: Optional[dict] = None, json: Optiona
             params={"oncologo_id": ONCOLOGO_DEMO, **(params or {})},
             json=json,
             timeout=30,
+            verify=VERIFICAR_TLS,
         )
     except requests.ConnectionError:
         print(f"\n{resaltar_error('ERROR:')} No se pudo conectar con la API.")

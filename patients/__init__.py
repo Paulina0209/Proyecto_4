@@ -9,7 +9,7 @@ Historias de usuario (un archivo por historia):
 Compartido:
     models.py         Modelos de dominio de las tres historias
     db/               Única base de datos: schema.sql y la conexión (sin datos de ejemplo)
-    api.py            API HTTP (uvicorn patients.api:app)
+    api.py            API HTTPS (python -m seguridad.servidor_tls)
     schemas.py        Esquemas de entrada/salida de la API
     demo.py           Cliente de consola (python -m patients.demo)
     expediente.py     Puente con el expediente clínico (HC-02, HC-04)

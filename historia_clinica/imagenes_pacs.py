@@ -49,6 +49,8 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Protocol, Tuple
 from urllib.parse import quote, urlparse
 
+from seguridad.tls import ConexionInseguraError, exigir_url_segura
+
 from expediente.repository import imagenologia_de_paciente, obtener_paciente
 from historia_clinica.db import ahora_iso, normalizar_texto
 from historia_clinica.laboratorios import nombres_coinciden
@@ -298,7 +300,8 @@ class FuenteDICOMweb:
         password: Optional[str] = None,
     ):
         self.nombre = nombre
-        self.base_url = base_url.rstrip("/")
+        # SEC-02: solo HTTPS (o el PACS local por loopback); nunca en claro por la red.
+        self.base_url = exigir_url_segura(base_url, que=f"El PACS '{nombre}'").rstrip("/")
         self.timeout = timeout
         self.token = token
         self.usuario = usuario
@@ -369,6 +372,10 @@ def validar_plantilla_visor(plantilla: Optional[str]) -> Optional[str]:
     analizada = urlparse(plantilla.replace("{study_uid}", "0"))
     if analizada.scheme not in ("http", "https") or not analizada.netloc:
         raise ErrorConfiguracionVisor("La plantilla del visor debe ser una URL http(s) completa.")
+    try:
+        exigir_url_segura(plantilla.replace("{study_uid}", "0"), que="El visor de imágenes")
+    except ConexionInseguraError as exc:
+        raise ErrorConfiguracionVisor(str(exc)) from exc
     return plantilla
 
 

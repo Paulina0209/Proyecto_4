@@ -23,6 +23,7 @@ from expediente.repository import (
     obtener_paciente,
 )
 
+from privacidad.consentimiento_ia import exigir_consentimiento_ia
 from estadificacion.models import (
     ComponenteEstadio,
     PropuestaEstadificacion,
@@ -91,6 +92,9 @@ def proponer_estadificacion(
             f"No existe ningún paciente con id={paciente_id}.",
             (),
         )
+    # SEC-03: la propuesta automática es una función de IA; la confirmación
+    # manual del oncólogo (EST-02) no depende de ella.
+    exigir_consentimiento_ia(conn, paciente_id)
 
     datos = datos_clinicos_estructurados_de_paciente(conn, paciente_id)
     ultimo = _ultimo_por_variable(datos)

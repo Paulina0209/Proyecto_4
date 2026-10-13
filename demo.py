@@ -204,6 +204,16 @@ def preparar_bd_real(sin_red: bool) -> Contexto:
         with contextlib.closing(sqlite3.connect(copia_pac)) as c:
             ctx.ids_pac[clave] = c.execute(
                 "SELECT id FROM pacientes WHERE numero_identificacion = ?", (identificacion,)).fetchone()[0]
+
+    # SEC-03: la IA exige consentimiento informado. Los pacientes de la demo lo
+    # firmaron; cualquier otro (p. ej. el que se registra en 'pac') queda sin IA.
+    from privacidad.consentimiento_ia import activar_consentimiento_ia, estado_consentimiento_ia, registrar_consentimiento_ia
+
+    activar_consentimiento_ia(ctx.conn, USUARIO_ID)
+    for clave, (paciente, _) in PACIENTES_DEMO.items():
+        if not estado_consentimiento_ia(ctx.conn, ctx.ids_exp[clave]).ia_habilitada:
+            registrar_consentimiento_ia(ctx.conn, USUARIO_ID, ctx.ids_exp[clave], medio="escrito",
+                                        soporte=f"consentimiento-ia-{paciente}.pdf")
     return ctx
 
 
@@ -231,7 +241,7 @@ def seccion_pacientes(ctx: Contexto) -> None:
     api.DB_PATH = str(ctx.ruta_pacientes)
     api.CARGADOR_DETALLE = None  # se crea al arrancar, sobre la copia del expediente
 
-    with TestClient(api.app) as cliente:
+    with TestClient(api.app, base_url="https://testserver") as cliente:
         subtitulo("PAC-02 — Búsqueda sobre los pacientes reales")
         for filtros in ({"diagnostico": "adenocarcinoma"}, {"diagnostico": "ductal"},
                         {"nombre": PACIENTES_DEMO["pulmon"][0]}, {"diagnostico": "sarcoma"}):
@@ -752,6 +762,21 @@ def seccion_auditoria(ctx: Contexto) -> None:
 # ---------------------------------------------------------------------------
 
 
+def seccion_seguridad_cumplimiento(ctx: Contexto) -> None:
+    import demo_seguridad_cumplimiento
+    from privacidad.consentimiento_ia import estado_consentimiento_ia
+
+    subtitulo("SEC-03 sobre los pacientes reales de la demo")
+    for clave in PACIENTES_DEMO:
+        estado = estado_consentimiento_ia(ctx.conn, ctx.ids_exp[clave])
+        print(f"  {ctx.etiqueta(clave)[:60]:<60} consentimiento: {estado.etiqueta}")
+    nota("Sus funciones de IA (secciones ia, dx, est, tx) corren porque tienen consentimiento vigente.")
+    nota("El recorrido completo, con cada criterio verificado, usa el paciente sintético SINT-0001:")
+    fallas = demo_seguridad_cumplimiento.main([])
+    if fallas:
+        raise RuntimeError(f"{fallas} verificación(es) de SEC-02/SEC-03/NFR-04 fallaron.")
+
+
 def seccion_privacidad(ctx: Contexto) -> None:
     from privacidad.models import EstadoAutorizacion, Finalidad
     from privacidad.tratamiento_datos import (
@@ -816,6 +841,8 @@ SECCIONES: List[Seccion] = [
     Seccion("doc", "DOC-02 · DOC-01", "Exportación a PDF y carga de documentos", seccion_documentos),
     Seccion("aud", "AUD-01 · AUD-02", "Auditoría de accesos y trazabilidad de la IA", seccion_auditoria),
     Seccion("priv", "NFR-06", "Datos personales: autorizaciones por finalidad", seccion_privacidad),
+    Seccion("seg", "SEC-02 · SEC-03 · NFR-04", "Cifrado, consentimiento de IA y cumplimiento normativo",
+            seccion_seguridad_cumplimiento),
 ]
 
 

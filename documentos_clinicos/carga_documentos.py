@@ -23,6 +23,10 @@ El contenido binario se guarda en disco bajo un directorio configurable
 (``directorio_almacenamiento``, nunca hardcodeado, para que las pruebas
 puedan usar un directorio temporal); solo los metadatos y la ruta
 resultante se guardan en SQLite.
+
+SEC-02: el archivo en disco va cifrado con AES-256-GCM
+(``seguridad.cifrado``), ligado al paciente. ``leer_contenido_documento``
+lo descifra y devuelve exactamente los bytes que se cargaron.
 """
 
 from __future__ import annotations
@@ -36,6 +40,7 @@ from typing import Callable, Dict, Optional, Tuple, Union
 
 from expediente.adapters import PacienteNoEncontradoError
 from expediente.repository import obtener_paciente
+from seguridad.cifrado import Cifrador, escribir_cifrado, leer_descifrado
 
 _SCHEMA_PATH = Path(__file__).resolve().parent / "schema_documentos_clinicos.sql"
 
@@ -158,6 +163,7 @@ def cargar_documento_clinico(
     cargado_por: str,
     directorio_almacenamiento: Union[str, Path],
     ahora: Optional[datetime] = None,
+    cifrador: Optional[Cifrador] = None,
 ) -> DocumentoClinicoCargado:
     """Carga un documento clínico al expediente de un paciente (AC1/AC2).
 
@@ -221,7 +227,7 @@ def cargar_documento_clinico(
     directorio_paciente.mkdir(parents=True, exist_ok=True)
     nombre_interno = f"{uuid.uuid4().hex}{extension}"
     ruta_destino = directorio_paciente / nombre_interno
-    ruta_destino.write_bytes(contenido)
+    escribir_cifrado(ruta_destino, contenido, _contexto_cifrado(paciente_id), cifrador)
 
     cargado_en = (ahora or datetime.now(timezone.utc)).isoformat()
 
@@ -268,15 +274,24 @@ def listar_documentos_de_paciente(
     return tuple(_fila_a_documento(f) for f in filas)
 
 
-def leer_contenido_documento(documento: DocumentoClinicoCargado) -> bytes:
+def leer_contenido_documento(
+    documento: DocumentoClinicoCargado, cifrador: Optional[Cifrador] = None
+) -> bytes:
     """Lee de vuelta el contenido binario real del documento desde disco.
 
     Útil para confirmar, en pruebas o en una demo, que lo que se guardó
-    es exactamente lo que se cargó -- nunca se transforma el contenido
-    original al guardarlo.
+    es exactamente lo que se cargó: en disco está cifrado (SEC-02), pero
+    al descifrarlo se recuperan los bytes originales sin ninguna otra
+    transformación.
     """
 
-    return Path(documento.ruta_almacenamiento).read_bytes()
+    return leer_descifrado(
+        Path(documento.ruta_almacenamiento), _contexto_cifrado(documento.paciente_id), cifrador
+    )
+
+
+def _contexto_cifrado(paciente_id: int) -> str:
+    return f"documento_clinico:paciente_{paciente_id}"
 
 
 def _fila_a_documento(fila: sqlite3.Row) -> DocumentoClinicoCargado:

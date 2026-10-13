@@ -20,7 +20,10 @@ python demo.py --sin-red        # sin OpenAI ni cBioPortal (la base ya debe esta
    demo. Necesita internet solo la primera vez.
 2. **Trabaja sobre una copia** en `%TEMP%\copiloto_demo\bd`: lo que la demo
    registra (un paciente nuevo, una nota, decisiones) no queda en la base real.
-3. **Pacientes de la demo** (vivos, con historial coherente):
+3. **Consentimiento de IA (SEC-03).** Activa la exigencia en la copia y
+   registra el consentimiento firmado de los tres pacientes de la demo; sin él,
+   las secciones de IA, DX, EST y TX no usarían sus datos.
+4. **Pacientes de la demo** (vivos, con historial coherente):
 
 | Paciente | Caso |
 |---|---|
@@ -48,12 +51,14 @@ símbolo ✎.
 | `doc` | DOC-02, DOC-01 | Resumen y expediente exportados a PDF; carga del PDF al expediente |
 | `aud` | AUD-01/02 | Accesos registrados y trazabilidad IA vs. médico de lo que hizo la demo |
 | `priv` | NFR-06 | Autorización de tratamiento de datos por finalidad (otorgar y revocar) |
+| `seg` | SEC-02, SEC-03, NFR-04 | API servida solo por TLS (rechaza HTTP y TLS 1.1), documento cifrado en disco, IA bloqueada sin consentimiento y tras retirarlo (sin borrar la historia), datos que llegan al modelo sin identificadores e informe de cumplimiento |
 
 Para explorar a mano:
 
 - `python demo_ia01.py`: preguntas, recomendaciones y evidencia.
 - `python demo_tx.py`: agente de tratamiento.
 - `python -m patients.demo`: búsqueda, 360, laboratorios (HC-02: valores críticos, conflictos y tendencias) y biopsias y biomarcadores (HC-04). Ver `docs/PACIENTES_DEMO.md`.
+- `python demo_seguridad_cumplimiento.py`: SEC-02, SEC-03 y NFR-04 con cada criterio de aceptación verificado (sin red; paciente sintético).
 - `python demo_laboratorios_biomarcadores.py`: el recorrido de HC-02 y HC-04 automático, con verificación de cada criterio de aceptación, y luego el mismo menú interactivo. Trabaja sobre una copia.
 
 Las tres trabajan sobre la base real.

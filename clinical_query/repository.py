@@ -12,6 +12,8 @@ from expediente.repository import (
     listar_pacientes,
 )
 
+from privacidad.consentimiento_ia import estado_consentimiento_ia
+
 from .ambiguity import PacienteRef
 from .models import ClinicalDatum, ClinicalRecord
 from .normalizer import normalize_text
@@ -31,6 +33,13 @@ class ClinicalRepository(ABC):
         """
 
         return []
+
+    def motivo_sin_consentimiento_ia(self, patient_id: str) -> str | None:
+        """SEC-03: por qué no se puede usar la IA con este paciente, o ``None``
+        si se puede. Por defecto ``None``: solo la base real lleva el registro
+        de consentimientos."""
+
+        return None
 
 
 class JsonClinicalRepository(ClinicalRepository):
@@ -78,6 +87,14 @@ class SQLiteClinicalRepository(ClinicalRepository):
 
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn
+
+    def motivo_sin_consentimiento_ia(self, patient_id: str) -> str | None:
+        try:
+            pid = int(patient_id)
+        except (TypeError, ValueError):
+            return None  # find_by_concept tampoco devuelve nada para un id inválido
+        estado = estado_consentimiento_ia(self.conn, pid)
+        return None if estado.ia_habilitada else estado.motivo
 
     @staticmethod
     def _matches(stored_name: str, concept: str) -> bool:

@@ -78,7 +78,7 @@ AC3  Dada cualquier operación de gestión
 
 ## API
 
-`uvicorn administracion.api:app` (base: `COPILOTO_USUARIOS_DB`, por defecto
+`python -m seguridad.servidor_tls --app administracion.api:app ...` (solo HTTPS, SEC-02; base: `COPILOTO_USUARIOS_DB`, por defecto
 `data/usuarios.db`, ya ignorada por git).
 
 Autenticación: **HTTP Basic sobre el login de SEC-01** en cada petición, así
@@ -116,5 +116,5 @@ credenciales o son incorrectas (el mensaje no revela si el usuario existe) y
 python -m pytest tests/administracion tests/seguridad tests/auditoria -q
 python -m administracion.demo
 python -m administracion crear-admin     # primer administrador (base real)
-uvicorn administracion.api:app
+python -m seguridad.servidor_tls --app administracion.api:app --cert certs/localhost.pem --key certs/localhost-clave.pem
 ```

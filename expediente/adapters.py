@@ -23,6 +23,15 @@ distinto del expediente:
 En los tres casos cada fragmento conserva el id real de la fila de la
 base de datos que lo originó, para que la trazabilidad llegue hasta el
 registro exacto, no solo a "la consulta" o "el paciente" en general.
+
+SEC-03: los tres arman la entrada de una función de IA, así que antes de
+leer nada exigen el consentimiento informado del paciente
+(``ConsentimientoIARequerido`` si no está vigente). Leer la historia
+clínica fuera de la IA (PAC-03, DOC-02) no pasa por aquí.
+
+NFR-04 (minimización): el texto libre (notas dictadas y antecedentes
+importados) sale seudonimizado: sin el nombre ni el documento del paciente,
+ni correos o teléfonos. El paciente se referencia por su id interno.
 """
 
 from __future__ import annotations
@@ -32,6 +41,8 @@ from typing import List
 
 from ia_clinica.notes.models import ClinicalContext, SourceSpan, split_sentences
 from ia_clinica.summary.models import CaseSummaryContext
+from privacidad.consentimiento_ia import exigir_consentimiento_ia
+from privacidad.minimizacion import seudonimizar_texto
 
 from expediente.repository import (
     Biomarcador,
@@ -75,6 +86,13 @@ def _texto_biomarcador(biomarcador: Biomarcador) -> str:
     return f"Biomarcador {biomarcador.biomarcador}: {biomarcador.resultado}."
 
 
+def _seudonimizador(paciente):
+    """Seudonimiza texto libre con los identificadores de ``paciente`` (NFR-04)."""
+    nombre = paciente.nombre if paciente else None
+    identificaciones = [paciente.identificacion] if paciente and paciente.identificacion else []
+    return lambda texto: seudonimizar_texto(texto, nombre=nombre, identificaciones=identificaciones)
+
+
 def construir_contexto_clinico(conn: sqlite3.Connection, consulta_id: int) -> ClinicalContext:
     """Construye el ``ClinicalContext`` de IA-02 a partir de una consulta guardada.
 
@@ -87,11 +105,13 @@ def construir_contexto_clinico(conn: sqlite3.Connection, consulta_id: int) -> Cl
     consulta = obtener_consulta(conn, consulta_id)
     if consulta is None:
         raise ConsultaNoEncontradaError(f"No existe ninguna consulta con id={consulta_id}.")
+    exigir_consentimiento_ia(conn, consulta.paciente_id)
 
     paciente = obtener_paciente(conn, consulta.paciente_id)
+    seudonimizar = _seudonimizador(paciente)
     segments = []
 
-    for i, oracion in enumerate(split_sentences(consulta.notas_libres), start=1):
+    for i, oracion in enumerate(split_sentences(seudonimizar(consulta.notas_libres)), start=1):
         segments.append(
             SourceSpan(
                 id=f"consulta-{consulta.id}-nota-{i}",
@@ -143,11 +163,13 @@ def obtener_hallazgos_de_paciente(conn: sqlite3.Connection, paciente_id: int) ->
     paciente = obtener_paciente(conn, paciente_id)
     if paciente is None:
         raise PacienteNoEncontradoError(f"No existe ningún paciente con id={paciente_id}.")
+    exigir_consentimiento_ia(conn, paciente_id)
+    seudonimizar = _seudonimizador(paciente)
 
     hallazgos: List[HallazgoClinico] = []
 
     for consulta in listar_consultas(conn, paciente_id):
-        for i, oracion in enumerate(split_sentences(consulta.notas_libres), start=1):
+        for i, oracion in enumerate(split_sentences(seudonimizar(consulta.notas_libres)), start=1):
             hallazgos.append(
                 HallazgoClinico(
                     id=f"consulta-{consulta.id}-nota-{i}",
@@ -185,7 +207,7 @@ def obtener_hallazgos_de_paciente(conn: sqlite3.Connection, paciente_id: int) ->
                 id=f"antecedente-{fila['id']}",
                 paciente_id=paciente_id,
                 origen="antecedente",
-                texto=f"Antecedente ({fila['tipo']}): {fila['descripcion']}",
+                texto=f"Antecedente ({fila['tipo']}): {seudonimizar(fila['descripcion'])}",
                 fecha=fila["fecha"],
             )
         )
@@ -231,6 +253,7 @@ def construir_contexto_resumen_caso(conn: sqlite3.Connection, paciente_id: int) 
     if paciente is None:
         raise PacienteNoEncontradoError(f"No existe ningún paciente con id={paciente_id}.")
 
+    # El consentimiento lo exige obtener_hallazgos_de_paciente.
     hallazgos = obtener_hallazgos_de_paciente(conn, paciente_id)
     segments = [
         SourceSpan(id=hallazgo.id, text=hallazgo.texto, origin=hallazgo.origen, timestamp=hallazgo.fecha)

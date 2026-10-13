@@ -56,6 +56,9 @@ políticas y las obligaciones sigue siendo responsabilidad de la institución
   institución, porque puede chocar con obligaciones de conservación de la
   historia clínica. Aquí queda registrada la solicitud, su resolución y su
   traza.
-- Todavía no se exige un rol concreto para configurar políticas o gestionar
-  solicitudes. Cuando ADM-01 defina los permisos institucionales, se puede
-  agregar la verificación con `seguridad.autorizacion.verificar_permiso`.
+- Ya existe `Accion.CONFIGURAR_POLITICA_DATOS` (administrador clínico, NFR-04),
+  y el consentimiento de IA (SEC-03, `docs/consentimiento_ia.md`) la exige
+  cuando se identifica al usuario. Las funciones genéricas de este módulo
+  todavía no reciben `usuario`.
+- El consentimiento informado para el uso de IA (SEC-03) es una autorización de
+  este módulo: política `consentimiento-ia`, finalidad `asistencia_ia`.

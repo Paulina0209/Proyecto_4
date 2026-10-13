@@ -46,6 +46,8 @@ PACIENTE_CEA = "P-0008538"    # mama IV, series largas de CEA y CA 15-3
 
 # Se completan en preparar().
 BASE_URL = ""
+#: Certificado autofirmado de la API de la demo (SEC-02); lo crea ``preparar``.
+CERTIFICADO: Any = True
 PAUSAR = True
 verificaciones: list[tuple[str, bool]] = []
 
@@ -93,7 +95,8 @@ def pausa() -> None:
 # ---------------------------------------------------------------------------
 
 def api(metodo: str, ruta: str, json: Optional[dict] = None, **params: Any) -> requests.Response:
-    return requests.request(metodo, f"{BASE_URL}{ruta}", params={**ONCOLOGO, **params}, json=json, timeout=60)
+    return requests.request(metodo, f"{BASE_URL}{ruta}", params={**ONCOLOGO, **params}, json=json, timeout=60,
+                            verify=CERTIFICADO)
 
 
 def paciente_id(identificacion: str) -> int:
@@ -154,7 +157,7 @@ def restablecer_estado_inicial(ruta_expediente: Path) -> int:
 def preparar() -> int:
     """Copia la base real, la deja en su estado inicial y levanta la API
     sobre la copia. Devuelve cuántos cambios manuales se descartaron."""
-    global BASE_URL
+    global BASE_URL, CERTIFICADO
     origen_exp, origen_pac = RAIZ / "data" / "copiloto.db", RAIZ / "patients" / "db" / "pacientes.db"
     if not origen_exp.is_file() or not origen_pac.is_file():
         raise SystemExit("Falta la base real. Prepárela una vez (necesita internet) con: python demo.py --solo pac")
@@ -171,15 +174,21 @@ def preparar() -> int:
     import uvicorn
 
     import patients.api as api_pacientes
+    from seguridad.servidor_tls import construir_config, generar_certificado_local
 
     api_pacientes.DB_PATH, api_pacientes.EXPEDIENTE_PATH = copia_pac, copia_exp
     puerto = _puerto_libre()
-    BASE_URL = f"http://127.0.0.1:{puerto}"
-    servidor = uvicorn.Server(uvicorn.Config(api_pacientes.app, host="127.0.0.1", port=puerto, log_level="warning"))
+    # SEC-02: la API solo atiende HTTPS; la demo usa un certificado autofirmado propio.
+    cert, clave = generar_certificado_local(SALIDA / "certs")
+    CERTIFICADO = str(cert)
+    BASE_URL = f"https://127.0.0.1:{puerto}"
+    config = construir_config(api_pacientes.app, "127.0.0.1", puerto, str(cert), str(clave))
+    config.log_level = "warning"
+    servidor = uvicorn.Server(config)
     threading.Thread(target=servidor.run, daemon=True).start()
     for _ in range(150):
         try:
-            requests.get(f"{BASE_URL}/docs", timeout=1)
+            requests.get(f"{BASE_URL}/docs", timeout=1, verify=CERTIFICADO)
             break
         except requests.ConnectionError:
             time.sleep(0.2)
@@ -433,7 +442,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     import patients.demo as demo
 
-    demo.BASE_URL = BASE_URL
+    demo.BASE_URL, demo.VERIFICAR_TLS = BASE_URL, CERTIFICADO
     p, p_cea = paciente_id(PACIENTE_EGFR), paciente_id(PACIENTE_CEA)
     pausa()
 

@@ -175,7 +175,7 @@ def api(tmp_path, monkeypatch, conn, cliente, ruta_expediente):
     conn_pac.close()
     monkeypatch.setattr(api_module, "DB_PATH", ruta_pac)
     monkeypatch.setattr(api_module, "CARGADOR_DETALLE", CargadorDetalle.desde_ruta(ruta_expediente, cliente))
-    with TestClient(api_module.app) as c:
+    with TestClient(api_module.app, base_url="https://testserver") as c:
         yield c
 
 

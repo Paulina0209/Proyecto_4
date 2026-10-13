@@ -18,3 +18,9 @@ import os
 import tempfile
 
 os.environ["COPILOTO_EXPEDIENTE_DB"] = str(Path(tempfile.mkdtemp(prefix="copiloto_tests_")) / "expediente.db")
+# SEC-02: clave de cifrado propia de la sesión de pruebas, para no crear ni
+# usar la del usuario (~/.copiloto_clinico/clave_cifrado).
+import base64
+import secrets
+
+os.environ["COPILOTO_CLAVE_CIFRADO"] = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode("ascii")
