@@ -56,8 +56,9 @@ TOOL_DECISION = "registrar_decision_tratamiento"
 # ---------------------------------------------------------------------
 
 #: Claves de dict cuyo valor se redacta antes de enviarse a Langfuse.
-#: Hoy solo "nombre" (lo devuelve obtener_datos_paciente). Agregar aquí
-#: cualquier otro campo identificador que se sume a las tools.
+#: Hoy solo "nombre". Desde NFR-04 obtener_datos_paciente ya no lo devuelve
+#: (minimización), así que queda como red de seguridad por si otra tool lo
+#: agrega. Agregar aquí cualquier otro campo identificador.
 _CLAVES_SENSIBLES = {"nombre"}
 _REDACTADO = "[REDACTADO]"
 

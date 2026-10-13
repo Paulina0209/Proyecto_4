@@ -11,7 +11,7 @@ Ejemplos:
 
     # Índice: TODOS los pacientes de mama y pulmón con sus datos básicos, en
     # segundos. El detalle de cada uno se trae al abrirlo en la API
-    # (COPILOTO_EXPEDIENTE_DB=data/copiloto.db uvicorn patients.api:app)
+    # (COPILOTO_EXPEDIENTE_DB=data/copiloto.db python -m seguridad.servidor_tls ...)
     python -m cbioportal --indice --db data/copiloto.db \\
         --db-pacientes patients/db/pacientes.db --oncologo-id 1
 """

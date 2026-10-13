@@ -37,7 +37,7 @@ from tx_clinica.module_selector import seleccionar_modulo_con_diagnostico
 from tx_clinica.patient_facts import construir_facts_paciente
 from tx_clinica.tools._db import conn_lock, obtener_conexion
 from tx_clinica.tools._paths import GUIDELINES_ROOT
-from tx_clinica.tools.patients_tools import ErrorPacienteNoEncontrado, obtener_paciente_o_error
+from tx_clinica.tools.patients_tools import ERRORES_PACIENTE, obtener_paciente_o_error
 
 
 def con_default_temporal(facts: dict[str, Any]) -> dict[str, Any]:
@@ -133,7 +133,7 @@ def obtener_recomendaciones_tratamiento_por_id(patient_id: int) -> str:
     nuevo (volvería a faltar el mismo dato, porque la base de datos no
     cambió)."""
     resuelto = obtener_paciente_o_error(patient_id)
-    if isinstance(resuelto, ErrorPacienteNoEncontrado):
+    if isinstance(resuelto, ERRORES_PACIENTE):
         return resuelto.a_json()
 
     conn = obtener_conexion()
@@ -161,7 +161,7 @@ def completar_datos_paciente_y_recomendar(patient_id: int, variables_adicionales
     llamar esta tool de inmediato con todas ellas, sin preguntarle de
     nuevo; pregunta solo por las que de verdad no te haya dado."""
     resuelto = obtener_paciente_o_error(patient_id)
-    if isinstance(resuelto, ErrorPacienteNoEncontrado):
+    if isinstance(resuelto, ERRORES_PACIENTE):
         return resuelto.a_json()
 
     conn = obtener_conexion()

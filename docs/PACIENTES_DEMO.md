@@ -39,7 +39,7 @@ El resto de este documento describe la demo manual (`python -m patients.demo` co
 ## Cómo funciona por dentro
 
 ```text
-python -m patients.demo  ──HTTP──▶  uvicorn patients.api:app
+python -m patients.demo  ──HTTPS──▶  python -m seguridad.servidor_tls (patients.api)
                                         │
                      ┌──────────────────┴───────────────────┐
                      ▼                                      ▼
@@ -82,9 +82,12 @@ paciente por nombre (opción 2, por ejemplo `P-0016350`).
 ## 2. Arrancar
 
 ```powershell
-uvicorn patients.api:app --reload        # terminal 1
+python -m seguridad.servidor_tls --generar-certificado-local certs   # una sola vez
+python -m seguridad.servidor_tls --cert certs/localhost.pem --key certs/localhost-clave.pem   # terminal 1
 python -m patients.demo                  # terminal 2
 ```
+
+La API solo atiende HTTPS (SEC-02); la demo confía en `certs/localhost.pem`.
 
 ## 3. Guion
 
@@ -167,7 +170,7 @@ Abra el 360 otra vez: el EGFR aparece como CONFIRMADO y la alerta de "por confir
 
 | Síntoma | Causa | Solución |
 |---|---|---|
-| `ERROR: No se pudo conectar con la API` | La API no está corriendo | `uvicorn patients.api:app` en otra terminal |
+| `ERROR: No se pudo conectar con la API` | La API no está corriendo | `python -m seguridad.servidor_tls --cert certs/localhost.pem --key certs/localhost-clave.pem` en otra terminal |
 | Error 500 al listar o buscar | Base de pacientes de una versión anterior (tipo `cbioportal`) | Renómbrela y ejecute `python demo.py --solo pac` (paso 1) |
 | `0 marcador(es)` en un paciente importado | cBioPortal no trae laboratorios de ese paciente | Registre uno (`R`) o use el 741, que tiene CEA y CA 15-3 |
 | Al confirmar o resolver: "no tiene el biomarcador/conflicto" | Se usó un número que no es el de la lista | Use el número que aparece en pantalla (`#16` → `C16`, `A1`, `C11`…) |

@@ -11,7 +11,7 @@ from clinical_decision.registro import registrar_decision_tratamiento as _regist
 from tx_clinica.patient_facts import construir_facts_paciente
 from tx_clinica.tools._db import conn_lock, obtener_conexion
 from tx_clinica.tools._interaction_shared import resolver_chequeo_interacciones
-from tx_clinica.tools.patients_tools import ErrorPacienteNoEncontrado, obtener_paciente_o_error
+from tx_clinica.tools.patients_tools import ERRORES_PACIENTE, obtener_paciente_o_error
 from tx_clinica.tools.recommendation_tools import _diagnosticar_y_recomendar, serializar_candidato
 
 _TIPOS_VALIDOS = ("accept", "modify", "reject")
@@ -65,7 +65,7 @@ def registrar_decision_tratamiento(
     al oncólogo -- no reintentes solo con textos distintos sin que el
     oncólogo haya dado la información que falta."""
     resuelto = obtener_paciente_o_error(patient_id)
-    if isinstance(resuelto, ErrorPacienteNoEncontrado):
+    if isinstance(resuelto, ERRORES_PACIENTE):
         return resuelto.a_json()
 
     # C3: el oncólogo que firma la decisión viene de la sesión autenticada

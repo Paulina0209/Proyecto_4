@@ -53,8 +53,12 @@ La aplicación no trae datos de ejemplo:
 ## API
 
 ```powershell
-uvicorn patients.api:app --reload      # documentación interactiva en http://127.0.0.1:8000/docs
+python -m seguridad.servidor_tls --generar-certificado-local certs   # una sola vez (autofirmado)
+python -m seguridad.servidor_tls --cert certs/localhost.pem --key certs/localhost-clave.pem
+# documentación interactiva en https://127.0.0.1:8443/docs
 ```
+
+Solo atiende HTTPS (SEC-02): una petición en claro recibe 403. Ver `docs/seguridad_cifrado.md`.
 
 **Reglas generales:**
 

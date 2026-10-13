@@ -1,10 +1,14 @@
 """API HTTP del módulo de pacientes: HC-01 (registro), PAC-02 (búsqueda y
 datos clínicos), PAC-03 (resumen 360), HC-02 (laboratorios), HC-04
-(biopsias y biomarcadores) y HC-03 (imágenes diagnósticas del PACS).
+(biopsias y biomarcadores), HC-03 (imágenes diagnósticas del PACS) y
+SEC-03 (consentimiento informado para el uso de IA).
 
-    uvicorn patients.api:app
+    python -m seguridad.servidor_tls --cert cert.pem --key clave.pem
 
-Al arrancar crea el esquema si falta. No carga datos de ejemplo: los
+Solo atiende HTTPS (SEC-02): una petición en claro recibe 403.
+
+Al arrancar crea el esquema si falta. La primera vez que abre el
+expediente activa en él la exigencia de consentimiento para la IA (SEC-03). No carga datos de ejemplo: los
 pacientes son los registrados y los de cBioPortal.
 
 Si existe el expediente real (``data/copiloto.db`` o la ruta de
@@ -41,6 +45,8 @@ from historia_clinica import imagenes_pacs as hc03
 from historia_clinica import laboratorios as hc02
 from historia_clinica.db import conectar_expediente, ruta_expediente
 from historia_clinica.integracion_externa import importar_mensaje_hl7
+from privacidad import consentimiento_ia as sec03
+from seguridad.tls import ConexionInseguraError, SoloHTTPSMiddleware
 
 from . import db
 from .busqueda import (
@@ -73,6 +79,8 @@ from .schemas import (
     BiopsiaCreateSchema,
     BiopsiaSchema,
     BusquedaPacientesResponse,
+    ConsentimientoIACreateSchema,
+    ConsentimientoIASchema,
     ConfirmarBiomarcadorSchema,
     ConflictoLaboratorioSchema,
     DescartarBiomarcadorSchema,
@@ -103,6 +111,7 @@ from .schemas import (
     Resumen360Schema,
     TratamientoCreateSchema,
     TratamientoSchema,
+    RetiroConsentimientoIASchema,
 )
 
 DB_PATH = db.RUTA_DB
@@ -119,6 +128,8 @@ CARGADOR_DETALLE = None
 PACS_FUENTE = None
 #: Plantilla de URL del visor incrustable (``{study_uid}``). None = ``COPILOTO_VISOR_URL``.
 VISOR_PLANTILLA: Optional[str] = None
+#: Quién figura en la auditoría por las acciones que hace la API al arrancar.
+USUARIO_SISTEMA = 0
 
 
 def get_conn():
@@ -134,9 +145,21 @@ def _ruta_expediente() -> Path:
     return Path(EXPEDIENTE_PATH) if EXPEDIENTE_PATH else ruta_expediente()
 
 
+#: Expedientes donde ya se activó la exigencia de consentimiento (SEC-03).
+_CONSENTIMIENTO_ACTIVADO: set[Path] = set()
+
+
 def get_conn_expediente():
-    """Conexión al expediente clínico (lo crea si no existe)."""
-    conn = conectar_expediente(_ruta_expediente(), check_same_thread=False)
+    """Conexión al expediente clínico (lo crea si no existe).
+
+    SEC-03: en el expediente que atiende esta API, la IA exige
+    consentimiento informado. Se activa la primera vez que se abre (y no al
+    arrancar, para que leer un paciente nunca cree el expediente)."""
+    ruta = _ruta_expediente()
+    conn = conectar_expediente(ruta, check_same_thread=False)
+    if ruta not in _CONSENTIMIENTO_ACTIVADO:
+        sec03.activar_consentimiento_ia(conn, USUARIO_SISTEMA)
+        _CONSENTIMIENTO_ACTIVADO.add(ruta)
     try:
         yield conn
     finally:
@@ -170,6 +193,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=_lifespan,
 )
+# SEC-02: solo HTTPS, sin respaldo en claro (python -m seguridad.servidor_tls).
+app.add_middleware(SoloHTTPSMiddleware)
 
 
 # ---------------------------------------------------------------------------
@@ -911,7 +936,12 @@ def descartar_biomarcador(
 # ---------------------------------------------------------------------------
 
 def _fuente_pacs():
-    return PACS_FUENTE if PACS_FUENTE is not None else hc03.fuente_desde_entorno()
+    if PACS_FUENTE is not None:
+        return PACS_FUENTE
+    try:
+        return hc03.fuente_desde_entorno()
+    except ConexionInseguraError:
+        return None  # PACS configurado sin TLS (SEC-02): se informa como no disponible, nunca se consulta en claro
 
 
 def _plantilla_visor() -> Optional[str]:
@@ -997,3 +1027,93 @@ def consultas_pacs(
     if expediente_id is None:
         return []
     return [ConsultaPACSSchema.model_validate(c) for c in hc03.historial_consultas(conn_exp, expediente_id)]
+
+
+# ---------------------------------------------------------------------------
+# SEC-03: consentimiento informado para el uso de IA
+# ---------------------------------------------------------------------------
+
+def _a_schema_consentimiento(estado: sec03.EstadoConsentimientoIA, paciente_id: int) -> ConsentimientoIASchema:
+    ultimo = estado.ultimo_registro
+    return ConsentimientoIASchema(
+        paciente_id=paciente_id,
+        estado=estado.etiqueta,
+        exigido=estado.exigido,
+        ia_habilitada=estado.ia_habilitada,
+        motivo=estado.motivo,
+        fecha=ultimo.fecha if ultimo else None,
+        medio=ultimo.medio if ultimo else None,
+        soporte=ultimo.evidencia_ref if ultimo else None,
+    )
+
+
+@app.get(
+    "/pacientes/{paciente_id}/consentimiento-ia",
+    response_model=ConsentimientoIASchema,
+    responses=_RESPUESTA_404,
+    summary="SEC-03: estado del consentimiento informado para el uso de IA",
+)
+def leer_consentimiento_ia(
+    paciente_id: int,
+    oncologo_id: int = OncologoId,
+    conn: sqlite3.Connection = Depends(get_conn),
+    conn_exp: sqlite3.Connection = Depends(get_conn_expediente),
+):
+    expediente_id = _id_en_expediente(conn, conn_exp, paciente_id, oncologo_id, crear=False)
+    if expediente_id is None:
+        # Paciente recién registrado, todavía sin historia en el expediente (AC1).
+        exigido = sec03.consentimiento_ia_activo(conn_exp)
+        estado = sec03.EstadoConsentimientoIA(
+            paciente_id, exigido=exigido, ia_habilitada=not exigido,
+            motivo="No hay consentimiento informado registrado." if exigido
+            else "La institución no ha activado la exigencia de consentimiento en esta base.",
+        )
+        return _a_schema_consentimiento(estado, paciente_id)
+    return _a_schema_consentimiento(sec03.estado_consentimiento_ia(conn_exp, expediente_id), paciente_id)
+
+
+@app.post(
+    "/pacientes/{paciente_id}/consentimiento-ia",
+    response_model=ConsentimientoIASchema,
+    status_code=201,
+    responses=_RESPUESTAS_ESCRITURA,
+    summary="SEC-03: registrar el consentimiento del paciente (otorgado o no otorgado)",
+)
+def registrar_consentimiento_ia(
+    paciente_id: int,
+    payload: ConsentimientoIACreateSchema,
+    oncologo_id: int = OncologoId,
+    conn: sqlite3.Connection = Depends(get_conn),
+    conn_exp: sqlite3.Connection = Depends(get_conn_expediente),
+):
+    expediente_id = _id_en_expediente(conn, conn_exp, paciente_id, oncologo_id, crear=True)
+    resultado = sec03.registrar_consentimiento_ia(
+        conn_exp, oncologo_id, expediente_id, medio=payload.medio, soporte=payload.soporte, otorgado=payload.otorgado,
+    )
+    if not resultado.exito:
+        raise HTTPException(status_code=400, detail={"errores": [{"campo": "consentimiento", "mensaje": resultado.motivo_rechazo}]})
+    return _a_schema_consentimiento(sec03.estado_consentimiento_ia(conn_exp, expediente_id), paciente_id)
+
+
+@app.post(
+    "/pacientes/{paciente_id}/consentimiento-ia/retiro",
+    response_model=ConsentimientoIASchema,
+    responses=_RESPUESTAS_ESCRITURA,
+    summary="SEC-03: el paciente retira el consentimiento (la historia clínica no se borra)",
+)
+def retirar_consentimiento_ia(
+    paciente_id: int,
+    payload: RetiroConsentimientoIASchema,
+    oncologo_id: int = OncologoId,
+    conn: sqlite3.Connection = Depends(get_conn),
+    conn_exp: sqlite3.Connection = Depends(get_conn_expediente),
+):
+    expediente_id = _id_en_expediente(conn, conn_exp, paciente_id, oncologo_id, crear=False)
+    if expediente_id is None:
+        raise _no_encontrado(paciente_id, "un consentimiento de IA registrado")
+    resultado = sec03.retirar_consentimiento_ia(
+        conn_exp, oncologo_id, expediente_id, medio=payload.medio, soporte=payload.soporte,
+    )
+    if not resultado.exito:
+        raise HTTPException(status_code=400, detail={"errores": [{"campo": "consentimiento", "mensaje": resultado.motivo_rechazo}]})
+    return _a_schema_consentimiento(sec03.estado_consentimiento_ia(conn_exp, expediente_id), paciente_id)

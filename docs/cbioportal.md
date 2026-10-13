@@ -33,7 +33,7 @@ python -m cbioportal --db data/copiloto.db --pacientes P-0000015 P-0002266 \
     --db-pacientes patients/db/pacientes.db --oncologo-id 1
 
 # 3. Levantar la API con la carga bajo demanda activada
-COPILOTO_EXPEDIENTE_DB=data/copiloto.db uvicorn patients.api:app
+COPILOTO_EXPEDIENTE_DB=data/copiloto.db python -m seguridad.servidor_tls --cert certs/localhost.pem --key certs/localhost-clave.pem
 ```
 
 Cómo funciona (`cbioportal/indice.py`):

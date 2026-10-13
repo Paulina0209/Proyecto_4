@@ -25,7 +25,7 @@ def client(tmp_path, monkeypatch):
     conn = adm.crear_conexion(str(ruta))
     adm.crear_primer_administrador(conn, "admin.sistema", CLAVE_ADMIN, "Administrador del Sistema")
     conn.close()
-    with TestClient(api_module.app) as c:
+    with TestClient(api_module.app, base_url="https://testserver") as c:
         yield c
 
 

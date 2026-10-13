@@ -455,3 +455,32 @@ class ConsultaPACSSchema(_Esquema):
     study_uid: Optional[str]
     mensaje: Optional[str]
     fecha: str
+
+
+# ---------------------------------------------------------------------------
+# SEC-03 · Consentimiento informado para el uso de IA
+# ---------------------------------------------------------------------------
+
+class ConsentimientoIACreateSchema(_Esquema):
+    """Respuesta del paciente al consentimiento. El medio y el soporte son
+    obligatorios: la política exige evidencia del documento firmado."""
+    medio: str = Field(..., min_length=1, description="escrito, digital, verbal_registrado...")
+    soporte: str = Field(..., min_length=1, description="Id, hash o ruta del documento firmado")
+    otorgado: bool = Field(True, description="False si el paciente no lo otorga")
+
+
+class RetiroConsentimientoIASchema(_Esquema):
+    medio: Optional[str] = None
+    soporte: Optional[str] = None
+
+
+class ConsentimientoIASchema(_Esquema):
+    paciente_id: int
+    #: pendiente | otorgada | revocada | denegada | no exigido
+    estado: str
+    exigido: bool
+    ia_habilitada: bool
+    motivo: str
+    fecha: Optional[str] = None
+    medio: Optional[str] = None
+    soporte: Optional[str] = None

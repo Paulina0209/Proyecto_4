@@ -43,6 +43,17 @@ class NaturalLanguageClinicalQueryService:
     ) -> QueryResponse:
         clarification = clarification or Clarification()
 
+        # 0. SEC-03: sin consentimiento informado vigente no se consulta nada.
+        motivo = self.repository.motivo_sin_consentimiento_ia(patient_id)
+        if motivo is not None:
+            return QueryResponse(
+                answer=(
+                    f"No puedo responder sobre este paciente: {motivo} Las funciones de IA requieren "
+                    "su consentimiento informado (SEC-03). Su historia clínica sigue disponible."
+                ),
+                found=False,
+            )
+
         # 1. Ambigüedad de paciente. La recuperación SIEMPRE se acota a
         #    patient_id; aquí solo se decide si además hay que pedir aclaración
         #    porque la pregunta parece hablar de otra persona.

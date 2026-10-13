@@ -35,7 +35,7 @@ from historia_clinica.biopsias_biomarcadores import cargar_catalogo
 from patients.medicacion_actual import obtener_estado_conciliacion, registrar_conciliacion
 from tx_clinica.tools._db import conn_lock, obtener_conexion
 from tx_clinica.tools._paths import GUIDELINES_ROOT
-from tx_clinica.tools.patients_tools import ErrorPacienteNoEncontrado, obtener_paciente_o_error
+from tx_clinica.tools.patients_tools import ERRORES_PACIENTE, obtener_paciente_o_error
 
 
 @lru_cache(maxsize=1)
@@ -162,7 +162,7 @@ def registrar_datos_clinicos_paciente(
     registran con su biopsia (HC-04) o confirmando el biomarcador pendiente.
     El oncólogo que registra se toma de la sesión; no lo pidas."""
     resuelto = obtener_paciente_o_error(patient_id)
-    if isinstance(resuelto, ErrorPacienteNoEncontrado):
+    if isinstance(resuelto, ERRORES_PACIENTE):
         return resuelto.a_json()
     oncologo_id = _oncologo(config)
     if not oncologo_id:
@@ -212,7 +212,7 @@ def registrar_conciliacion_medicamentos(
     el oncólogo apruebe, edite o rechace lo que se va a guardar. El
     oncólogo que registra se toma de la sesión; no lo pidas."""
     resuelto = obtener_paciente_o_error(patient_id)
-    if isinstance(resuelto, ErrorPacienteNoEncontrado):
+    if isinstance(resuelto, ERRORES_PACIENTE):
         return resuelto.a_json()
     oncologo_id = _oncologo(config)
     if not oncologo_id:

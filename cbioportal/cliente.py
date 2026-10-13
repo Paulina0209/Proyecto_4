@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Any, Dict, Iterable, List, Optional, Set
 
 from historia_clinica.integracion_externa import ErrorIntegracion
+from seguridad.tls import exigir_url_segura
 
 URL_PUBLICA = "https://www.cbioportal.org/api"
 
@@ -36,7 +37,6 @@ def _sesion_con_reintentos(total: int = 4):
     )
     session = requests.Session()
     session.mount("https://", HTTPAdapter(max_retries=reintentos))
-    session.mount("http://", HTTPAdapter(max_retries=reintentos))
     return session
 
 
@@ -53,7 +53,8 @@ class ClienteCBioPortal:
         token: Optional[str] = None,
         reintentos: int = 4,
     ):
-        self.base_url = base_url.rstrip("/")
+        # SEC-02: una instancia institucional también debe ir por HTTPS.
+        self.base_url = exigir_url_segura(base_url, que="cBioPortal").rstrip("/")
         self.timeout = timeout
         self.session = session if session is not None else _sesion_con_reintentos(reintentos)
         self._cabeceras = {"Accept": "application/json"}

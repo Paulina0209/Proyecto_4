@@ -1,11 +1,12 @@
 """API HTTP de ADM-01 (gestión de usuarios, roles y permisos).
 
-    uvicorn administracion.api:app
+    python -m seguridad.servidor_tls --app administracion.api:app --cert cert.pem --key clave.pem
 
 Autenticación: HTTP Basic sobre el login de SEC-01 (``autenticar``), en cada
 petición, así que el bloqueo temporal por intentos fallidos también aplica
 aquí. Todavía no hay sesiones ni tokens (ver ``docs/seguridad.md``): sirve
-solo detrás de TLS (SEC-02). Un usuario autenticado que no es
+solo detrás de TLS (SEC-02), y ``SoloHTTPSMiddleware`` rechaza cualquier
+petición en claro. Un usuario autenticado que no es
 ``administrador`` recibe 403, y el intento queda auditado.
 
 La base es ``COPILOTO_USUARIOS_DB`` (por defecto ``data/usuarios.db``). El
@@ -27,12 +28,15 @@ from pydantic import BaseModel, ConfigDict
 from administracion import usuarios as adm
 from seguridad.autenticacion import autenticar
 from seguridad.models import Rol, Usuario
+from seguridad.tls import SoloHTTPSMiddleware
 
 RUTA_POR_DEFECTO = Path(__file__).resolve().parent.parent / "data" / "usuarios.db"
 #: None = ``COPILOTO_USUARIOS_DB`` o ``data/usuarios.db``; los tests lo apuntan a una base temporal.
 USUARIOS_DB_PATH: Optional[Path] = None
 
 app = FastAPI(title="Copiloto oncológico — Administración (ADM-01)")
+# SEC-02: la contraseña viaja en cada petición (HTTP Basic): nunca sin TLS.
+app.add_middleware(SoloHTTPSMiddleware)
 _basic = HTTPBasic(auto_error=False)
 
 

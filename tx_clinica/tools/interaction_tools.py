@@ -18,7 +18,7 @@ from patients.medicacion_actual import (
 )
 from tx_clinica.tools._db import conn_lock, obtener_conexion
 from tx_clinica.tools._interaction_shared import resolver_chequeo_interacciones, serializar_chequeo
-from tx_clinica.tools.patients_tools import ErrorPacienteNoEncontrado, obtener_paciente_o_error
+from tx_clinica.tools.patients_tools import ERRORES_PACIENTE, obtener_paciente_o_error
 
 
 @tool
@@ -32,7 +32,7 @@ def consultar_medicacion_actual(patient_id: int) -> str:
     régimen todavía -- para eso usa chequear_interacciones_tratamiento
     en su lugar."""
     resuelto = obtener_paciente_o_error(patient_id)
-    if isinstance(resuelto, ErrorPacienteNoEncontrado):
+    if isinstance(resuelto, ERRORES_PACIENTE):
         return resuelto.a_json()
 
     conn = obtener_conexion()
@@ -81,7 +81,7 @@ def chequear_interacciones_tratamiento(patient_id: int, regimen_id: str) -> str:
     justificación se registra después, al confirmar el tratamiento con
     registrar_decision_tratamiento."""
     resuelto = obtener_paciente_o_error(patient_id)
-    if isinstance(resuelto, ErrorPacienteNoEncontrado):
+    if isinstance(resuelto, ERRORES_PACIENTE):
         return resuelto.a_json()
 
     resolucion = resolver_chequeo_interacciones(patient_id, regimen_id)

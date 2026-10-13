@@ -19,7 +19,7 @@ def test_la_api_no_carga_datos_de_ejemplo_al_arrancar(tmp_path, monkeypatch):
     ruta = tmp_path / "pacientes_test.db"
     monkeypatch.setattr(api_module, "DB_PATH", ruta)
 
-    with TestClient(api_module.app):
+    with TestClient(api_module.app, base_url="https://testserver"):
         pass
     assert _contar_pacientes(ruta) == 0
 
@@ -27,14 +27,14 @@ def test_la_api_no_carga_datos_de_ejemplo_al_arrancar(tmp_path, monkeypatch):
 def test_un_paciente_registrado_persiste_al_reiniciar_la_api(tmp_path, monkeypatch):
     monkeypatch.setattr(api_module, "DB_PATH", tmp_path / "pacientes_test.db")
 
-    with TestClient(api_module.app) as c:
+    with TestClient(api_module.app, base_url="https://testserver") as c:
         r = c.post("/pacientes", json={
             "nombre_completo": "Paciente Real", "sexo": "otro", "tipo_identificacion": "cedula",
             "numero_identificacion": "1234567", "contacto": {"telefono": "3000000000"}, "oncologo_id": 1,
         })
         assert r.status_code == 201, r.text
 
-    with TestClient(api_module.app) as c:
+    with TestClient(api_module.app, base_url="https://testserver") as c:
         nombres = [p["nombre_completo"] for p in c.get("/pacientes", params={"oncologo_id": 1}).json()]
         assert nombres == ["Paciente Real"]
 

@@ -1,5 +1,34 @@
 # Changelog
 
+## [Sin versionar] — Rama `seguridad-consentimiento-cumplimiento`
+
+### Añadido
+
+- **SEC-02 — Cifrado en tránsito y en reposo** (`seguridad/tls.py`, `seguridad/servidor_tls.py`, `seguridad/cifrado.py`):
+  - `python -m seguridad.servidor_tls`: sirve las APIs solo con TLS ≥ 1.2 (suites AEAD) y no arranca sin certificado;
+  - `SoloHTTPSMiddleware` en `patients.api` y `administracion.api`: 403 a todo lo que no llega por HTTPS, más HSTS;
+  - cBioPortal, PACS y visor solo aceptan `https://` (o loopback, para el Orthanc local);
+  - AES-256-GCM ligado al paciente para los documentos de DOC-01, y respaldos cifrados de las bases (`python -m seguridad.cifrado`).
+  - Ver `docs/seguridad_cifrado.md`.
+- **SEC-03 — Consentimiento informado para el uso de IA** (`privacidad/consentimiento_ia.py`):
+  - autorización `asistencia_ia` de NFR-06, con evidencia obligatoria, solo inserción y auditoría;
+  - sin consentimiento vigente no corren IA-01, IA-02, IA-04, DX-02, EST-01 ni el agente de TX; al retirarlo se apagan sin borrar la historia;
+  - endpoints `GET/POST /pacientes/{id}/consentimiento-ia` y `POST .../retiro`, y la línea de comandos `python -m privacidad.consentimiento_ia`.
+  - Ver `docs/consentimiento_ia.md`.
+- **NFR-04 — Cumplimiento normativo** (`privacidad/minimizacion.py`, `privacidad/cumplimiento.py`):
+  - minimización: el texto que llega al modelo sale sin nombre, documento, teléfono ni correo, y el agente ya no recibe el nombre;
+  - permisos `REGISTRAR_CONSENTIMIENTO_IA` y `CONFIGURAR_POLITICA_DATOS`;
+  - `eventos_acceso` (AUD-01) protegida con triggers de solo inserción;
+  - informe verificable `python -m privacidad.cumplimiento`.
+  - Ver `docs/cumplimiento_normativo.md`.
+- `demo_seguridad_cumplimiento.py` y la sección `seg` de `demo.py`.
+
+### Cambiado
+
+- `demo.py` registra el consentimiento de IA de sus tres pacientes; `obtener_datos_paciente` (TX) ya no devuelve `nombre`.
+- Los `TestClient` de las pruebas usan `https://testserver`.
+- `requirements.txt`: `cryptography` y `uvicorn`.
+
 ## [Sin versionar] — Rama `NatiMejia`
 
 ### Añadido
