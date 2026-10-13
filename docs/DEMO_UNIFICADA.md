@@ -54,6 +54,7 @@ Para explorar a mano:
 - `python demo_ia01.py`: preguntas, recomendaciones y evidencia.
 - `python demo_tx.py`: agente de tratamiento.
 - `python -m patients.demo`: búsqueda, 360, laboratorios (HC-02: valores críticos, conflictos y tendencias) y biopsias y biomarcadores (HC-04). Ver `docs/PACIENTES_DEMO.md`.
+- `python demo_laboratorios_biomarcadores.py`: el recorrido de HC-02 y HC-04 automático, con verificación de cada criterio de aceptación, y luego el mismo menú interactivo. Trabaja sobre una copia.
 
 Las tres trabajan sobre la base real.
 

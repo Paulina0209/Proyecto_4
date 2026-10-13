@@ -36,6 +36,11 @@
 
   Con esto, el flujo TX-01 → TX-03 → TX-04 funciona completo desde el chat. Ver `docs/tx_clinica.md`.
 
+- `demo_laboratorios_biomarcadores.py`: demo guiada de HC-02 y HC-04.
+  - Ejecuta sola el recorrido, verificando cada criterio de aceptación.
+  - Después abre el menú de la demo de pacientes para seguir interactuando.
+  - Trabaja sobre una copia de la base, restablecida al estado recién importado (`restablecer_estado_inicial`), y levanta su propia API. Ver `docs/PACIENTES_DEMO.md`.
+
 ### Cambiado
 
 - **HC-01:**
