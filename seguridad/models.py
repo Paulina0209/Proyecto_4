@@ -17,6 +17,9 @@ class Rol(str, Enum):
     #: ADM-01: administrador del sistema; gestiona usuarios, roles y permisos.
     #: Es un rol de administración: no tiene acceso clínico a los expedientes.
     ADMINISTRADOR = "administrador"
+    #: ADM-02: dirección médica; consulta las métricas agregadas de uso del
+    #: sistema. Es un rol de gestión: no tiene acceso clínico a expedientes.
+    DIRECTOR_MEDICO = "director_medico"
 
 
 @dataclass(frozen=True)

@@ -20,6 +20,9 @@ class TipoAccion(str, Enum):
     # ADM-01: alta, cambio, baja y cambio de rol de usuarios institucionales
     # (también los intentos denegados).
     GESTIONAR_USUARIOS = "gestionar_usuarios"
+    # ADM-02: consulta del tablero de métricas de uso (también las denegadas).
+    # No cuenta como uso clínico del sistema en las propias métricas.
+    CONSULTAR_METRICAS = "consultar_metricas"
 
 
 @dataclass(frozen=True)

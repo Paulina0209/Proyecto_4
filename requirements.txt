@@ -38,3 +38,6 @@ uvicorn>=0.30
 #   python-pptx>=0.6         # guidelineUpdate/agent/pptx_text.py
 #   Pillow>=10.0             # guidelineUpdate/agent/pptx_text.py
 #   playwright>=1.40         # guidelineUpdate/scraper/download_content.py (import perezoso)
+#   pypdf>=4.0               # accesibilidad/pdf.py (NFR-03): auditar un PDF; sin él esas pruebas se omiten
+#                            # Para las pruebas de navegador de NFR-03 (se omiten si faltan): pip install playwright
+#                            # && playwright install chromium; axe-core opcional: npm install axe-core y AXE_CORE_JS

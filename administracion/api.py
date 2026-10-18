@@ -1,4 +1,4 @@
-"""API HTTP de ADM-01 (gestión de usuarios, roles y permisos).
+"""API HTTP de ADM-01 (gestión de usuarios, roles y permisos) y ADM-02 (métricas de uso).
 
     python -m seguridad.servidor_tls --app administracion.api:app --cert cert.pem --key clave.pem
 
@@ -11,21 +11,29 @@ petición en claro. Un usuario autenticado que no es
 
 La base es ``COPILOTO_USUARIOS_DB`` (por defecto ``data/usuarios.db``). El
 primer administrador se crea con ``python -m administracion crear-admin``.
+
+ADM-02: ``GET /metricas`` (JSON) y ``GET /metricas/panel`` (tablero HTML) para
+el rol ``director_medico``. Las métricas se calculan leyendo, en modo
+solo-lectura, las bases del sistema que existan (``METRICAS_DB_PATHS``, o
+pacientes + expediente + ``COPILOTO_METRICAS_DBS``); ver ``docs/administracion_metricas.md``.
 """
 from __future__ import annotations
 
 import os
 import sqlite3
 from pathlib import Path
+from datetime import date
 from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel, ConfigDict
 
+from administracion import metricas_uso as met
 from administracion import usuarios as adm
+from administracion.panel_metricas import renderizar_error, renderizar_panel
 from seguridad.autenticacion import autenticar
 from seguridad.models import Rol, Usuario
 from seguridad.tls import SoloHTTPSMiddleware
@@ -33,6 +41,9 @@ from seguridad.tls import SoloHTTPSMiddleware
 RUTA_POR_DEFECTO = Path(__file__).resolve().parent.parent / "data" / "usuarios.db"
 #: None = ``COPILOTO_USUARIOS_DB`` o ``data/usuarios.db``; los tests lo apuntan a una base temporal.
 USUARIOS_DB_PATH: Optional[Path] = None
+#: ADM-02: bases (además de la de usuarios) de las que salen las métricas. None = las que existan por
+#: defecto (``met.rutas_por_defecto()``); los tests lo apuntan a bases temporales. Se abren solo-lectura.
+METRICAS_DB_PATHS: Optional[List[Path]] = None
 
 app = FastAPI(title="Copiloto oncológico — Administración (ADM-01)")
 # SEC-02: la contraseña viaja en cada petición (HTTP Basic): nunca sin TLS.
@@ -228,3 +239,72 @@ def roles(quien: Usuario = Depends(actor), conn: sqlite3.Connection = Depends(ge
          summary="ADM-01: historial de gestión de usuarios (AUD-01), de todos o de uno")
 def auditoria(usuario_id: Optional[int] = Query(None), quien: Usuario = Depends(actor), conn: sqlite3.Connection = Depends(get_conn)):
     return adm.eventos_de_administracion(conn, quien, usuario_id=usuario_id)
+
+
+# --- ADM-02: métricas de uso --------------------------------------------------
+
+_R_METRICAS = {**_R, 403: {"description": "Solo el director médico (el intento queda auditado)"}}
+#: El tablero no carga nada externo: nada más que sí mismo, sin incrustarse en otras páginas.
+_CSP = ("default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; "
+        "form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
+
+
+def fuentes_metricas(conn: sqlite3.Connection = Depends(get_conn)):
+    """La base de usuarios (SEC-01/AUD-01) más las demás bases del sistema, estas últimas solo-lectura."""
+    rutas = METRICAS_DB_PATHS if METRICAS_DB_PATHS is not None else met.rutas_por_defecto()
+    otras = []
+    try:
+        for ruta in rutas:
+            try:
+                otras.append(met.abrir_solo_lectura(Path(ruta)))
+            except sqlite3.Error:
+                continue  # una base ilegible se informa como fuente no disponible
+        yield met.FuentesMetricas(conn, otras)
+    finally:
+        for c in otras:
+            c.close()
+
+
+def _consultar(via: str, desde: Optional[date], hasta: Optional[date], quien: Usuario, fuentes: met.FuentesMetricas):
+    try:
+        return met.consultar_metricas(fuentes, quien, desde=desde, hasta=hasta, via=via)
+    except met.ErrorMetricas as exc:
+        return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+
+@app.get("/metricas", responses=_R_METRICAS, summary="ADM-02: métricas de uso del sistema (agregadas, JSON)")
+def metricas(
+    desde: Optional[date] = Query(None, description="Primer día (AAAA-MM-DD); por defecto, hace 30 días"),
+    hasta: Optional[date] = Query(None, description="Último día; por defecto, hoy (UTC)"),
+    quien: Usuario = Depends(actor), fuentes: met.FuentesMetricas = Depends(fuentes_metricas),
+):
+    resultado = _consultar("api", desde, hasta, quien, fuentes)
+    if isinstance(resultado, JSONResponse):
+        return resultado
+    return JSONResponse(content=resultado.a_dict(), headers={"Cache-Control": "no-store"})
+
+
+@app.get("/metricas/panel", response_class=HTMLResponse, responses=_R_METRICAS,
+         summary="ADM-02: tablero de métricas de uso (HTML)")
+def metricas_panel(
+    desde: Optional[str] = Query(None, description="Primer día (AAAA-MM-DD)"),
+    hasta: Optional[str] = Query(None, description="Último día (AAAA-MM-DD)"),
+    quien: Usuario = Depends(actor), fuentes: met.FuentesMetricas = Depends(fuentes_metricas),
+):
+    # Quien usa el tablero es una persona en un navegador, no un cliente de API: un periodo mal escrito
+    # recibe una página que explica el error y deja corregirlo (NFR-03, WCAG 3.3.1 y 3.3.3), no un JSON.
+    cabeceras = {"Content-Security-Policy": _CSP, "Cache-Control": "no-store"}
+    try:
+        d = date.fromisoformat(desde) if desde else None
+        h = date.fromisoformat(hasta) if hasta else None
+    except ValueError:
+        return HTMLResponse(renderizar_error(["Una de las fechas no es válida: usa el formato AAAA-MM-DD (por ejemplo 2026-10-17)."],
+                                             desde=desde or "", hasta=hasta or ""), status_code=400, headers=cabeceras)
+    try:
+        resultado = _consultar("panel", d, h, quien, fuentes)
+    except adm.ErrorValidacion as exc:
+        return HTMLResponse(renderizar_error([m for _, m in exc.errores], desde=desde or "", hasta=hasta or ""),
+                            status_code=400, headers=cabeceras)
+    if isinstance(resultado, JSONResponse):
+        return resultado
+    return HTMLResponse(renderizar_panel(resultado), headers=cabeceras)

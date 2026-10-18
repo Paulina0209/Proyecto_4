@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Copiloto oncológico</title>
+<link rel="icon" href="/ui/icono.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/ui/app.css">
+<script src="/ui/tema.js"></script>
+</head>
+<body>
+<a class="saltar" href="#contenido">Saltar al contenido</a>
+<div id="aviso-demo" class="aviso-demo" role="note" hidden></div>
+<header class="cabecera" id="cabecera">
+  <div class="cabecera-interior">
+    <a class="marca" href="#/pacientes">
+      <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect width="32" height="32" rx="7" fill="#ffffff"/><path d="M13 7h6v6h6v6h-6v6h-6v-6H7v-6h6z" fill="#0b3a6e"/></svg>
+      <span>Copiloto oncológico</span>
+    </a>
+    <nav class="nav-principal" id="nav-principal" aria-label="Principal" hidden>
+      <ul>
+        <li><a href="#/pacientes" id="nav-pacientes">Pacientes</a></li>
+        <li><a href="#/metricas" id="nav-metricas" hidden>Métricas de uso</a></li>
+      </ul>
+    </nav>
+    <div class="usuario-barra" id="usuario-barra" hidden>
+      <p class="quien" id="quien"></p>
+      <button type="button" class="btn-barra" id="btn-tema">Tema: automático</button>
+      <button type="button" class="btn-barra" id="btn-salir">Cerrar sesión</button>
+    </div>
+  </div>
+</header>
+<main id="contenido" tabindex="-1">
+  <h1>Copiloto oncológico</h1>
+  <p class="cargando">Cargando…</p>
+  <noscript><p>Esta aplicación necesita JavaScript activado para funcionar.</p></noscript>
+</main>
+<div id="anuncios" class="vh" role="status" aria-live="polite" aria-atomic="true"></div>
+<script type="module" src="/ui/app.js"></script>
+</body>
+</html>

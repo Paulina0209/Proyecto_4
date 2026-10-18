@@ -50,6 +50,9 @@ AC3  Dada cualquier operación de gestión
   muestra. No hay permisos sueltos por usuario: revisarlos persona por
   persona no escala y complica la auditoría. Si la institución necesita
   perfiles intermedios, la vía es un rol nuevo, no excepciones por usuario.
+- **Roles de gestión**: `administrador` (nuevo en esta historia) gestiona
+  usuarios; `director_medico` (ADM-02, `docs/administracion_metricas.md`) solo
+  consulta las métricas de uso, y es el administrador quien le da de alta.
 - **Solo el rol `administrador`** (nuevo) gestiona usuarios. Es un rol de
   administración: no tiene acceso clínico a los expedientes (ver
   `docs/seguridad.md`). El `administrador_clinico` de CFG-01 es otro rol y no

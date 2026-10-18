@@ -243,6 +243,12 @@ el expediente clínico completo directamente desde
 `expediente` — al modelo genérico, cada una en su propia
 función. Ver `docs/documentos_clinicos_exportacion.md`.
 
+**NFR-03 sobre DOC-02.** El PDF declara idioma y título visible, tiene
+marcadores por sección y cumple el contraste WCAG 2.1 AA, pero no puede ser un
+PDF etiquetado (reportlab); `html_export.py` produce el mismo
+`DocumentoExportable` como HTML con estructura real (la alternativa accesible).
+Ver `docs/accesibilidad.md`.
+
 ### configuracion
 
 **CFG-01 — guías clínicas institucionales por defecto** (NCCN, ESMO y/o
@@ -261,6 +267,33 @@ autenticación Basic. Solo el rol `administrador` (sin acceso clínico);
 cada operación y cada intento denegado queda en AUD-01, y el sistema nunca
 se queda sin administrador activo. Ver `docs/administracion_usuarios.md`.
 
+**ADM-02 — tablero de métricas de uso.** Para el rol `director_medico`:
+adopción, tiempo ahorrado estimado, alertas generadas y cómo se resuelven las
+recomendaciones de IA, en agregado institucional (nunca por persona) y
+comparado con el periodo anterior. Un solo punto de cálculo
+(`administracion/metricas_uso.py`) que suma las tablas que encuentre en las
+bases recibidas, en solo lectura (accesos de AUD-01, decisiones de TX-04 y
+EST-02, notas de IA-03, alertas de HC-02); una fuente ausente es "no
+disponible", no cero. La aceptación de IA se suprime en muestras pequeñas y se
+presenta con su nota de interpretación; el tiempo ahorrado es una estimación
+en rango con supuestos editables. API (`/metricas`, `/metricas/panel`) y
+tablero HTML autocontenido. Cada consulta queda en AUD-01. Ver
+`docs/administracion_metricas.md`.
+
+### frontend
+
+**Interfaz web clínica.** Archivos estáticos (HTML, CSS y módulos ES, sin
+compilación) que sirve la pasarela `frontend/servidor.py` (FastAPI). La
+pasarela es el único camino web hacia los datos: autentica con SEC-01 y abre una
+sesión en el servidor (`sesiones.py`), monta `patients.api` **sin modificarla**
+detrás de permisos por rol (`verificar_permiso`), sustituye la identidad que
+mande el navegador por la de la sesión y deja pasar solo una lista cerrada de
+rutas. Muestra el tablero ADM-02 y exporta el expediente (DOC-02) con auditoría.
+Solo el rol `oncologo` ve expedientes hasta que exista la asignación de pacientes
+por persona. `python -m frontend.demo` la levanta con datos sintéticos
+(`demo_datos.py`). Entra a la compuerta de `accesibilidad/` (estática y Chromium
+con axe-core: `tests/frontend`). Ver `docs/frontend.md`.
+
 ### privacidad
 
 **NFR-06 — cumplimiento de datos personales y gestión de derechos.**
@@ -269,6 +302,20 @@ dato, no código), autorizaciones con evidencia y finalidad, solicitudes de
 derechos del titular con plazo y recopilación de su información, todo con
 traza en `auditoria.eventos_acceso` (AUD-01). Tablas de solo inserción.
 Ver `docs/privacidad.md`.
+
+### accesibilidad
+
+**NFR-03 — accesibilidad (WCAG 2.1 AA).** Una compuerta reutilizable más el arreglo
+de las superficies que había (la interfaz `frontend/` pasa por ella). Paquete sin dependencias de los demás módulos:
+`contraste.py` (razones de contraste), `auditoria_html.py` (auditor estático de
+HTML/CSS y de los tokens de color en cada esquema), `pdf.py` (`auditar_pdf`),
+`navegador.py` (Chromium opcional: contraste calculado, reflujo a 320 px,
+teclado, axe-core) y `python -m accesibilidad html|pdf|sistema`. Cada pantalla
+nueva debe llamar a `auditar_html` en sus pruebas (modelo:
+`tests/administracion/test_panel_accesibilidad.py`) y, si es una aplicación con
+sesión, a `auditar_pagina_abierta` en Chromium (modelo: `tests/frontend/test_navegador.py`). No hay prueba con lectores
+de pantalla ni con personas usuarias: protocolo y declaración de conformidad en
+`docs/accesibilidad.md`.
 
 ### tx_clinica
 Contiene las capacidades de la épica Tratamientos (TX-01, TX-02...). Implementa TX-01 — recomendación de tratamiento: evalúa cada régimen conocido de guidelines/<módulo>/regimens.yaml de forma hipotética contra las reglas del módulo aplicable, para generar sugerencias desde estadio/biomarcadores en vez de solo auditar concordancia (que es para lo que esas reglas fueron escritas originalmente). Implementa también TX-02 — nivel de evidencia por recomendación, leyendo evidence.native.* y source/module_version directamente de la regla y el módulo reales. No reescribe ninguna regla existente. 
