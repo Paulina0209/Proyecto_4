@@ -69,10 +69,16 @@ asociados al documento y al paciente, y se **confirma** al usuario cuántos frag
 ## Uso
 
 ```powershell
+python -m frontend.real            # datos + certificado + índice + servidor, en un solo paso
+# https://127.0.0.1:8443  ·  dra.gomez / Demo-Clave-2026
+```
+
+Por partes, lo mismo es:
+
+```powershell
 python -m datos preparar           # capas de datos (una vez)
 python -m asistente indexar        # guías + pacientes con consentimiento (evita esperar en la primera pregunta)
 python -m seguridad.servidor_tls --app frontend.servidor:app --cert certs/localhost.pem --key certs/localhost-clave.pem
-# https://127.0.0.1:8443  ·  dra.gomez / Demo-Clave-2026
 ```
 
 Variables: ver `asistente/config.py` (`COPILOTO_LLM_PROVEEDOR`, `OLLAMA_URL`, `OLLAMA_MODEL`,

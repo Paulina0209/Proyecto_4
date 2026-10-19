@@ -73,6 +73,19 @@ navegador ──HTTPS──▶ frontend.servidor (pasarela)
 
 ### Cómo se pone en marcha con bases reales
 
+En un solo comando (prepara las capas de datos si faltan, crea o renueva el certificado local en
+`certs/`, actualiza la base vectorial del asistente, muestra los usuarios y arranca):
+
+```
+python -m frontend.real                 # https://127.0.0.1:8443
+python -m frontend.real --sin-indexar   # arranca sin esperar la base vectorial
+python -m frontend.real --puerto 9443 --workers 4
+```
+
+Pacientes: los de cBioPortal (MSK-CHORD, desidentificados) de la capa de trabajo. Usuarios: la base
+propia `data/usuarios.db` del escenario (`dra.gomez`, `dr.vega`… contraseña de demo `Demo-Clave-2026`).
+A mano es lo mismo que:
+
 ```
 python -m seguridad.servidor_tls --app frontend.servidor:app --port 8443 --cert cert.pem --key clave.pem
 ```
