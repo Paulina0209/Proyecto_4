@@ -245,6 +245,74 @@ def test_se_guarda_el_historial(expediente, indice):
     assert len(guardados) == 1 and guardados[0]["respuesta"] and guardados[0]["intencion"] == "dato"
 
 
+def test_el_indice_mide_con_coseno_aunque_se_abra_con_autorreparacion(tmp_path):
+    from asistente.indice import _abrir_o_reconstruir, _espacio
+
+    idx = IndiceVectorial(cliente=_abrir_o_reconstruir(tmp_path / "vec"), embeddings=embeddings_falsos)
+    assert _espacio(idx._coleccion) == "cosine"
+    idx.sincronizar_paciente(1, [Fragmento("lab-1", "Hemoglobina 11 g/dL", "expediente", "laboratorio", 1)])
+    assert idx.buscar("Hemoglobina 11 g/dL", paciente_id=1)[0].similitud == pytest.approx(1.0, abs=1e-3)
+
+
+def test_si_chroma_aun_no_escribio_el_segmento_se_busca_contra_todos(indice, monkeypatch):
+    indice.sincronizar_paciente(1, [Fragmento("lab-1", "Hemoglobina 11 g/dL", "expediente", "laboratorio", 1),
+                                    Fragmento("lab-2", "CEA 3 ng/ml", "expediente", "laboratorio", 1)])
+
+    def sin_segmento(**_k):
+        raise RuntimeError("Error creating hnsw segment reader: Nothing found on disk")
+
+    monkeypatch.setattr(indice._coleccion, "query", sin_segmento)
+    r = indice.buscar("hemoglobina", paciente_id=1, k=2)
+    assert [x.id for x in r][0] == "lab-1" and r[0].similitud > r[1].similitud
+
+
+def test_un_indice_creado_en_l2_se_rehace_con_coseno(tmp_path):
+    import chromadb
+
+    from asistente.indice import COLECCION, _espacio
+
+    cliente = chromadb.PersistentClient(path=str(tmp_path / "vec"))
+    viejo = cliente.get_or_create_collection(COLECCION)            # sin métrica: L2, como quedaban antes
+    viejo.add(ids=["lab-1"], documents=["x"], embeddings=[[1.0] + [0.0] * (DIM - 1)])
+    idx = IndiceVectorial(cliente=cliente, embeddings=embeddings_falsos)
+    assert _espacio(idx._coleccion) == "cosine" and idx.cuantos() == 0   # se reindexa al consultar
+
+
+def test_el_resumen_arma_el_panorama_sin_depender_de_la_similitud(expediente, indice, monkeypatch):
+    conn, ids = expediente
+    monkeypatch.setenv("COPILOTO_UMBRAL_SIMILITUD", "0.99")         # ningún fragmento pasaría por parecido
+    r = g.ejecutar("Resume el caso", deps(conn, ids, indice), paciente_activo=ids["paciente_maria"])
+    assert r["estado"] == "respondida"
+    prefijos = {f["id"].split("-")[0] for f in r["fuentes"]}
+    assert {"biomarcador", "lab", "imagen"} <= prefijos
+    assert any(p["titulo"] == "Armé el panorama del caso" for p in r["pasos"])
+
+
+def test_la_estadificacion_informa_el_estadio_registrado_aunque_falte_el_tnm(expediente, indice):
+    conn, ids = expediente
+    pid = ids["paciente_maria"]
+    conn.execute("UPDATE pacientes SET estadio = 'IV' WHERE id = ?", (pid,))
+    r = g.ejecutar("¿En qué estadio está?", deps(conn, ids, indice), paciente_activo=pid)
+    assert r["estado"] == "respondida" and "Estadio registrado en el expediente: IV" in r["respuesta"]
+    assert f"paciente-{pid}" in [f["id"] for f in r["fuentes"]]
+
+
+def test_una_repregunta_se_entiende_con_la_pregunta_anterior(expediente, indice, monkeypatch):
+    conn, ids = expediente
+    monkeypatch.setenv("COPILOTO_UMBRAL_SIMILITUD", "0")                # que llegue al modelo
+    consultas = []
+    original = indice.buscar
+    monkeypatch.setattr(indice, "buscar", lambda q, **k: consultas.append(q) or original(q, **k))
+    monkeypatch.setattr(llm, "disponible", lambda: True)
+    monkeypatch.setattr(llm, "descripcion", lambda: "modelo de prueba")
+    prompts = []
+    monkeypatch.setattr(llm, "redactar", lambda s, u, timeout=None: prompts.append(u) or MENSAJE_SIN_INFORMACION)
+    historia = [{"rol": "medico", "texto": "¿Cuál es el HER2?"}, {"rol": "asistente", "texto": "HER2 negativo."}]
+    g.ejecutar("¿Y eso desde cuándo?", deps(conn, ids, indice), paciente_activo=ids["paciente_maria"], historia=historia)
+    assert "HER2" in consultas[0]
+    assert "CONVERSACIÓN PREVIA" in prompts[0] and "HER2 negativo" in prompts[0]
+
+
 def test_el_grafo_tiene_los_nodos_del_flujo():
     nombres = set(g.construir_grafo().get_graph().nodes)
     assert {"validar_intencion", "resolver_paciente", "recuperar", "evaluar_contexto", "responder", "rechazar", "guardar_historial"} <= nombres

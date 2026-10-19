@@ -131,6 +131,32 @@ def resolver_paciente(estado: Estado, config: RunnableConfig) -> Estado:
     return {"paciente": paciente, "pasos": [_paso("resolver_paciente", f"Paciente: {nombre}", "Consentimiento de IA vigente", paciente=paciente)]}
 
 
+#: Resultados estructurados del sistema (no dependen de la similitud).
+RESULTADOS = ("resumen", "dato", "diagnostico", "estadificacion", "tratamiento", "faltantes")
+ETIQUETA_SECCION = {"ficha": "Ficha", "biomarcador": "Biomarcador", "consulta": "Consulta", "imagenologia": "Imagen",
+                    "laboratorio": "Laboratorio", "antecedente": "Antecedente", "dato": "Dato clínico", "documento": "Documento"}
+#: Cuántos registros de cada sección entran al panorama de un resumen (los más recientes).
+PANORAMA = (("ficha", 1), ("biomarcador", 6), ("consulta", 3), ("imagenologia", 3), ("laboratorio", 5), ("antecedente", 3), ("dato", 6))
+
+
+def _panorama(por_id: Dict[str, Any]) -> List[str]:
+    """Ids de los registros clave del expediente para resumir el caso, sección por sección."""
+    ids: List[str] = []
+    for origen, cuantos in PANORAMA:
+        de_origen = [f for f in por_id.values() if f.origen == origen]
+        de_origen.sort(key=lambda f: str(f.fecha or ""), reverse=True)
+        ids += [f.id for f in de_origen[:cuantos]]
+    return ids
+
+
+def _pregunta_previa(estado: Estado) -> Optional[str]:
+    """La última pregunta del médico en esta conversación (para entender una repregunta)."""
+    for m in reversed(estado.get("historia") or []):
+        if m.get("rol") == "medico" and (m.get("texto") or "").strip() and m["texto"].strip() != estado["pregunta"].strip():
+            return m["texto"].strip()
+    return None
+
+
 def _fuente(fid: str, texto: str, metadatos: Dict[str, Any], similitud: Optional[float]) -> Dict[str, Any]:
     origen = str(metadatos.get("origen") or fid.split("-", 1)[0])
     return {"id": fid, "texto": texto, "origen": origen, "seccion": SECCION_HC.get(origen, origen), "tipo": metadatos.get("tipo"),
@@ -150,16 +176,18 @@ def recuperar(estado: Estado, config: RunnableConfig) -> Estado:
     pasos = []
     por_id: Dict[str, Any] = {}
 
+    # Una repregunta («dice estadio 4, ¿cómo que no sabes?») se busca junto con la pregunta anterior del médico.
+    consulta = pregunta if not (previa := _pregunta_previa(estado)) else f"{previa}\n{pregunta}"
     if eid is not None:
         fragmentos = fragmentos_del_expediente(deps.conn_exp, eid)
         por_id = {f.id: f for f in fragmentos}
         nuevos = deps.indice.sincronizar_paciente(eid, fragmentos)
         pasos.append(_paso("recuperar", "Indexé el expediente", f"{len(fragmentos)} fragmentos" + (f" ({nuevos} recalculados)" if nuevos else " (ya al día)")))
-        for r in deps.indice.buscar(pregunta, paciente_id=eid, k=8):
+        for r in deps.indice.buscar(consulta, paciente_id=eid, k=8):
             contexto.append(_fuente(r.id, r.texto, r.metadatos, r.similitud))
     if intencion in ("evidencia", "tratamiento"):
         deps.indice.asegurar_guias()
-        for r in deps.indice.buscar(pregunta, tipo="guia", k=5):
+        for r in deps.indice.buscar(consulta, tipo="guia", k=5):
             contexto.append(_fuente(r.id, r.texto, r.metadatos, r.similitud))
 
     def citar(ids: Sequence[str]) -> List[str]:
@@ -168,12 +196,20 @@ def recuperar(estado: Estado, config: RunnableConfig) -> Estado:
             f = por_id.get(fid)
             if f is not None and fid not in validos:
                 validos.append(fid)
-                if not any(c["id"] == fid for c in contexto):
+                ya = next((c for c in contexto if c["id"] == fid), None)
+                if ya is None:
                     contexto.append({**_fuente(fid, f.texto, f.metadatos_chroma(), None), "estructurado": True})
+                else:
+                    ya["estructurado"] = True  # lo usa un resultado del sistema: entra aunque su similitud sea baja
         return validos
 
     if eid is not None:
-        if intencion == "dato":
+        citar([f"paciente-{eid}"])  # la ficha (diagnóstico y estadio registrados) acompaña siempre al paciente
+        if intencion == "resumen":
+            # Un resumen no se busca por parecido («resume el caso» no se parece a ningún registro): se arma el panorama.
+            estructurado["resumen"] = {"fuentes": citar(_panorama(por_id))}
+            pasos.append(_paso("recuperar", "Armé el panorama del caso", f"{len(estructurado['resumen']['fuentes'])} registros clave del expediente"))
+        elif intencion == "dato":
             from clinical_query import NaturalLanguageClinicalQueryService, SQLiteClinicalRepository
             from clinical_query.service import Clarification
 
@@ -206,7 +242,9 @@ def recuperar(estado: Estado, config: RunnableConfig) -> Estado:
             prop = proponer_estadificacion(deps.conn_exp, eid)
             inc = analizar_estadificacion_incompleta(prop)
             fuentes = citar([fid for c in prop.componentes for fid in c.fuente_ids] + [f"paciente-{eid}"])
-            estructurado["estadificacion"] = {"sistema": f"{prop.sistema_nombre} (v{prop.sistema_version})", "estadio": prop.estadio_global,
+            fila = deps.conn_exp.execute("SELECT estadio FROM pacientes WHERE id = ?", (eid,)).fetchone()
+            estructurado["estadificacion"] = {"registrado": (fila[0] if fila else None) or None,
+                                              "sistema": f"{prop.sistema_nombre} (v{prop.sistema_version})", "estadio": prop.estadio_global,
                                               "fundamento": prop.fundamento_global, "componentes": [{"codigo": c.codigo, "valor": c.valor} for c in prop.componentes],
                                               "faltan": [c.codigo for c in inc.componentes_indeterminados], "mensaje": inc.mensaje, "fuentes": fuentes}
             pasos.append(_paso("recuperar", "Propuse la estadificación (EST-01/03)", prop.estadio_global or "Incompleta"))
@@ -226,9 +264,9 @@ def recuperar(estado: Estado, config: RunnableConfig) -> Estado:
             pasos.append(_paso("recuperar", "Revisé qué falta para decidir (HC-05)", f"{len(ev.faltantes)} datos faltantes"))
 
     umbral = ajustes.umbral_similitud()
-    aceptados = [c for c in contexto if c.get("similitud") is None or c["similitud"] >= umbral]
+    aceptados = [c for c in contexto if c.get("similitud") is None or c.get("estructurado") or c["similitud"] >= umbral]
     pasos.append(_paso("recuperar", "Busqué en la base vectorial", f"{len([c for c in contexto if c.get('similitud') is not None])} fragmentos; "
-                       f"{len([c for c in aceptados if c.get('similitud') is not None])} superan la similitud {umbral:.2f}",
+                       f"{len([c for c in contexto if c.get('similitud') is not None and c['similitud'] >= umbral])} superan la similitud {umbral:.2f}",
                        fuentes=[c["id"] for c in aceptados][:12]))
     return {"contexto": aceptados, "estructurado": estructurado, "pasos": pasos}
 
@@ -240,8 +278,8 @@ def evaluar_contexto(estado: Estado, config: RunnableConfig) -> Estado:
     if "aclaracion" in estructurado:
         return {"suficiente": True, "motivo": "La pregunta es ambigua: se pide aclaración",
                 "pasos": [_paso("evaluar_contexto", "La pregunta es ambigua", "Se pide aclaración (IA-06)")]}
-    utiles = [k for k in ("dato", "diagnostico", "estadificacion", "tratamiento", "faltantes") if k in estructurado]
-    vectoriales = [c for c in contexto if c.get("similitud") is not None]
+    utiles = [k for k in RESULTADOS if k in estructurado and (k != "resumen" or estructurado[k]["fuentes"])]
+    vectoriales = [c for c in contexto if c.get("similitud") is not None and c["similitud"] >= ajustes.umbral_similitud()]
     suficiente = bool(utiles) or bool(vectoriales)
     if estado["intencion"] == "diagnostico" and not (estructurado.get("diagnostico") or {}).get("candidatos") and not vectoriales:
         suficiente = False
@@ -271,12 +309,32 @@ def _extractiva(estado: Estado) -> Tuple[str, List[str]]:
         if d["indagar"]:
             lineas.append("Para reducir la incertidumbre, indagar: " + "; ".join(d["indagar"]) + ".")
         lineas.append(d["disclaimer"])
+    if "resumen" in e:
+        for fid in e["resumen"]["fuentes"]:
+            c = next((x for x in estado.get("contexto") or [] if x["id"] == fid), None)
+            if c is not None:
+                lineas.append(f"- {ETIQUETA_SECCION.get(c['origen'], c['origen'].capitalize())}: {' '.join(c['texto'].split())[:240]} [{fid}]")
+                citas.append(fid)
     if "estadificacion" in e:
         s = e["estadificacion"]
-        lineas.append(f"Estadio propuesto ({s['sistema']}): {s['estadio']}." if s["estadio"] else f"No se propone un estadio: {s['mensaje'] or s['fundamento']}")
-        if s["faltan"]:
-            lineas.append(f"Faltan los componentes: {', '.join(s['faltan'])}.")
-        lineas[-1] += " " + " ".join(f"[{f}]" for f in s["fuentes"])
+        ficha = [f for f in s["fuentes"] if f.startswith("paciente-")]
+        if s.get("registrado"):
+            # El estadio que ya consta en el expediente se informa siempre; EST-01 solo dice si puede verificarlo.
+            lineas.append(f"Estadio registrado en el expediente: {s['registrado']}. " + " ".join(f"[{f}]" for f in ficha))
+            if s["estadio"]:
+                lineas.append(f"Con {s['sistema']} el copiloto calcula: {s['estadio']}"
+                              + (" (coincide)." if str(s["estadio"]).strip().upper() == str(s["registrado"]).strip().upper() else " (no coincide: revisar)."))
+            elif s["faltan"]:
+                lineas.append(f"El copiloto no puede recalcularlo con {s['sistema']} porque el expediente no trae los componentes "
+                              f"{', '.join(s['faltan'])}; se informa el registrado.")
+            otras = [f for f in s["fuentes"] if f not in ficha]
+            if otras:
+                lineas[-1] += " " + " ".join(f"[{f}]" for f in otras)
+        else:
+            lineas.append(f"Estadio propuesto ({s['sistema']}): {s['estadio']}." if s["estadio"] else f"No se propone un estadio: {s['mensaje'] or s['fundamento']}")
+            if s["faltan"]:
+                lineas.append(f"Faltan los componentes: {', '.join(s['faltan'])}.")
+            lineas[-1] += " " + " ".join(f"[{f}]" for f in s["fuentes"])
         citas += s["fuentes"]
     if "tratamiento" in e:
         t = e["tratamiento"]
@@ -294,7 +352,7 @@ def _extractiva(estado: Estado) -> Tuple[str, List[str]]:
     if "faltantes" in e:
         f = e["faltantes"]
         lineas.append("Para decidir falta: " + ("; ".join(f["faltantes"]) if f["faltantes"] else "nada en las fases evaluadas") + ".")
-    if not lineas or estado["intencion"] in ("resumen", "evidencia") or ("dato" not in e and estado["intencion"] == "dato"):
+    if not lineas or estado["intencion"] == "evidencia" or ("dato" not in e and estado["intencion"] == "dato"):
         for c in (estado.get("contexto") or [])[:4]:
             if c.get("similitud") is not None:
                 lineas.append(f"- {c['texto'][:260]} [{c['id']}]")
@@ -309,7 +367,11 @@ SISTEMA = (
     "2. Cita cada afirmación con el id de su fuente entre corchetes, por ejemplo [lab-12] o [guia-x-rules-3]. Usa solo ids que aparezcan en el contexto.\n"
     "3. Si el contexto no permite responder, escribe exactamente: \"" + MENSAJE_SIN_INFORMACION + "\"\n"
     "4. No inventes valores, fechas, diagnósticos ni dosis. Si un dato falta, di que falta.\n"
-    "5. Es apoyo a la decisión: no des órdenes; la decisión es del médico."
+    "5. Es apoyo a la decisión: no des órdenes; la decisión es del médico.\n"
+    "6. Lo registrado en el expediente (por ejemplo el estadio de la ficha [paciente-N]) es un dato válido: infórmalo aunque el "
+    "sistema no pueda recalcularlo, y aclara que no se pudo verificar.\n"
+    "7. En un resumen, organiza por: diagnóstico y estadio, biomarcadores, consultas y tratamiento, imágenes, laboratorios.\n"
+    "8. La CONVERSACIÓN PREVIA solo sirve para entender a qué se refiere la pregunta; no es fuente ni se cita."
 )
 
 
@@ -323,13 +385,16 @@ def responder(estado: Estado, config: RunnableConfig) -> Estado:
                 "pasos": [_paso("responder", "Pedí una aclaración", "")]}
     texto, modelo, pasos = base, None, []
     if llm.disponible():
-        bloques = "\n".join(f"[{c['id']}] ({c['origen']}{', ' + str(c['fecha']) if c.get('fecha') else ''}) {c['texto']}" for c in contexto[:16])
-        usuario = (f"Pregunta del oncólogo: {estado['pregunta']}\nIntención: {ETIQUETAS[estado['intencion']]}\n\n"
+        bloques = "\n".join(f"[{c['id']}] ({c['origen']}{', ' + str(c['fecha']) if c.get('fecha') else ''}) {c['texto']}" for c in contexto[:36])
+        conversacion = "\n".join(f"{'Médico' if m.get('rol') == 'medico' else 'Copiloto'}: {' '.join(str(m.get('texto') or '').split())[:300]}"
+                                 for m in (estado.get("historia") or [])[-4:])
+        usuario = ((f"CONVERSACIÓN PREVIA:\n{conversacion}\n\n" if conversacion else "")
+                   + f"Pregunta del oncólogo: {estado['pregunta']}\nIntención: {ETIQUETAS[estado['intencion']]}\n\n"
                    f"RESULTADO DEL SISTEMA (estructurado, ya verificado):\n{base}\n\nCONTEXTO:\n{bloques}")
         inicio = time.perf_counter()
         try:
             borrador = llm.redactar(SISTEMA, usuario).replace("[[", "[").replace("]]", "]")
-            hay_resultado = any(k in (estado.get("estructurado") or {}) for k in ("dato", "diagnostico", "estadificacion", "tratamiento", "faltantes"))
+            hay_resultado = any(k in (estado.get("estructurado") or {}) for k in RESULTADOS)
             if MENSAJE_SIN_INFORMACION.casefold() in borrador.casefold() and hay_resultado:
                 # El sistema SÍ tiene un resultado verificado (p. ej. "faltan estos datos"): se responde con él, sin redactar.
                 pasos.append(_paso("responder", "Uso el resultado del sistema", "El modelo no lo redactó; respondo con lo verificado"))

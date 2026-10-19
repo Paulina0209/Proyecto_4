@@ -37,7 +37,11 @@ validar_intencion → resolver_paciente ─┬→ recuperar → evaluar_contexto
 
 1. **validar_intencion**: dato, resumen, diagnóstico, estadificación, tratamiento, faltantes, evidencia o saludo (reglas, sin modelo).
 2. **resolver_paciente**: el paciente abierto o el nombrado en la pregunta (id `P-…`, documento o nombre), solo entre los del médico. Si es ambiguo o falta, **pide aclaración**. Sin consentimiento de IA (SEC-03) no consulta nada.
-3. **recuperar**: búsqueda vectorial filtrada por paciente (y en guías si aplica) + las funciones del sistema como datos estructurados: IA-01 (dato exacto), DX-02 (diferencial), EST-01/03, TX-01, HC-05.
+3. **recuperar**: búsqueda vectorial (coseno) filtrada por paciente (y en guías si aplica) + las funciones del sistema como datos estructurados: IA-01 (dato exacto), DX-02 (diferencial), EST-01/03, TX-01, HC-05.
+   - La ficha (diagnóstico y estadio registrados) acompaña siempre al paciente.
+   - **Resumen**: no se busca por parecido; se arma el panorama (ficha, biomarcadores, últimas consultas, imágenes, laboratorios, antecedentes).
+   - **Estadificación**: se informa el estadio registrado y EST-01 dice si puede verificarlo con TNM.
+   - **Repreguntas**: se buscan junto con la pregunta anterior, y el modelo recibe los últimos mensajes (no como fuente).
 4. **evaluar_contexto**: nodo dedicado; ¿hay con qué responder sin inventar?
 5. **responder** / **rechazar**: el modelo redacta solo con el contexto y cita cada afirmación; o el rechazo explícito.
 6. **guardar_historial**.

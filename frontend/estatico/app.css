@@ -1,9 +1,10 @@
-/* Copiloto oncológico — interfaz clínica clara: blancos y azules suaves, nunca fondos oscuros.
+/* Copiloto oncológico — interfaz clínica clara: blancos y azules suaves con acento rojo (la cruz), nunca fondos oscuros.
    Contraste AA verificado en tests/frontend (tokens en un único esquema claro). */
 :root{color-scheme:light;--page:#f4f8fd;--surface:#ffffff;--ink:#10263f;--ink2:#38526e;--muted:#4e6279;--line:#d9e4f0;--borde:#6b7f96;
  --primario:#1565c0;--sobre-primario:#ffffff;--primario-hover:#0d4f9a;--suave:#e8f1fb;--nav:#ffffff;--sobre-nav:#0d4f9a;--nav-hover:#e8f1fb;
  --foco:#1a6fd8;--foco-nav:#1a6fd8;--link:#0d56a6;--ok:#14613a;--ok-bg:#e6f5ed;--aviso:#7a4300;--aviso-bg:#fff4de;--crit:#a3151b;--crit-bg:#fdecec;
- --info:#0d56a6;--info-bg:#e8f1fb;--ia:#0b6670;--ia-bg:#e3f4f5;--linea:#1565c0;--punto-alto:#a3151b;--sombra:rgba(16,38,63,.07);--sombra-fuerte:rgba(16,38,63,.12)}
+ --info:#0d56a6;--info-bg:#e8f1fb;--ia:#0b6670;--ia-bg:#e3f4f5;--linea:#1565c0;--punto-alto:#a3151b;--sombra:rgba(16,38,63,.07);--sombra-fuerte:rgba(16,38,63,.12);
+ --acento:#c62828}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
@@ -19,8 +20,8 @@ a:hover{text-decoration-thickness:2px}
 .saltar{position:absolute;left:.5rem;top:-4rem;z-index:30;background:var(--surface);color:var(--ink);padding:.65rem 1rem;border:2px solid var(--foco);border-radius:.5rem}
 .saltar:focus{top:.5rem}
 
-/* Cabecera: blanca, con la marca y la navegación en azul */
-.cabecera{background:var(--nav);color:var(--sobre-nav);border-bottom:1px solid var(--line);box-shadow:0 1px 3px var(--sombra);position:sticky;top:0;z-index:20}
+/* Cabecera: blanca, con la cruz roja, una franja roja arriba y la navegación en azul */
+.cabecera{background:var(--nav);color:var(--sobre-nav);border-top:3px solid var(--acento);border-bottom:1px solid var(--line);box-shadow:0 1px 3px var(--sombra);position:sticky;top:0;z-index:20}
 .cabecera :focus-visible{outline-color:var(--foco-nav)}
 .cabecera-interior{max-width:84rem;margin:0 auto;padding:.4rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;align-items:center}
 .marca{display:flex;align-items:center;gap:.6rem;color:var(--sobre-nav);text-decoration:none;font-weight:700;font-size:1.05rem;margin-right:auto;min-height:2.75rem}
@@ -29,7 +30,7 @@ a:hover{text-decoration-thickness:2px}
 .nav-principal ul{display:flex;flex-wrap:wrap;gap:.25rem;list-style:none;margin:0;padding:0}
 .nav-principal a{display:inline-flex;align-items:center;gap:.4rem;min-height:2.75rem;padding:.25rem .9rem;border-radius:.5rem;color:var(--sobre-nav);text-decoration:none;font-weight:600}
 .nav-principal a:hover{background:var(--nav-hover)}
-.nav-principal a[aria-current="page"]{background:var(--nav-hover);box-shadow:inset 0 -3px 0 var(--primario)}
+.nav-principal a[aria-current="page"]{background:var(--nav-hover);box-shadow:inset 0 -3px 0 var(--acento)}
 .nav-principal .contador{display:inline-flex;min-width:1.5rem;justify-content:center;padding:0 .4rem;border-radius:999px;background:var(--crit-bg);color:var(--crit);border:1px solid var(--crit);font-size:.8rem}
 .usuario-barra{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
 .usuario-barra .quien{font-size:.9rem;line-height:1.25;color:var(--ink);margin:0}

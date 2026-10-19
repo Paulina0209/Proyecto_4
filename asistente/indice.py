@@ -16,7 +16,9 @@ el consentimiento de IA, sus fragmentos se borran del índice (SEC-03).
 
 from __future__ import annotations
 
+import contextlib
 import threading
+import time
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Sequence
 
@@ -74,6 +76,16 @@ class IndiceVectorial:
         self._cliente = cliente
         self._embeddings = embeddings or EmbeddingsOpenAI()
         self._coleccion = cliente.get_or_create_collection(COLECCION, metadata={"hnsw:space": "cosine"})
+        if _espacio(self._coleccion) != "cosine":
+            # Chroma no cambia el espacio de una colección existente: con L2 la "similitud" (1 - distancia) sale
+            # en otra escala y el umbral rechaza casi todo. Se rehace; los pacientes se reindexan al consultarlos.
+            import logging
+
+            logging.getLogger(__name__).warning("Índice vectorial con distancia %s: se rehace con coseno.", _espacio(self._coleccion))
+            for nombre in (COLECCION, f"{COLECCION}_huellas"):
+                with contextlib.suppress(Exception):
+                    cliente.delete_collection(nombre)
+            self._coleccion = cliente.get_or_create_collection(COLECCION, metadata={"hnsw:space": "cosine"})
         self._huellas = cliente.get_or_create_collection(f"{COLECCION}_huellas")
         self._cerrojo = threading.Lock()
 
@@ -137,17 +149,51 @@ class IndiceVectorial:
             filtros.append({"tipo": tipo})
         donde = None if not filtros else filtros[0] if len(filtros) == 1 else {"$and": filtros}
         vector = self._embeddings([pregunta])[0]
-        r = self._coleccion.query(query_embeddings=[vector], n_results=k, where=donde)
+        r = None
+        for intento in range(3):
+            try:
+                r = self._coleccion.query(query_embeddings=[vector], n_results=k, where=donde)
+                break
+            except Exception as exc:  # noqa: BLE001 - chromadb.errors.InternalError
+                if "nothing found on disk" not in str(exc).casefold():
+                    raise
+                time.sleep(0.05 * (intento + 1))
+        if r is None:
+            # Chroma aún no escribió el segmento HNSW (colección recién llenada y pequeña): se compara contra todos.
+            return self._buscar_exhaustiva(vector, donde, k)
         resultados = []
         for i, fid in enumerate((r.get("ids") or [[]])[0]):
             distancia = r["distances"][0][i]
             resultados.append(Recuperado(fid, r["documents"][0][i], 1.0 - float(distancia), dict(r["metadatas"][0][i] or {})))
         return resultados
 
+    def _buscar_exhaustiva(self, vector: Sequence[float], donde, k: int) -> List[Recuperado]:
+        import math
+
+        # Sin pedir los embeddings guardados: leerlos también necesita el segmento que falta. Se recalculan.
+        r = self._coleccion.get(where=donde, include=["documents", "metadatas"])
+        textos = r.get("documents") or []
+        norma = math.sqrt(sum(x * x for x in vector)) or 1.0
+        candidatos = []
+        for fid, texto, meta, emb in zip(r.get("ids") or [], textos, r.get("metadatas") or [], self._embeddings(textos) if textos else []):
+            otra = math.sqrt(sum(float(x) * float(x) for x in emb)) or 1.0
+            similitud = sum(a * float(b) for a, b in zip(vector, emb)) / (norma * otra)
+            candidatos.append(Recuperado(fid, texto, similitud, dict(meta or {})))
+        return sorted(candidatos, key=lambda c: c.similitud, reverse=True)[:k]
+
     def cuantos(self, paciente_id: Optional[int] = None) -> int:
         if paciente_id is None:
             return self._coleccion.count()
         return len(self._coleccion.get(where={"paciente_id": int(paciente_id)}).get("ids") or [])
+
+
+def _espacio(coleccion) -> str:
+    """Métrica de distancia de una colección (``cosine``, ``l2``, ``ip``)."""
+    try:
+        espacio = ((coleccion.configuration_json or {}).get("hnsw") or {}).get("space")
+    except Exception:  # noqa: BLE001 - versiones de chromadb sin configuration_json
+        espacio = None
+    return espacio or (coleccion.metadata or {}).get("hnsw:space") or "l2"
 
 
 def _abrir_o_reconstruir(carpeta):
@@ -161,8 +207,9 @@ def _abrir_o_reconstruir(carpeta):
     carpeta.mkdir(parents=True, exist_ok=True)
     cliente = chromadb.PersistentClient(path=str(carpeta))
     try:
-        for nombre in (COLECCION, f"{COLECCION}_huellas"):
-            cliente.get_or_create_collection(nombre).count()
+        # Solo se ABREN las que existen: crearlas aquí, sin métrica, las dejaría en L2 para siempre.
+        for coleccion in cliente.list_collections():
+            cliente.get_collection(getattr(coleccion, "name", coleccion)).count()
         return cliente
     except Exception as exc:  # noqa: BLE001 - chromadb.errors.InternalError y similares
         logging.getLogger(__name__).warning("Índice vectorial dañado (%s): se aparta y se reconstruye.", exc)
