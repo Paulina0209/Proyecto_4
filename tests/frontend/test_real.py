@@ -43,12 +43,21 @@ def test_sin_llave_de_openai_no_indexa_pero_no_impide_arrancar(monkeypatch):
     assert "OPENAI_API_KEY" in mensajes[0]
 
 
-def test_muestra_los_usuarios_del_escenario_y_no_los_de_la_demo_sintetica():
+def test_muestra_los_usuarios_de_la_base_incluidos_los_creados_despues(tmp_path):
+    import sqlite3
+
+    ruta = tmp_path / "usuarios.db"
+    with sqlite3.connect(ruta) as conn:
+        conn.execute("CREATE TABLE usuarios (id INTEGER PRIMARY KEY, nombre_usuario TEXT, rol TEXT, activo INTEGER)")
+        conn.executemany("INSERT INTO usuarios VALUES (?, ?, ?, ?)", [
+            (1, "admin.copiloto", "administrador", 1), (2, "dra.gomez", "oncologo", 1),
+            (10, "nueva.admin", "administrador", 1), (11, "retirado", "oncologo", 0)])
     mensajes = []
-    real.mostrar_accesos(8443, aviso=mensajes.append)
+    real.mostrar_accesos(8443, aviso=mensajes.append, ruta_usuarios=ruta)
     texto = "\n".join(mensajes)
     assert "https://127.0.0.1:8443" in texto and "dra.gomez" in texto and "admin.copiloto" in texto
-    assert "admin.demo" not in texto
+    assert "nueva.admin" in texto and "contraseña propia" in texto     # la creada en el sistema también aparece
+    assert "retirado" not in texto and "admin.demo" not in texto
 
 
 def test_el_orden_es_datos_certificado_indice_y_servidor(monkeypatch, tmp_path):

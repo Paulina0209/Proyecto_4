@@ -84,13 +84,25 @@ def indexar(aviso: Callable[[str], None] = print) -> None:
         aviso(f"    No se pudo indexar ahora ({type(exc).__name__}); se intentará al preguntar.")
 
 
-def mostrar_accesos(puerto: int, aviso: Callable[[str], None] = print) -> None:
+def usuarios_activos(ruta: Optional[Path] = None) -> list:
+    """(usuario, rol) de las cuentas activas de la base de usuarios: las del escenario y las creadas después."""
+    import sqlite3
+
+    from datos import capas
+
+    ruta = ruta or capas.RutasTrabajo.por_defecto().usuarios
+    with contextlib.closing(sqlite3.connect(f"file:{Path(ruta).as_posix()}?mode=ro", uri=True)) as conn:
+        return conn.execute("SELECT nombre_usuario, rol FROM usuarios WHERE activo = 1 ORDER BY id").fetchall()
+
+
+def mostrar_accesos(puerto: int, aviso: Callable[[str], None] = print, ruta_usuarios: Optional[Path] = None) -> None:
     from datos.escenario import CLAVE_ESCENARIO, USUARIOS
 
+    del_escenario = {u for u, _r, _n in USUARIOS}
     aviso(f"\nInterfaz: https://127.0.0.1:{puerto}   (Ctrl+C para detener)")
-    aviso(f"Usuarios (base propia data/usuarios.db), contraseña de demo: {CLAVE_ESCENARIO}")
-    for usuario, rol, nombre in USUARIOS:
-        aviso(f"  {usuario:<15} {rol.value:<22} {nombre}")
+    aviso(f"Usuarios activos (base propia data/usuarios.db). Los del escenario usan la contraseña de demo {CLAVE_ESCENARIO}:")
+    for usuario, rol in usuarios_activos(ruta_usuarios):
+        aviso(f"  {usuario:<15} {rol:<22} {'' if usuario in del_escenario else '(creado en el sistema, contraseña propia)'}")
     aviso("")
 
 
