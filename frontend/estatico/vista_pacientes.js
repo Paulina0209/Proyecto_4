@@ -90,7 +90,11 @@ export async function vistaPacientes(ctx) {
     return `#/pacientes${t ? `?${t}` : ""}`;
   }
 
-  contenedor.append(h("h1", {}, "Pacientes"), h("p", { class: "sub" }, "Solo ves a los pacientes que atiendes tú."), formulario, resultados);
+  contenedor.append(
+    h("div", { class: "ficha-cabecera" },
+      h("div", {}, h("h1", {}, "Pacientes"), h("p", { class: "sub" }, "Solo ves a los pacientes que atiendes tú.")),
+      ctx.sesion.puede_registrar ? h("div", { class: "acciones" }, h("a", { class: "btn", href: "#/pacientes/nuevo" }, "Registrar paciente")) : null),
+    formulario, resultados);
   const nodo = contenedor;
   return { titulo: "Pacientes", nodo, alMostrar: cargar };
 }

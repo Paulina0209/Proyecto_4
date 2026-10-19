@@ -1,0 +1,121 @@
+/* Secciones del paciente: documentos (DOC-01), consentimiento y privacidad (SEC-03 / NFR-06) y línea de tiempo (HC-06).
+   La línea de tiempo se activa sola cuando el backend publica su ruta (ver frontend/extensiones.py). */
+import { h, anunciar } from "./dom.js";
+import { api, descargar } from "./api.js";
+import { fecha } from "./formato.js";
+import { campo, formulario, insignia, listaDatos, mensaje, tabla, tarjeta, vacio } from "./ui.js";
+
+const base = (id) => `/api/clinica/pacientes/${id}`;
+const recargar = () => window.dispatchEvent(new HashChangeEvent("hashchange"));
+
+/* ---------------- Documentos ---------------- */
+
+function leerComoBase64(archivo) {
+  return new Promise((resolver, rechazar) => {
+    const lector = new FileReader();
+    lector.onload = () => resolver(String(lector.result).split(",")[1] || "");
+    lector.onerror = () => rechazar(new Error("No se pudo leer el archivo."));
+    lector.readAsDataURL(archivo);
+  });
+}
+
+export async function secDocumentos(ctx, p) {
+  const docs = await api(`${base(p.id)}/documentos`);
+  const estado = h("div", { role: "status", "aria-live": "polite" });
+  const archivo = campo({ nombre: "archivo", etiqueta: "Archivo", tipo: "file", requerido: true,
+    ayuda: "PDF, imagen (JPG o PNG) o DICOM, hasta 15 MB. Se guarda cifrado (SEC-02).", atributos: { accept: ".pdf,.jpg,.jpeg,.png,.dcm" } });
+  const carga = ctx.sesion.puede_registrar ? formulario({ campos: [archivo], textoBoton: "Cargar al expediente",
+    enviar: async (v) => {
+      if (!v.archivo) { const e = new Error("Elige un archivo."); e.mensajes = [e.message]; e.campos = { archivo: e.message }; throw e; }
+      if (v.archivo.size > 15 * 1024 * 1024) { const e = new Error("El archivo supera los 15 MB."); e.mensajes = [e.message]; e.campos = { archivo: e.message }; throw e; }
+      return api(`${base(p.id)}/documentos`, { metodo: "POST", cuerpo: { nombre: v.archivo.name, contenido_base64: await leerComoBase64(v.archivo) } });
+    },
+    alExito: (d) => { estado.replaceChildren(mensaje("ok", "Documento cargado", `${d.nombre_archivo_original} (${d.tipo_documento}).`)); anunciar("Documento cargado."); window.setTimeout(recargar, 1200); } }) : null;
+
+  const filas = docs.map((d) => [d.nombre_archivo_original, d.tipo_documento, `${Math.max(1, Math.round(d.tamano_bytes / 1024))} KB`,
+    `${fecha((d.cargado_en || "").slice(0, 10))} · ${d.cargado_por}`,
+    h("button", { type: "button", class: "btn sec chico", "aria-label": `Descargar ${d.nombre_archivo_original}`, onclick: async () => {
+      try { await descargar(`${base(p.id)}/documentos/${d.id}/contenido`); } catch (err) { estado.replaceChildren(mensaje("error", "No se pudo descargar", err.mensajes[0])); }
+    } }, "Descargar")]);
+  return h("div", {}, estado,
+    carga ? tarjeta("Cargar un documento clínico (DOC-01)", carga) : null,
+    docs.length ? tabla("Documentos del expediente", ["Archivo", "Tipo", "Tamaño", "Cargado", "Contenido"], filas, { filaEncabezado: true })
+      : tarjeta("Documentos del expediente", vacio("Este paciente todavía no tiene documentos cargados.")));
+}
+
+/* ---------------- Consentimiento y privacidad ---------------- */
+
+const ESTADOS = {
+  otorgada: { texto: "Otorgado", tono: "ok", icono: "ok" },
+  pendiente: { texto: "Pendiente", tono: "aviso", icono: "alerta" },
+  revocada: { texto: "Retirado", tono: "crit", icono: "alerta" },
+  denegada: { texto: "No otorgado", tono: "crit", icono: "alerta" },
+  "no exigido": { texto: "No exigido", tono: "neutra", icono: "info" },
+};
+const FINALIDADES = { asistencia_ia: "Uso de IA en la atención (SEC-03)", investigacion: "Investigación (NFR-06)", atencion_clinica: "Atención clínica" };
+
+export async function secConsentimiento(ctx, p) {
+  const [c, priv] = await Promise.all([api(`/api/pacientes/${p.id}/consentimiento-ia`), api(`${base(p.id)}/privacidad`)]);
+  const puede = ctx.sesion.puede_consentimiento;
+  const otorgar = (otorgado) => formulario({ campos: [
+    campo({ nombre: "medio", etiqueta: "Medio", tipo: "select", opciones: [["escrito", "Escrito (firmado)"], ["digital", "Digital"], ["verbal_registrado", "Verbal, con registro"]] }),
+    campo({ nombre: "soporte", etiqueta: "Soporte del documento", requerido: true, ayuda: "Número o nombre del documento firmado (queda como evidencia)." }),
+  ], textoBoton: otorgado ? "Registrar consentimiento otorgado" : "Registrar que no lo otorgó",
+  enviar: (v) => api(`/api/pacientes/${p.id}/consentimiento-ia`, { metodo: "POST", cuerpo: { ...v, otorgado } }),
+  alExito: () => { anunciar(otorgado ? "Consentimiento registrado. La IA queda habilitada." : "Quedó registrado que el paciente no otorgó el consentimiento."); recargar(); } });
+  const retirar = formulario({ campos: [campo({ nombre: "soporte", etiqueta: "Soporte del retiro (opcional)" })], textoBoton: "Registrar retiro del consentimiento",
+    enviar: (v) => api(`/api/pacientes/${p.id}/consentimiento-ia/retiro`, { metodo: "POST", cuerpo: { medio: "escrito", soporte: v.soporte || null } }),
+    alExito: () => { anunciar("Retiro registrado. La IA deja de aplicarse; la historia clínica no se borra."); recargar(); } });
+
+  return h("div", {},
+    h("section", { class: "tarjeta destacada" },
+      h("h2", {}, "Consentimiento para el uso de IA", ESTADOS[c.estado] ? insignia(ESTADOS[c.estado]) : null),
+      listaDatos([["Funciones de IA", c.ia_habilitada ? "Habilitadas" : "Bloqueadas para este paciente"], ["Detalle", c.motivo],
+        ["Último registro", c.fecha ? `${fecha(c.fecha.slice(0, 10))} · ${c.medio || "—"} · soporte ${c.soporte || "—"}` : "—"]]),
+      !c.ia_habilitada && c.exigido ? mensaje("info", null, "Sin consentimiento, el copiloto no usa los datos del paciente en preguntas, notas, resúmenes, diagnóstico, estadificación ni tratamiento. Su historia clínica sigue disponible.") : null),
+    puede ? h("div", { class: "rejilla-2" },
+      c.ia_habilitada && c.estado === "otorgada" ? tarjeta("El paciente retira el consentimiento", h("p", { class: "tenue" }, "Las funciones de IA dejan de aplicarse de inmediato. No se borra nada: el consentimiento anterior queda como evidencia."), retirar)
+        : tarjeta("Registrar el consentimiento", otorgar(true)),
+      c.estado === "pendiente" ? tarjeta("El paciente no lo otorga", otorgar(false)) : null)
+      : mensaje("info", null, "Tu rol no registra consentimientos."),
+    priv.autorizaciones.length ? tabla("Historial de autorizaciones (solo se agregan registros, nunca se borran)", ["Fecha", "Finalidad", "Estado", "Medio", "Soporte"],
+      priv.autorizaciones.map((a) => [fecha((a.fecha || "").slice(0, 10)), FINALIDADES[a.finalidad] || a.finalidad,
+        ESTADOS[a.estado] ? insignia(ESTADOS[a.estado]) : a.estado, a.medio || "—", a.evidencia_ref || "—"]))
+      : tarjeta("Historial de autorizaciones", vacio("Todavía no hay registros.")));
+}
+
+/* ---------------- Línea de tiempo (HC-06, se conecta sola) ---------------- */
+
+function valor(evento, nombres) {
+  for (const n of nombres) if (evento[n] !== undefined && evento[n] !== null && evento[n] !== "") return evento[n];
+  return null;
+}
+
+export async function secLineaTiempo(ctx, p) {
+  const ext = ctx.capacidades.extensiones.linea_tiempo;
+  if (!ext.disponible) {
+    return tarjeta("Línea de tiempo del paciente (HC-06)",
+      mensaje("info", "Pendiente de integrar", "Esta vista se activa sola cuando el backend publique la historia HC-06 (línea de tiempo cronológica). No hay que cambiar nada en la interfaz."),
+      h("p", { class: "tenue" }, "Mientras tanto, la historia clínica, los laboratorios y las imágenes muestran los eventos por separado."));
+  }
+  const crudo = await api(`/api${ext.ruta.replace("{id}", p.id)}`);
+  const eventos = (Array.isArray(crudo) ? crudo : crudo.eventos || []).map((e) => {
+    const precision = e.precision || e.precision_fecha;
+    return { fecha: String(valor(e, ext.campos.fecha) || ""), tipo: String(valor(e, ext.campos.tipo) || "evento"),
+      descripcion: String(valor(e, ext.campos.descripcion) || ""), aproximada: Boolean(valor(e, ext.campos.aproximada)) || (precision && precision !== "dia") };
+  }).sort((a, b) => a.fecha.localeCompare(b.fecha));
+  const tipos = [...new Set(eventos.map((e) => e.tipo))].sort();
+  const lista = h("ol", { class: "linea-tiempo" });
+  const pintar = (tipo) => {
+    const visibles = eventos.filter((e) => !tipo || e.tipo === tipo);
+    lista.replaceChildren(...visibles.map((e) => h("li", { class: e.aproximada ? "aproximada" : null },
+      h("strong", {}, e.aproximada ? `${e.fecha.slice(0, 7)} (fecha aproximada)` : fecha(e.fecha)), " · ", insignia({ texto: e.tipo, tono: "info", icono: "info" }),
+      h("p", {}, e.descripcion))));
+    anunciar(`${visibles.length} eventos.`);
+  };
+  pintar("");
+  const filtro = campo({ nombre: "tipo", etiqueta: "Tipo de evento", tipo: "select", opciones: [["", "Todos"], ...tipos.map((t) => [t, t])] });
+  filtro.control.addEventListener("change", () => pintar(filtro.control.value));
+  return h("div", {}, tarjeta("Línea de tiempo del paciente (HC-06)", filtro.nodo,
+    h("p", { class: "ayuda" }, "Borde punteado: el evento solo tiene mes y año."), eventos.length ? lista : vacio("Sin eventos registrados.")));
+}

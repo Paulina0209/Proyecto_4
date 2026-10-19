@@ -1,0 +1,151 @@
+/* Pantallas de gestión, cada una para su rol: auditoría (AUD-01/02), usuarios (ADM-01), guías (CFG-01),
+   estado del sistema (NFR-01/02) y notificaciones (CFG-02, se activa sola cuando el backend la publica). */
+import { h, anunciar } from "./dom.js";
+import { api } from "./api.js";
+import { fecha } from "./formato.js";
+import { campo, cargando, errorConReintento, formulario, insignia, listaDatos, mensaje, tabla, tarjeta, vacio } from "./ui.js";
+
+const sinPermiso = (titulo, texto) => ({ titulo, nodo: h("div", {}, h("h1", {}, titulo), mensaje("aviso", "Sin permiso", texto)) });
+const recargar = () => window.dispatchEvent(new HashChangeEvent("hashchange"));
+
+function pantalla(titulo, sub, cargar) {
+  const cuerpo = h("div", {}, cargando());
+  const intentar = async () => {
+    cuerpo.replaceChildren(cargando());
+    try { cuerpo.replaceChildren(await cargar()); } catch (err) { cuerpo.replaceChildren(errorConReintento(err, intentar)); }
+  };
+  return { titulo, nodo: h("div", {}, h("h1", {}, titulo), h("p", { class: "sub" }, sub), cuerpo), alMostrar: intentar };
+}
+
+/* ---------------- Auditoría ---------------- */
+
+export async function vistaAuditoria(ctx) {
+  if (!ctx.sesion.ver_auditoria) return sinPermiso("Auditoría", "Solo el rol de auditoría consulta los registros.");
+  const paciente = ctx.consulta.get("paciente_id") || "";
+  const usuario = ctx.consulta.get("usuario_id") || "";
+  return pantalla("Auditoría", "Quién hizo qué y cuándo sobre cada expediente (AUD-01), y qué sugirió la IA frente a lo que decidió el médico (AUD-02). Los registros no se pueden modificar.", async () => {
+    const r = await api("/api/gestion/auditoria", { consulta: { paciente_id: paciente, usuario_id: usuario } });
+    const filtros = h("form", { class: "tarjeta filtros", role: "search", onsubmit: (e) => {
+      e.preventDefault();
+      const d = new FormData(e.target), p = new URLSearchParams();
+      for (const k of ["paciente_id", "usuario_id"]) if (d.get(k)) p.set(k, d.get(k));
+      window.location.hash = `#/auditoria${p.toString() ? `?${p}` : ""}`;
+    } }, campo({ nombre: "paciente_id", etiqueta: "Paciente (id)", tipo: "number", valor: paciente }).nodo,
+      campo({ nombre: "usuario_id", etiqueta: "Usuario (id)", tipo: "number", valor: usuario }).nodo,
+      h("div", { class: "campo" }, h("button", { type: "submit", class: "btn" }, "Filtrar")));
+    return h("div", {}, filtros,
+      r.eventos.length ? tabla(`${r.eventos.length} eventos (los más recientes primero)`, ["Fecha", "Usuario", "Paciente", "Acción", "Detalle", "Base"],
+        r.eventos.map((e) => [`${fecha(e.fecha.slice(0, 10))} ${e.fecha.slice(11, 19)}`, e.usuario, e.paciente_id ?? "—", e.accion, e.detalle || "—", e.origen]))
+        : tarjeta("Eventos", vacio("No hay eventos con esos filtros.")),
+      paciente ? (r.trazabilidad_ia.length ? tabla("Trazabilidad IA frente a médico (AUD-02)", ["Dominio", "Sugerencia del sistema", "Decisión del médico", "¿Difiere?"],
+        r.trazabilidad_ia.map((t) => [t.dominio, String(t.recomendacion_sistema || "—").slice(0, 160), String(t.decision_medico || "—").slice(0, 160),
+          t.difiere_de_sugerencia ? insignia({ texto: "Sí", tono: "aviso", icono: "alerta" }) : insignia({ texto: "No", tono: "ok", icono: "ok" })]))
+        : tarjeta("Trazabilidad IA frente a médico (AUD-02)", vacio("Sin decisiones registradas para este paciente."))) : null);
+  });
+}
+
+/* ---------------- Usuarios ---------------- */
+
+export async function vistaUsuarios(ctx) {
+  if (!ctx.sesion.gestionar_usuarios) return sinPermiso("Usuarios", "Solo el administrador del sistema gestiona usuarios.");
+  return pantalla("Usuarios y roles", "Alta, cambio de rol y baja lógica (ADM-01). Nadie se borra: el historial se conserva.", async () => {
+    const r = await api("/api/gestion/usuarios");
+    const estado = h("div", { role: "status", "aria-live": "polite" });
+    const opcionesRol = r.roles.map((x) => [x.valor, x.etiqueta]);
+    const filas = r.usuarios.map((u) => {
+      const selectorRol = h("select", { "aria-label": `Rol de ${u.nombre_usuario}` }, opcionesRol.map(([v, t]) => h("option", { value: v, selected: v === u.rol }, t)));
+      const operar = async (operacion, cuerpo, texto) => {
+        try {
+          await api(`/api/gestion/usuarios/${u.id}/${operacion}`, { metodo: "POST", cuerpo });
+          anunciar(texto); recargar();
+        } catch (err) { estado.replaceChildren(mensaje("error", `No se pudo actualizar a ${u.nombre_usuario}`, err.mensajes[0])); }
+      };
+      return [u.nombre_usuario, u.nombre_completo || "—", selectorRol,
+        u.activo ? insignia({ texto: "Activo", tono: "ok", icono: "ok" }) : insignia({ texto: "Inactivo", tono: "neutra", icono: "pausa" }),
+        h("span", { class: "acciones" },
+          h("button", { type: "button", class: "btn sec chico", onclick: () => operar("rol", { rol: selectorRol.value, motivo: "Cambio desde la interfaz de administración" }, "Rol actualizado.") }, "Guardar rol"),
+          u.activo ? h("button", { type: "button", class: "btn peligro chico", onclick: () => operar("desactivar", { motivo: "Baja desde la interfaz de administración" }, "Usuario desactivado.") }, "Desactivar")
+            : h("button", { type: "button", class: "btn sec chico", onclick: () => operar("reactivar", {}, "Usuario reactivado.") }, "Reactivar"))];
+    });
+    const alta = formulario({ columnas: true, textoBoton: "Crear usuario", campos: [
+      campo({ nombre: "nombre_usuario", etiqueta: "Usuario", requerido: true }),
+      campo({ nombre: "nombre_completo", etiqueta: "Nombre completo", requerido: true }),
+      campo({ nombre: "correo", etiqueta: "Correo", tipo: "email" }),
+      campo({ nombre: "rol", etiqueta: "Rol", tipo: "select", opciones: opcionesRol }),
+      campo({ nombre: "contrasena", etiqueta: "Contraseña inicial", tipo: "password", requerido: true, ayuda: "Mínimo 10 caracteres, con letras y números." }),
+    ], enviar: (v) => api("/api/gestion/usuarios", { metodo: "POST", cuerpo: v }), alExito: () => { anunciar("Usuario creado."); recargar(); } });
+    return h("div", {}, estado,
+      tabla(`${r.usuarios.length} usuarios`, ["Usuario", "Nombre", "Rol", "Estado", "Acciones"], filas, { filaEncabezado: true }),
+      h("details", { class: "tarjeta" }, h("summary", {}, "Crear un usuario"), alta));
+  });
+}
+
+/* ---------------- Guías institucionales ---------------- */
+
+export async function vistaGuias(ctx) {
+  if (!ctx.sesion.acceso_clinico && !ctx.sesion.configurar_guias) return sinPermiso("Guías clínicas", "Las guías las consulta oncología y las configura la administración clínica.");
+  return pantalla("Guías clínicas institucionales", "Qué guías usa la institución por defecto para la evidencia y las recomendaciones (CFG-01).", async () => {
+    const r = await api("/api/gestion/guias");
+    const v = r.vigente;
+    const config = r.puede_configurar ? formulario({ textoBoton: "Publicar nueva versión", campos: [
+      campo({ nombre: "organizaciones", etiqueta: "Organizaciones, en orden de prioridad", valor: v.organizaciones.join(", "), ayuda: `Disponibles: ${r.organizaciones_disponibles.join(", ")}. Separadas por coma.` }),
+      campo({ nombre: "motivo", etiqueta: "Motivo del cambio", requerido: true, ayuda: "Por ejemplo: acta del comité de oncología." }),
+      campo({ nombre: "protocolo_nombre", etiqueta: "Protocolo interno (opcional)" }),
+      campo({ nombre: "protocolo_codigo", etiqueta: "Referencia del protocolo" }),
+    ], enviar: (x) => api("/api/gestion/guias", { metodo: "POST", cuerpo: { ...x, organizaciones: x.organizaciones.split(",").map((o) => o.trim()).filter(Boolean) } }),
+    alExito: () => { anunciar("Nueva versión publicada."); recargar(); } }) : null;
+    return h("div", {},
+      tarjeta("Configuración vigente", listaDatos([
+        ["Versión", v.version ? `v${v.version}` : "Por defecto del sistema (sin configurar)"],
+        ["Organizaciones", v.organizaciones.join(" > ")],
+        ["Protocolo interno", v.protocolo_interno ? `${v.protocolo_interno.nombre} (${v.protocolo_interno.referencia})` : "—"],
+        ["Módulos de guía habilitados", String(v.modulos_habilitados.length)],
+        ["Configurada", v.fecha ? `${fecha(v.fecha.slice(0, 10))} · ${v.motivo}` : "—"],
+      ]), ...(v.advertencias || []).map((a) => mensaje("aviso", null, a))),
+      config ? tarjeta("Cambiar la configuración", config) : mensaje("info", null, "Solo la administración clínica puede cambiar las guías."),
+      r.historial.length ? tabla("Historial de versiones", ["Versión", "Organizaciones", "Motivo", "Fecha"], r.historial.map((x) => [`v${x.version}`, x.organizaciones.join(" > "), x.motivo || "—", fecha((x.fecha || "").slice(0, 10))])) : null);
+  });
+}
+
+/* ---------------- Estado del sistema ---------------- */
+
+const TONOS = { ok: { texto: "Bien", tono: "ok", icono: "ok" }, degradado: { texto: "Degradado", tono: "aviso", icono: "alerta" }, falla: { texto: "Falla", tono: "crit", icono: "alerta" } };
+
+export async function vistaSistema(ctx) {
+  if (!ctx.sesion.ver_estado_sistema) return sinPermiso("Estado del sistema", "Solo el administrador del sistema ve el estado de la plataforma.");
+  return pantalla("Estado del sistema", "Disponibilidad (NFR-02) y tiempos de respuesta por ruta de esta réplica (NFR-01: consultas < 2 s, notas < 10 s).", async () => {
+    const r = await api("/api/gestion/salud");
+    return h("div", {},
+      tarjeta("Verificaciones", h("p", {}, "Estado general: ", insignia(TONOS[r.estado] || TONOS.falla)),
+        tabla("Lo que necesita la réplica para atender", ["Verificación", "Estado", "Detalle", "Crítica"], r.verificaciones.map((v) =>
+          [v.nombre, insignia(TONOS[v.estado] || TONOS.falla), v.detalle, v.critica ? "Sí" : "No (hay respaldo)"]), { filaEncabezado: true })),
+      r.rutas.length ? tabla("Tiempos de respuesta por ruta", ["Ruta", "Peticiones", "p50 (ms)", "p95 (ms)", "Objetivo", "Cumple"], r.rutas.map((x) =>
+        [x.ruta, String(x.peticiones), String(x.p50_ms), String(x.p95_ms), `${x.objetivo_ms / 1000} s`,
+          x.cumple ? insignia({ texto: "Sí", tono: "ok", icono: "ok" }) : insignia({ texto: "No", tono: "crit", icono: "alerta" })]), { numericas: [1, 2, 3], filaEncabezado: true })
+        : tarjeta("Tiempos de respuesta", vacio("Aún no hay peticiones medidas en esta réplica.")));
+  });
+}
+
+/* ---------------- Notificaciones (CFG-02, se conecta sola) ---------------- */
+
+export async function vistaNotificaciones(ctx) {
+  const ext = ctx.capacidades.extensiones.notificaciones;
+  if (!ext.disponible) {
+    return { titulo: "Notificaciones", nodo: h("div", {}, h("h1", {}, "Notificaciones y alertas"),
+      mensaje("info", "Pendiente de integrar", "Esta pantalla se activa sola cuando el backend publique la historia CFG-02 (notificaciones y alertas). Mientras tanto, las alertas críticas de laboratorio e interacciones se ven en el resumen de cada paciente.")) };
+  }
+  return pantalla("Notificaciones y alertas", "Resultados críticos, estudios pendientes e interacciones que no debes perderte (CFG-02).", async () => {
+    const [lista, prefs] = await Promise.all([api("/api/notificaciones"), ext.preferencias ? api("/api/notificaciones/preferencias").catch(() => null) : null]);
+    const items = Array.isArray(lista) ? lista : lista.notificaciones || lista.items || [];
+    const pintar = (n) => h("li", {}, h("strong", {}, n.titulo || n.tipo || "Notificación"), " ",
+      n.severidad ? insignia({ texto: n.severidad, tono: n.severidad === "critica" || n.severidad === "alta" ? "crit" : "info", icono: "alerta" }) : null,
+      h("p", {}, n.mensaje || n.descripcion || n.detalle || ""), h("p", { class: "ayuda" }, fecha(String(n.fecha || n.creada_en || "").slice(0, 10))),
+      ext.marcar_leida && n.id !== undefined && !n.leida ? h("button", { type: "button", class: "btn sec chico", onclick: async () => {
+        try { await api(`/api/notificaciones/${n.id}/leida`, { metodo: "POST", cuerpo: {} }); recargar(); } catch (err) { anunciar(err.mensajes[0]); }
+      } }, "Marcar como leída") : null);
+    const nodoPrefs = prefs ? tarjeta("Mis preferencias",
+      h("pre", { class: "texto" }, JSON.stringify(prefs, null, 2)),
+      ext.guardar_preferencias ? h("p", { class: "ayuda" }, "Edita las preferencias desde la configuración de CFG-02.") : null) : null;
+    return h("div", {}, items.length ? tarjeta(`${items.length} notificaciones`, h("ul", { class: "lista-limpia" }, items.map(pintar))) : tarjeta("Notificaciones", vacio("No tienes notificaciones.")), nodoPrefs);
+  });
+}

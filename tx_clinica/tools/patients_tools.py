@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Any, Union
+from typing import Any, FrozenSet, Optional, Union
 
 from langchain_core.tools import tool
 
@@ -61,6 +62,11 @@ class ErrorConsentimientoIA:
         )
 
 
+#: Si se fija (la interfaz web lo hace al conversar sobre un paciente), las tools
+#: solo atienden a estos pacientes: el agente no puede leer los de otro oncólogo
+#: aunque el modelo pida otro id.
+PACIENTES_PERMITIDOS: ContextVar[Optional[FrozenSet[int]]] = ContextVar("pacientes_permitidos", default=None)
+
 #: Lo que puede devolver ``obtener_paciente_o_error`` en vez del paciente.
 ERRORES_PACIENTE = (ErrorPacienteNoEncontrado, ErrorConsentimientoIA)
 
@@ -75,6 +81,9 @@ def obtener_paciente_o_error(
     "no hay paciente" se ve idéntica a una lista vacía por "paciente real
     sin datos" -- exactamente la ambigüedad que el proyecto evita en
     todos los demás lugares (dato ausente != negativo)."""
+    permitidos = PACIENTES_PERMITIDOS.get()
+    if permitidos is not None and paciente_id not in permitidos:
+        return ErrorPacienteNoEncontrado(paciente_id)
     conn = obtener_conexion()
     with conn_lock:
         paciente = obtener_paciente(conn, paciente_id)

@@ -17,14 +17,27 @@ from clinical_decision.registro import inicializar_schema as _init_decision
 from patients.medicacion_actual import inicializar_schema as _init_medicacion
 
 _conn: Optional[sqlite3.Connection] = None
+#: Expediente explícito (``usar_expediente``); None = el de ``COPILOTO_EXPEDIENTE_DB``.
+_ruta: Optional[str] = None
 conn_lock = threading.Lock()
+
+
+def usar_expediente(ruta) -> None:
+    """Apunta las tools a ``ruta`` (la interfaz web usa el mismo expediente que su API)."""
+    global _conn, _ruta
+    with conn_lock:
+        if _ruta == str(ruta) and _conn is not None:
+            return
+        if _conn is not None:
+            _conn.close()
+        _conn, _ruta = None, str(ruta)
 
 
 def obtener_conexion() -> sqlite3.Connection:
     global _conn
     with conn_lock:
         if _conn is None:
-            _conn = conectar_expediente(check_same_thread=False)
+            _conn = conectar_expediente(_ruta, check_same_thread=False)
             _init_medicacion(_conn)
             _init_auditoria(_conn)
             _init_decision(_conn)

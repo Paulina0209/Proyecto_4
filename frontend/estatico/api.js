@@ -22,6 +22,7 @@ function leerError(estado, cuerpo) {
   const detalle = cuerpo && cuerpo.detail;
   if (typeof detalle === "string") return new ErrorApi(estado, [detalle]);
   if (cuerpo && typeof cuerpo.mensaje === "string") return new ErrorApi(estado, [cuerpo.mensaje]);
+  if (detalle && typeof detalle.mensaje === "string") return new ErrorApi(estado, [detalle.mensaje]);
   const texto = estado >= 500 ? "El servidor tuvo un problema. Inténtalo de nuevo en unos minutos." : "No se pudo completar la acción.";
   return new ErrorApi(estado, [texto]);
 }

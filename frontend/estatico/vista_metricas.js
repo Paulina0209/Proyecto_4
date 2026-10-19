@@ -8,7 +8,6 @@ export async function vistaMetricas(ctx) {
       mensaje("aviso", "Sin permiso", "Solo la dirección médica puede ver las métricas de uso de la institución.")) };
   }
   const marco = h("iframe", { class: "marco-tablero", src: "/panel/metricas", title: "Tablero de métricas de uso de la institución" });
-  marco.addEventListener("load", () => ctx.sincronizarTemaDelMarco(marco));
   const nodo = h("div", {},
     h("h1", {}, "Métricas de uso"),
     h("p", { class: "sub" }, "Datos agregados de toda la institución. Nunca se muestran por médico."),

@@ -110,7 +110,7 @@ def test_listar_filtrar_roles_y_auditoria(client):
     assert client.get("/usuarios", auth=ADMIN, params={"rol": "inventado"}).status_code == 400
     roles = {r["rol"]: r["permisos"] for r in client.get("/roles", auth=ADMIN).json()}
     assert "confirmar_tratamiento" in roles["oncologo"] and "confirmar_tratamiento" not in roles["enfermeria"]
-    assert roles["administrador"] == ["gestionar_usuarios"]
+    assert roles["administrador"] == ["gestionar_usuarios", "ver_estado_sistema"]  # gestión, sin acceso clínico
     operaciones = [e["operacion"] for e in client.get("/auditoria/usuarios", auth=ADMIN).json()]
     assert operaciones[:2] == ["crear_usuario", "crear_usuario"]
 

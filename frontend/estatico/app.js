@@ -1,51 +1,36 @@
-/* Núcleo de la interfaz: sesión, cabecera, tema y enrutador por hash (sin dependencias ni paso de compilación). */
+/* Núcleo de la interfaz: sesión, cabecera según el rol, capacidades del sistema y enrutador por hash
+   (sin dependencias ni paso de compilación). Tema único claro: blanco y azul. */
 import { h, anunciar } from "./dom.js";
 import { api, ErrorApi } from "./api.js";
 import { errorConReintento, mensaje } from "./ui.js";
 import { vistaLogin } from "./vista_login.js";
 import { vistaPacientes } from "./vista_pacientes.js";
+import { vistaRegistroPaciente } from "./vista_registro.js";
 import { vistaExpediente } from "./vista_expediente.js";
 import { vistaMetricas } from "./vista_metricas.js";
+import { vistaAuditoria, vistaGuias, vistaNotificaciones, vistaSistema, vistaUsuarios } from "./vista_gestion.js";
 
 const NOMBRE_APP = "Copiloto oncológico";
 const principal = document.getElementById("contenido");
-const estado = { sesion: null, info: { modo_demo: false }, destino: null, aviso: null, contador: 0, primera: true };
-
-/* ---------------- Tema (automático / claro / oscuro) ---------------- */
-const TEMAS = [["auto", "automático"], ["light", "claro"], ["dark", "oscuro"]];
-function temaGuardado() {
-  try { const t = window.localStorage.getItem("copiloto-tema"); return t === "light" || t === "dark" ? t : "auto"; } catch (e) { return "auto"; }
-}
-function aplicarTema(clave) {
-  if (clave === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", clave);
-  try { if (clave === "auto") window.localStorage.removeItem("copiloto-tema"); else window.localStorage.setItem("copiloto-tema", clave); } catch (e) { /* sin almacenamiento */ }
-  const nombre = TEMAS.find(([c]) => c === clave)[1];
-  document.getElementById("btn-tema").textContent = `Tema: ${nombre}`;
-  document.querySelectorAll("iframe.marco-tablero").forEach(sincronizarTemaDelMarco);
-  return nombre;
-}
-function sincronizarTemaDelMarco(marco) {
-  try {
-    const raiz = marco.contentDocument && marco.contentDocument.documentElement;
-    if (!raiz) return;
-    const t = temaGuardado();
-    if (t === "auto") raiz.removeAttribute("data-theme"); else raiz.setAttribute("data-theme", t);
-  } catch (e) { /* marco de otro origen: no aplica */ }
-}
-document.getElementById("btn-tema").addEventListener("click", () => {
-  const i = TEMAS.findIndex(([c]) => c === temaGuardado());
-  const siguiente = TEMAS[(i + 1) % TEMAS.length][0];
-  anunciar(`Tema ${aplicarTema(siguiente)}.`);
-});
-aplicarTema(temaGuardado());
+const SIN_CAPACIDADES = { modelo_ia: { configurado: false }, agente: { disponible: false }, extensiones: { linea_tiempo: { disponible: false }, notificaciones: { disponible: false } } };
+const estado = { sesion: null, info: { modo_demo: false }, capacidades: SIN_CAPACIDADES, destino: null, aviso: null, contador: 0, primera: true };
 
 /* ---------------- Cabecera según la sesión ---------------- */
+const MENU = [
+  ["nav-pacientes", (s) => s.acceso_clinico],
+  ["nav-notificaciones", (s, c) => s.acceso_clinico && c.extensiones.notificaciones.disponible],
+  ["nav-guias", (s) => s.acceso_clinico || s.configurar_guias],
+  ["nav-metricas", (s) => s.ver_metricas],
+  ["nav-auditoria", (s) => s.ver_auditoria],
+  ["nav-usuarios", (s) => s.gestionar_usuarios],
+  ["nav-sistema", (s) => s.ver_estado_sistema],
+];
+
 function actualizarCabecera() {
   const s = estado.sesion;
   document.getElementById("nav-principal").hidden = !s;
   document.getElementById("usuario-barra").hidden = !s;
-  document.getElementById("nav-metricas").hidden = !(s && s.ver_metricas);
-  document.getElementById("nav-pacientes").hidden = !(s && (s.acceso_clinico || !s.ver_metricas));
+  for (const [id, visible] of MENU) document.getElementById(id).hidden = !(s && visible(s, estado.capacidades));
   const quien = document.getElementById("quien");
   quien.replaceChildren();
   if (s) quien.append(s.usuario.nombre_completo, h("small", {}, s.usuario.rol_etiqueta));
@@ -56,7 +41,16 @@ function actualizarCabecera() {
   });
 }
 
-function inicio(s) { return s && !s.acceso_clinico && s.ver_metricas ? "#/metricas" : "#/pacientes"; }
+/* Primera pantalla de cada rol. */
+function inicio(s) {
+  if (!s) return "#/ingresar";
+  if (s.acceso_clinico) return "#/pacientes";
+  if (s.ver_metricas) return "#/metricas";
+  if (s.ver_auditoria) return "#/auditoria";
+  if (s.gestionar_usuarios) return "#/usuarios";
+  if (s.configurar_guias) return "#/guias";
+  return "#/sin-acceso";
+}
 
 /* ---------------- Rutas ---------------- */
 function sinAcceso(ctx) {
@@ -68,9 +62,16 @@ const clinica = (vista) => (ctx) => (ctx.sesion.acceso_clinico ? vista(ctx) : si
 
 const RUTAS = [
   { patron: /^\/ingresar$/, vista: vistaLogin, publica: true },
+  { patron: /^\/sin-acceso$/, vista: sinAcceso },
   { patron: /^\/pacientes$/, vista: clinica(vistaPacientes) },
-  { patron: /^\/pacientes\/(\d+)(?:\/([a-z]+))?$/, vista: clinica(vistaExpediente), parametros: ["id", "seccion"] },
+  { patron: /^\/pacientes\/nuevo$/, vista: clinica(vistaRegistroPaciente) },
+  { patron: /^\/pacientes\/(\d+)(?:\/([a-z-]+))?$/, vista: clinica(vistaExpediente), parametros: ["id", "seccion"] },
+  { patron: /^\/notificaciones$/, vista: clinica(vistaNotificaciones) },
+  { patron: /^\/guias$/, vista: vistaGuias },
   { patron: /^\/metricas$/, vista: vistaMetricas },
+  { patron: /^\/auditoria$/, vista: vistaAuditoria },
+  { patron: /^\/usuarios$/, vista: vistaUsuarios },
+  { patron: /^\/sistema$/, vista: vistaSistema },
 ];
 
 function analizarHash() {
@@ -82,7 +83,7 @@ function analizarHash() {
 async function navegar() {
   const mia = ++estado.contador;
   const { ruta, consulta } = analizarHash();
-  if (ruta === "/") { window.location.replace(estado.sesion ? inicio(estado.sesion) : "#/ingresar"); return; }
+  if (ruta === "/" || ruta === "/inicio") { window.location.replace(inicio(estado.sesion)); return; }
   const definicion = RUTAS.find((r) => r.patron.test(ruta));
   if (!estado.sesion && !(definicion && definicion.publica)) {
     estado.destino = window.location.hash;
@@ -92,12 +93,18 @@ async function navegar() {
   if (estado.sesion && definicion && definicion.publica) { window.location.replace(inicio(estado.sesion)); return; }
   actualizarCabecera();
 
-  const ctx = { sesion: estado.sesion, info: estado.info, consulta, parametros: {}, aviso: estado.aviso, sincronizarTemaDelMarco,
-    alIniciarSesion: async (s) => { estado.sesion = s; actualizarCabecera(); const d = estado.destino; estado.destino = null; window.location.hash = d && d !== "#/ingresar" ? d : inicio(s); } };
+  const ctx = { sesion: estado.sesion, info: estado.info, capacidades: estado.capacidades, consulta, parametros: {}, aviso: estado.aviso,
+    alIniciarSesion: async (s) => {
+      estado.sesion = s;
+      await cargarCapacidades();
+      actualizarCabecera();
+      const d = estado.destino; estado.destino = null;
+      window.location.hash = d && d !== "#/ingresar" ? d : inicio(s);
+    } };
   estado.aviso = null;
   let resultado;
   if (!definicion) {
-    resultado = { titulo: "Página no encontrada", nodo: h("div", {}, h("h1", {}, "Página no encontrada"), h("p", {}, h("a", { href: estado.sesion ? inicio(estado.sesion) : "#/ingresar" }, "Ir al inicio"))) };
+    resultado = { titulo: "Página no encontrada", nodo: h("div", {}, h("h1", {}, "Página no encontrada"), h("p", {}, h("a", { href: inicio(estado.sesion) }, "Ir al inicio"))) };
   } else {
     const m = definicion.patron.exec(ruta);
     (definicion.parametros || []).forEach((nombre, i) => { if (m[i + 1] !== undefined) ctx.parametros[nombre] = m[i + 1]; });
@@ -115,9 +122,8 @@ async function navegar() {
   principal.removeAttribute("aria-busy");
   principal.replaceChildren(resultado.nodo);
   document.title = `${resultado.titulo} — ${NOMBRE_APP}`;
-  // El foco se mueve al título solo cuando la persona CAMBIA de pantalla. Al abrir o recargar la página queda al
-  // principio del documento (el primer Tab llega al enlace «Saltar al contenido»); la única excepción es el
-  // formulario de acceso, que pide el foco en su primer campo.
+  // El foco va al título solo cuando la persona CAMBIA de pantalla; al abrir o recargar queda al principio del
+  // documento (el primer Tab llega a «Saltar al contenido»), salvo el formulario de acceso, que lo pide.
   if (!estado.primera || resultado.foco) {
     const titulo = resultado.foco || principal.querySelector("h1");
     if (titulo) { titulo.setAttribute("tabindex", "-1"); titulo.focus({ preventScroll: false }); }
@@ -128,6 +134,10 @@ async function navegar() {
 }
 
 /* ---------------- Sesión ---------------- */
+async function cargarCapacidades() {
+  try { estado.capacidades = await api("/api/clinica/capacidades", { sinSesion: true }); } catch (e) { estado.capacidades = SIN_CAPACIDADES; }
+}
+
 function irAIngresar(aviso) {
   estado.sesion = null;
   estado.aviso = aviso || null;
@@ -160,6 +170,7 @@ async function arrancar() {
     aviso.hidden = false;
   }
   try { const s = await api("/api/sesion", { sinSesion: true }); estado.sesion = s && s.autenticado ? s : null; } catch (e) { estado.sesion = null; }
+  if (estado.sesion) await cargarCapacidades();
   actualizarCabecera();
   await navegar();
 }
