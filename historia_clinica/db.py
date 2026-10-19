@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Optional
 
 from expediente.db import inicializar_esquema as inicializar_esquema_expediente
+from operacion.sqlite import preparar_concurrencia
 
 _SCHEMA_PATH = Path(__file__).resolve().parent / "schema_historia_clinica.sql"
 RUTA_EXPEDIENTE_POR_DEFECTO = Path(__file__).resolve().parent.parent / "data" / "copiloto.db"
@@ -30,10 +31,10 @@ def ruta_expediente() -> Path:
 
 
 def conectar_expediente(ruta: Optional[Path] = None, *, check_same_thread: bool = True) -> sqlite3.Connection:
-    """Conexión a la base real del expediente, con el esquema completo."""
+    """Conexión a la base real del expediente, con el esquema completo (en WAL, ver ``operacion.sqlite``)."""
     ruta = Path(ruta or ruta_expediente())
     ruta.parent.mkdir(parents=True, exist_ok=True)
-    return crear_conexion(str(ruta), check_same_thread=check_same_thread)
+    return preparar_concurrencia(crear_conexion(str(ruta), check_same_thread=check_same_thread), ruta)
 
 
 def crear_conexion(ruta: str = ":memory:", *, check_same_thread: bool = True) -> sqlite3.Connection:

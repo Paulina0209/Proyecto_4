@@ -125,18 +125,17 @@ visor se abre en otra pestaña y su accesibilidad es la del visor.
   asignación de pacientes). Mientras no exista, se les niega con una explicación en lugar de adivinar
   o enseñar todo. Es una decisión de seguridad, no un olvido; cuando exista la asignación, basta con
   ampliar la regla en `frontend/servidor.py`.
-- **Las sesiones viven en la memoria del proceso.** Reiniciar el servidor cierra todas, y con varios
-  procesos cada uno tendría las suyas; para producción con varias réplicas hay que moverlas a un almacén
-  compartido (la interfaz `AlmacenSesiones` es pequeña a propósito).
+- **Sesiones.** Por defecto viven en la memoria del proceso (reiniciar el servidor las cierra). Con
+  `COPILOTO_SESIONES_DB` (o `--workers` mayor que 1 en `seguridad.servidor_tls`) se guardan en una base
+  compartida (`AlmacenSesionesSQLite`, NFR-05): cualquier réplica atiende a cualquier usuario y reiniciar
+  no cierra las sesiones.
 - **Casi todo es de solo lectura.** La única escritura es revisar una alerta de laboratorio. No hay aún
   pantallas para resolver conflictos de laboratorio, registrar el consentimiento de IA, cargar
   documentos (DOC-01) ni las funciones de IA (resumen, estadificación, recomendación de tratamiento).
 - **Sin pruebas en navegadores distintos de Chromium** ni con lectores de pantalla (ver arriba).
-- La interfaz asume `patients.api` tal como está. Al probarla apareció un fallo latente de esa API: su
-  `get_conn` abre la conexión SQLite en un hilo y el endpoint corre en otro, y SQLite lo prohíbe
-  (`ProgrammingError`) cuando llegan varias peticiones a la vez, que es justo lo que hace la pantalla
-  del expediente. La pasarela lo evita sin tocar `patients/` (reemplaza esa dependencia solo mientras
-  corre); el arreglo de raíz es una línea: `check_same_thread=False` en `get_conn`/`db.conectar`.
+- Al probar la interfaz apareció un fallo de `patients.api` con peticiones simultáneas (`ProgrammingError`
+  de SQLite: la conexión se abría en un hilo y se usaba en otro). Se arregló de raíz en NFR-02
+  (`check_same_thread=False` y modo WAL en `patients/db`), así que la pasarela ya no lo rodea.
 
 ## Pruebas
 

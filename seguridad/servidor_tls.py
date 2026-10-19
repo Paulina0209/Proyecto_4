@@ -12,6 +12,10 @@ y ``SoloHTTPSMiddleware`` sigue rechazando lo que no llegó por HTTPS.
 Para probar en local, un certificado autofirmado:
 
     python -m seguridad.servidor_tls --generar-certificado-local certs/
+
+NFR-05: ``--workers N`` levanta N procesos que comparten el puerto. Con más de
+uno, las sesiones de la interfaz web pasan a ``data/sesiones.db`` (o a
+``COPILOTO_SESIONES_DB``) para que cualquier proceso atienda a cualquier usuario.
 """
 
 from __future__ import annotations
@@ -28,26 +32,56 @@ from seguridad.tls import contexto_tls_servidor
 ENV_CERT = "COPILOTO_TLS_CERT"
 ENV_KEY = "COPILOTO_TLS_KEY"
 ENV_KEY_PASSWORD = "COPILOTO_TLS_KEY_PASSWORD"
+SESIONES_POR_DEFECTO = Path(__file__).resolve().parent.parent / "data" / "sesiones.db"
 
 
-def construir_config(app: str, host: str, port: int, cert: str, key: str, password: Optional[str] = None):
+class FabricaContextoTLS:
+    """Fábrica del contexto TLS para uvicorn. Es una clase (y no una lambda) para que
+    se pueda pasar a los procesos hijos con ``--workers`` (en Windows se serializa)."""
+
+    def __init__(self, cert: str, key: str, password: Optional[str] = None):
+        self.cert, self.key, self.password = cert, key, password
+
+    def __call__(self, _config=None, _por_defecto=None):
+        return contexto_tls_servidor(self.cert, self.key, self.password)
+
+
+def construir_config(
+    app: str, host: str, port: int, cert: str, key: str, password: Optional[str] = None, workers: int = 1
+):
     """``uvicorn.Config`` con el contexto TLS endurecido de ``seguridad.tls``."""
     import uvicorn
 
     for ruta, que in ((cert, "certificado"), (key, "clave privada")):
         if not Path(ruta).is_file():
             raise FileNotFoundError(f"No existe el archivo de {que}: {ruta}")
+    if workers > 1 and not isinstance(app, str):
+        raise ValueError("Con varios procesos la aplicación se indica como texto, p. ej. 'patients.api:app'.")
     # Falla aquí, antes de abrir el puerto, si el par certificado/clave no sirve.
     contexto_tls_servidor(cert, key, password)
     return uvicorn.Config(
         app,
         host=host,
         port=port,
+        workers=workers,
         ssl_certfile=cert,
         ssl_keyfile=key,
         ssl_keyfile_password=password,
-        ssl_context_factory=lambda config, _por_defecto: contexto_tls_servidor(cert, key, password),
+        ssl_context_factory=FabricaContextoTLS(cert, key, password),
     )
+
+
+def ejecutar(config) -> None:
+    """Un proceso (``Server.run``) o varios (supervisor de uvicorn) según ``config.workers``."""
+    import uvicorn
+
+    if config.workers and config.workers > 1:
+        from uvicorn.supervisors import Multiprocess
+
+        sock = config.bind_socket()
+        Multiprocess(config, sockets=[sock]).run()
+    else:
+        uvicorn.Server(config).run()
 
 
 def generar_certificado_local(carpeta: Path, dias: int = 30) -> tuple[Path, Path]:
@@ -96,6 +130,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     p.add_argument("--port", type=int, default=8443)
     p.add_argument("--cert", default=os.environ.get(ENV_CERT), help=f"Certificado PEM (o {ENV_CERT}).")
     p.add_argument("--key", default=os.environ.get(ENV_KEY), help=f"Clave privada PEM (o {ENV_KEY}).")
+    p.add_argument("--workers", type=int, default=1, help="Procesos que atienden en paralelo (NFR-05).")
     p.add_argument("--generar-certificado-local", metavar="CARPETA", type=Path,
                    help="Crea un certificado autofirmado para localhost y termina.")
     args = p.parse_args(argv)
@@ -111,10 +146,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
               "La API no se sirve sin cifrar.", file=sys.stderr)
         return 2
 
-    import uvicorn
-
-    config = construir_config(args.app, args.host, args.port, args.cert, args.key, os.environ.get(ENV_KEY_PASSWORD))
-    uvicorn.Server(config).run()
+    if args.workers > 1:
+        # Las sesiones de la interfaz se comparten entre procesos (los hijos heredan el entorno).
+        os.environ.setdefault("COPILOTO_SESIONES_DB", str(SESIONES_POR_DEFECTO))
+    config = construir_config(
+        args.app, args.host, args.port, args.cert, args.key, os.environ.get(ENV_KEY_PASSWORD), args.workers
+    )
+    ejecutar(config)
     return 0
 
 

@@ -42,7 +42,9 @@ from administracion import usuarios as adm
 from administracion.panel_metricas import renderizar_error, renderizar_panel
 from auditoria.models import TipoAccion
 from auditoria.registro_acceso import registrar_acceso
-from frontend.sesiones import AlmacenSesiones
+from frontend.sesiones import AlmacenSesiones, almacen_por_defecto
+from operacion import salud
+from operacion.latencia import MedicionLatenciaMiddleware
 from seguridad.autenticacion import autenticar
 from seguridad.autorizacion import Accion, permisos_del_rol, verificar_permiso
 from seguridad.models import Rol, Usuario
@@ -270,32 +272,6 @@ class _CabecerasDeSeguridad:
         await self.app(scope, receive, enviar)
 
 
-def _permitir_conexiones_entre_hilos(patients_app) -> Callable[[], None]:
-    """La interfaz lanza varias peticiones a la vez (resumen, alertas, marcadores...). FastAPI abre la conexión de
-    ``patients.api.get_conn`` en un hilo y ejecuta el endpoint en otro, y SQLite lo prohíbe por defecto
-    (``ProgrammingError``) cuando coinciden varias peticiones. El expediente ya se abre con
-    ``check_same_thread=False``; aquí se hace lo mismo con la base de pacientes, SOLO mientras corre esta
-    pasarela y sin tocar ``patients/``. Devuelve la función que deshace el cambio."""
-    try:
-        from patients import api as papi
-    except ImportError:  # pragma: no cover - sin el paquete de pacientes no hay nada que ajustar
-        return lambda: None
-    if patients_app is not papi.app or papi.get_conn in patients_app.dependency_overrides:
-        return lambda: None
-
-    def conexion_pacientes():
-        conn = sqlite3.connect(papi.DB_PATH, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
-        try:
-            yield conn
-        finally:
-            conn.close()
-
-    patients_app.dependency_overrides[papi.get_conn] = conexion_pacientes
-    return lambda: patients_app.dependency_overrides.pop(papi.get_conn, None) and None
-
-
 def _pagina_mensaje(titulo: str, mensaje: str, enlace: Optional[Tuple[str, str]] = None) -> str:
     """Página mínima y accesible para el marco del tablero (sesión caducada, sin permiso, error)."""
     import html
@@ -334,7 +310,8 @@ class Pasarela:
     ) -> None:
         self._usuarios_db = usuarios_db
         self._patients_app = patients_app
-        self.sesiones = sesiones if sesiones is not None else AlmacenSesiones()
+        # NFR-05: con COPILOTO_SESIONES_DB, sesiones compartidas entre réplicas.
+        self.sesiones = sesiones if sesiones is not None else almacen_por_defecto()
         self.carpeta_estatica = Path(carpeta_estatica)
         self._metricas_db_paths = metricas_db_paths
         self._fuentes_metricas = fuentes_metricas
@@ -403,6 +380,22 @@ class Pasarela:
             "mensaje_sin_acceso_clinico": None if clinico else MENSAJE_SIN_ASIGNACION,
         }
 
+    # --- Salud (NFR-02) -----------------------------------------------------------------------
+    def verificaciones_salud(self) -> List[Any]:
+        from frontend.sesiones import AlmacenSesionesSQLite
+        from historia_clinica.db import ruta_expediente
+        from patients import api as papi
+
+        expediente = Path(papi.EXPEDIENTE_PATH or ruta_expediente())
+        resultado = [
+            salud.verificar_base("usuarios", self._ruta_usuarios()),
+            salud.verificar_base("base de pacientes", Path(papi.DB_PATH)),
+            salud.verificar_base("expediente clínico", expediente, critica=expediente.is_file()),
+        ]
+        if isinstance(self.sesiones, AlmacenSesionesSQLite):
+            resultado.append(salud.verificar_base("sesiones compartidas", self.sesiones.ruta))
+        return resultado + [salud.verificar_espacio(self._ruta_usuarios()), salud.verificar_modelo_ia(), salud.verificar_pacs()]
+
     # --- Métricas -----------------------------------------------------------------------------
     @contextmanager
     def fuentes_de_metricas(self, conn_usuarios: sqlite3.Connection) -> Iterator[Any]:
@@ -438,18 +431,18 @@ class Pasarela:
         @asynccontextmanager
         async def vida(_app: FastAPI):
             # Starlette no ejecuta el arranque de las apps montadas: aquí se hace el de pacientes
-            # (esquemas de la base de pacientes y de auditoría).
-            retirar = _permitir_conexiones_entre_hilos(patients_app)
-            try:
-                async with patients_app.router.lifespan_context(patients_app):
-                    yield
-            finally:
-                retirar()
+            # (esquemas de la base de pacientes y de auditoría). Las peticiones simultáneas ya no
+            # necesitan ajuste aquí: patients.api abre su conexión apta para varios hilos (NFR-02).
+            async with patients_app.router.lifespan_context(patients_app):
+                yield
 
         app = FastAPI(title="Copiloto oncológico — interfaz web", docs_url=None, redoc_url=None, openapi_url=None, lifespan=vida)
+        app.add_middleware(MedicionLatenciaMiddleware)  # NFR-01
         app.add_middleware(_CabecerasDeSeguridad)
-        app.add_middleware(SoloHTTPSMiddleware)
+        # NFR-02: la sonda de vida (sin datos) también responde por HTTP, para el balanceador.
+        app.add_middleware(SoloHTTPSMiddleware, rutas_exentas=(salud.RUTA_VIVO,))
         pasarela = self
+        app.include_router(salud.crear_router(pasarela.verificaciones_salud))
 
         # --- Páginas ---
         @app.get("/", include_in_schema=False)

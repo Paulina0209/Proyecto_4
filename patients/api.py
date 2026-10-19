@@ -27,6 +27,7 @@ autenticación. Cuando exista, debe salir de la identidad autenticada.
 """
 from __future__ import annotations
 
+import os
 import sqlite3
 from contextlib import asynccontextmanager
 from datetime import date
@@ -46,6 +47,8 @@ from historia_clinica import laboratorios as hc02
 from historia_clinica.db import conectar_expediente, ruta_expediente
 from historia_clinica.integracion_externa import importar_mensaje_hl7
 from privacidad import consentimiento_ia as sec03
+from operacion import salud
+from operacion.latencia import MedicionLatenciaMiddleware
 from seguridad.tls import ConexionInseguraError, SoloHTTPSMiddleware
 
 from . import db
@@ -133,8 +136,11 @@ USUARIO_SISTEMA = 0
 
 
 def get_conn():
-    """Una conexión por petición (se sobreescribe en tests con DB_PATH)."""
-    conn = db.conectar(DB_PATH)
+    """Una conexión por petición (se sobreescribe en tests con DB_PATH).
+
+    FastAPI la abre en un hilo y ejecuta el endpoint en otro: sin
+    ``check_same_thread=False`` fallaba con varias peticiones a la vez (NFR-02)."""
+    conn = db.conectar(DB_PATH, check_same_thread=False)
     try:
         yield conn
     finally:
@@ -170,7 +176,10 @@ def get_conn_expediente():
 async def _lifespan(app: FastAPI):
     global CARGADOR_DETALLE
     ruta = ruta_expediente()
-    if CARGADOR_DETALLE is None and ruta.is_file():
+    # NFR-01: traer el detalle de cBioPortal al abrir un paciente tarda segundos (red).
+    # Con los datos ya cargados en el expediente se apaga con COPILOTO_DETALLE_BAJO_DEMANDA=0.
+    bajo_demanda = os.environ.get("COPILOTO_DETALLE_BAJO_DEMANDA", "1").strip().lower() not in ("0", "false", "no")
+    if CARGADOR_DETALLE is None and ruta.is_file() and bajo_demanda:
         from cbioportal.indice import CargadorDetalle
 
         CARGADOR_DETALLE = CargadorDetalle.desde_ruta(str(ruta))
@@ -193,8 +202,27 @@ app = FastAPI(
     version="1.0.0",
     lifespan=_lifespan,
 )
+# NFR-01: tiempo de cada petición (Server-Timing y /salud/metricas).
+app.add_middleware(MedicionLatenciaMiddleware)
 # SEC-02: solo HTTPS, sin respaldo en claro (python -m seguridad.servidor_tls).
-app.add_middleware(SoloHTTPSMiddleware)
+# La sonda de vida no lleva datos y el balanceador la consulta por la red interna (NFR-02).
+app.add_middleware(SoloHTTPSMiddleware, rutas_exentas=(salud.RUTA_VIVO,))
+
+
+def _verificaciones_salud():
+    """NFR-02: lo que necesita esta réplica para atender (``/salud/listo``)."""
+    expediente = _ruta_expediente()
+    return [
+        salud.verificar_base("base de pacientes", Path(DB_PATH)),
+        # Un expediente que aún no existe (instalación nueva) no saca la réplica de servicio.
+        salud.verificar_base("expediente clínico", expediente, critica=expediente.is_file()),
+        salud.verificar_espacio(Path(DB_PATH)),
+        salud.verificar_modelo_ia(),
+        salud.verificar_pacs(),
+    ]
+
+
+app.include_router(salud.crear_router(_verificaciones_salud))
 
 
 # ---------------------------------------------------------------------------
