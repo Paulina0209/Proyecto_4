@@ -41,7 +41,7 @@ const CONSENTIMIENTO = {
 function marco(ctx, paciente, consentimiento, seccion, contenido) {
   const a = edad(paciente.fecha_nacimiento);
   const estado = h("div", { id: "estado-ficha", role: "status", "aria-live": "polite" });
-  const botones = [];
+  const botones = [h("a", { class: "btn chico", href: `#/asistente?paciente=${paciente.id}` }, "Preguntar al asistente")];
   if (ctx.sesion.puede_exportar) {
     const exportar = (formato, texto) => h("button", { type: "button", class: "btn sec chico", onclick: async () => {
       estado.replaceChildren(h("p", { class: "tenue" }, "Preparando la descarga…"));

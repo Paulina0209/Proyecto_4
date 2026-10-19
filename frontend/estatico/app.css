@@ -178,10 +178,51 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .acceso .logo{display:flex;justify-content:center;margin:0 0 1rem}
 .acceso .logo svg{width:3.5rem;height:3.5rem}
 
+/* Asistente clínico: conversaciones · chat · historia clínica con las fuentes resaltadas */
+main:has(.chat-app){max-width:none;padding:1rem 1rem 1.5rem}
+.chat-app{display:grid;gap:1rem;grid-template-columns:14rem minmax(0,1fr) minmax(20rem,30rem);align-items:start;min-height:calc(100vh - 7rem)}
+.conversaciones{background:var(--surface);border:1px solid var(--line);border-radius:.85rem;padding:.75rem;position:sticky;top:4.5rem;max-height:calc(100vh - 6rem);overflow-y:auto}
+.conversaciones ul{list-style:none;margin:.75rem 0 0;padding:0}
+.conversaciones a:not(.btn){display:block;min-height:2.5rem;padding:.4rem .6rem;border-radius:.5rem;color:var(--ink);text-decoration:none;border-left:4px solid transparent}
+.conversaciones a:not(.btn):hover{background:var(--suave)}
+.conversaciones a[aria-current="page"]{background:var(--suave);border-left-color:var(--primario)}
+.conversaciones small{display:block;color:var(--muted)}
+.conversaciones .btn{width:100%}
+.chat-centro{display:flex;flex-direction:column;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:.85rem;padding:1rem;box-shadow:0 1px 3px var(--sombra)}
+.chat-cabecera{display:flex;flex-wrap:wrap;gap:.75rem 1rem;justify-content:space-between;align-items:flex-start;margin:0 0 .75rem}
+.chat-cabecera h1{font-size:1.35rem}
+.buscador-paciente{position:relative;min-width:min(100%,18rem)}
+.resultados-paciente{position:absolute;z-index:5;left:0;right:0;list-style:none;margin:.25rem 0 0;padding:.4rem;background:var(--surface);border:1px solid var(--borde);border-radius:.5rem;box-shadow:0 4px 12px var(--sombra-fuerte)}
+.resultados-paciente li{margin:0 0 .25rem}.resultados-paciente .btn{width:100%;justify-content:flex-start}
+.chat-principal{flex:1;max-height:none;min-height:24rem;height:calc(100vh - 19rem);margin:0 0 .5rem}
+.bienvenida{margin:auto;max-width:36rem;text-align:center;padding:2rem 1rem}
+.bienvenida .sugerencias{justify-content:center}
+.entrada-chat{display:flex;gap:.5rem;align-items:flex-end}
+.entrada-chat textarea{min-height:3.25rem}
+.respuesta p{margin:0 0 .4rem}.respuesta li{margin:0 0 .25rem 1rem}
+.cita{display:inline-flex;align-items:center;min-height:2.5rem;padding:0 .5rem;margin:0 .15rem;border-radius:.4rem;border:1px solid var(--ia);background:var(--ia-bg);color:var(--ia);font:inherit;font-size:.85rem;font-weight:650;cursor:pointer}
+.cita:hover{background:var(--surface)}
+.fuentes{display:flex;flex-wrap:wrap;gap:.25rem;align-items:center;margin:.5rem 0 0;padding:.5rem 0 0;border-top:1px solid var(--line)}
+.pasos{margin:.5rem 0 0;font-size:.9rem}
+.pasos ol,.progreso{margin:.25rem 0 0;padding-left:1.25rem;font-size:.9rem;color:var(--ink2)}
+.progreso li{margin:0 0 .15rem}
+.panel-hc{background:var(--surface);border:1px solid var(--line);border-radius:.85rem;padding:1rem;position:sticky;top:4.5rem;max-height:calc(100vh - 6rem);overflow-y:auto;box-shadow:0 1px 3px var(--sombra)}
+.panel-cabecera{border-bottom:1px solid var(--line);padding:0 0 .75rem;margin:0 0 .75rem}
+.panel-cabecera h2{margin:0}
+.seccion-hc{border:1px solid var(--line);border-radius:.6rem;padding:0 .75rem;margin:0 0 .5rem}
+.seccion-hc[open]{padding-bottom:.5rem}
+.lista-hc{list-style:none;margin:0;padding:0}
+.lista-hc li{display:grid;gap:.15rem;padding:.45rem .5rem;border-radius:.4rem;border:1px solid transparent;font-size:.92rem}
+.lista-hc li+li{border-top-color:var(--line)}
+.lista-hc .grupo-hc{font-weight:650;color:var(--ink2);background:var(--page);margin-top:.35rem}
+.lista-hc .fecha-hc{font-size:.8rem;color:var(--muted)}
+.lista-hc .id-hc{font-size:.75rem;color:var(--muted);font-family:ui-monospace,Consolas,monospace}
+.lista-hc li.resaltado{background:var(--aviso-bg);border:2px solid var(--aviso);box-shadow:0 0 0 3px var(--aviso-bg)}
 details>summary{cursor:pointer;font-weight:650;min-height:2.5rem;display:flex;align-items:center}
 pre.texto{white-space:pre-wrap;font:inherit;margin:0}
 
-@media (max-width:56rem){.espacio{grid-template-columns:1fr}.secciones{position:static}}
+@media (max-width:80rem){.chat-app{grid-template-columns:minmax(0,1fr) minmax(18rem,26rem)}.conversaciones{grid-column:1/-1;position:static;max-height:none}}
+@media (max-width:56rem){.espacio{grid-template-columns:1fr}.secciones{position:static}.chat-app{grid-template-columns:1fr}.panel-hc{position:static;max-height:none}.chat-principal{height:auto;max-height:32rem}}
 @media (max-width:40rem){main{padding:1rem .75rem 2.5rem}.dato{grid-template-columns:1fr}.dato dt{margin-top:.5rem}h1{font-size:1.4rem}.burbuja{max-width:100%}}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 @media print{.cabecera,.aviso-demo,.secciones,.acciones,.saltar{display:none}body{background:#fff;color:#000}.tarjeta{box-shadow:none;border-color:#000}.espacio{display:block}}

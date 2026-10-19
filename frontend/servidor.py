@@ -458,7 +458,7 @@ class Pasarela:
 
             self._patients_app = patients_app
         patients_app = self._patients_app
-        from frontend import clinica, extensiones, gestion
+        from frontend import chat, clinica, extensiones, gestion
 
         self.reglas_extra = extensiones.reglas_extra(patients_app)
 
@@ -556,6 +556,7 @@ class Pasarela:
             return pasarela._panel(request, desde, hasta)
 
         # --- Apoyo a la decisión, IA y gestión (antes del montaje de /api, que atrapa el resto) ---
+        app.include_router(chat.crear_router(self))
         app.include_router(clinica.crear_router(self))
         app.include_router(gestion.crear_router(self))
 

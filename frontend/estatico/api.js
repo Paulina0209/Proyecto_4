@@ -79,3 +79,32 @@ export async function descargar(ruta) {
   a.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
+
+/* Respuesta en flujo (NDJSON): llama a alEvento con cada línea en cuanto llega (el asistente muestra sus pasos en vivo). */
+export async function apiFlujo(ruta, cuerpo, alEvento) {
+  let respuesta;
+  try {
+    respuesta = await fetch(ruta, { method: "POST", credentials: "same-origin", body: JSON.stringify(cuerpo),
+      headers: { Accept: "application/x-ndjson", "Content-Type": "application/json", "X-Copiloto-Solicitud": "1" } });
+  } catch (e) {
+    throw new ErrorApi(0, ["No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo."]);
+  }
+  if (!respuesta.ok) {
+    let datos = null;
+    try { datos = await respuesta.json(); } catch (e) { datos = null; }
+    if (respuesta.status === 401) document.dispatchEvent(new CustomEvent("sesion-terminada"));
+    throw leerError(respuesta.status, datos);
+  }
+  const lector = respuesta.body.getReader();
+  const decodificador = new TextDecoder();
+  let pendiente = "";
+  for (;;) {
+    const { value, done } = await lector.read();
+    if (done) break;
+    pendiente += decodificador.decode(value, { stream: true });
+    const lineas = pendiente.split("\n");
+    pendiente = lineas.pop();
+    for (const linea of lineas) if (linea.trim()) alEvento(JSON.parse(linea));
+  }
+  if (pendiente.trim()) alEvento(JSON.parse(pendiente));
+}

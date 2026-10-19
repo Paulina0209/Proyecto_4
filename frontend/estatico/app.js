@@ -4,6 +4,7 @@ import { h, anunciar } from "./dom.js";
 import { api, ErrorApi } from "./api.js";
 import { errorConReintento, mensaje } from "./ui.js";
 import { vistaLogin } from "./vista_login.js";
+import { vistaChat } from "./vista_chat.js";
 import { vistaPacientes } from "./vista_pacientes.js";
 import { vistaRegistroPaciente } from "./vista_registro.js";
 import { vistaExpediente } from "./vista_expediente.js";
@@ -17,6 +18,7 @@ const estado = { sesion: null, info: { modo_demo: false }, capacidades: SIN_CAPA
 
 /* ---------------- Cabecera según la sesión ---------------- */
 const MENU = [
+  ["nav-asistente", (s) => s.acceso_clinico],
   ["nav-pacientes", (s) => s.acceso_clinico],
   ["nav-notificaciones", (s, c) => s.acceso_clinico && c.extensiones.notificaciones.disponible],
   ["nav-guias", (s) => s.acceso_clinico || s.configurar_guias],
@@ -44,7 +46,7 @@ function actualizarCabecera() {
 /* Primera pantalla de cada rol. */
 function inicio(s) {
   if (!s) return "#/ingresar";
-  if (s.acceso_clinico) return "#/pacientes";
+  if (s.acceso_clinico) return "#/asistente";
   if (s.ver_metricas) return "#/metricas";
   if (s.ver_auditoria) return "#/auditoria";
   if (s.gestionar_usuarios) return "#/usuarios";
@@ -63,6 +65,7 @@ const clinica = (vista) => (ctx) => (ctx.sesion.acceso_clinico ? vista(ctx) : si
 const RUTAS = [
   { patron: /^\/ingresar$/, vista: vistaLogin, publica: true },
   { patron: /^\/sin-acceso$/, vista: sinAcceso },
+  { patron: /^\/asistente(?:\/([\w-]+))?$/, vista: clinica(vistaChat), parametros: ["conversacion"] },
   { patron: /^\/pacientes$/, vista: clinica(vistaPacientes) },
   { patron: /^\/pacientes\/nuevo$/, vista: clinica(vistaRegistroPaciente) },
   { patron: /^\/pacientes\/(\d+)(?:\/([a-z-]+))?$/, vista: clinica(vistaExpediente), parametros: ["id", "seccion"] },

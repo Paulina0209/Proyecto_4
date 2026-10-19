@@ -658,7 +658,31 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
             finally:
                 conn_docs.close()
             ctx.auditar(TipoAccion.EDITAR, f"DOC-01: documento cargado ({doc.tipo_documento})")
-            return {k: v for k, v in a_json(doc).items() if k != "ruta_almacenamiento"}
+            respuesta = {k: v for k, v in a_json(doc).items() if k != "ruta_almacenamiento"}
+            respuesta["procesamiento"] = _indexar_documento(ctx, doc, contenido)
+            return respuesta
+
+    def _indexar_documento(ctx: Contexto, doc, contenido: bytes) -> dict:
+        """Base de conocimiento del asistente: extraer el texto, trocearlo, calcular embeddings y guardarlos.
+        Solo con consentimiento de IA (el texto va a OpenAI para los embeddings) y seudonimizado (NFR-04)."""
+        from asistente.fragmentos import Fragmento, fragmentos_de_documento
+        from asistente.indice import indice
+        from privacidad.consentimiento_ia import estado_consentimiento_ia
+        from privacidad.minimizacion import seudonimizar_texto
+
+        if not estado_consentimiento_ia(ctx.conn_exp, ctx.expediente_id).ia_habilitada:
+            return {"indexado": False, "fragmentos": 0, "mensaje": "Guardado en el expediente. Sin consentimiento de IA no se agrega a la base del asistente."}
+        trozos = fragmentos_de_documento(doc.id, ctx.expediente_id, doc.nombre_archivo_original, contenido, doc.extension)
+        if not trozos:
+            return {"indexado": False, "fragmentos": 0, "mensaje": "Guardado en el expediente. No tiene texto que el asistente pueda leer (imagen o DICOM)."}
+        ficha = ctx.conn_exp.execute("SELECT nombre, identificacion FROM pacientes WHERE id = ?", (ctx.expediente_id,)).fetchone()
+        trozos = [Fragmento(t.id, seudonimizar_texto(t.texto, nombre=ficha[0], identificaciones=[ficha[1]] if ficha[1] else []), t.tipo, t.origen,
+                            t.paciente_id, (doc.cargado_en or "")[:10], t.titulo, t.metadatos) for t in trozos]
+        try:
+            agregados = indice().agregar_documento(trozos)
+        except Exception as exc:  # noqa: BLE001 - el documento ya quedó guardado; el índice se puede rehacer
+            return {"indexado": False, "fragmentos": 0, "mensaje": f"Guardado en el expediente, pero no se pudo procesar para el asistente ({type(exc).__name__})."}
+        return {"indexado": True, "fragmentos": agregados, "mensaje": f"Procesado: {agregados} fragmentos agregados a la base de conocimiento del asistente."}
 
     @router.get("/pacientes/{paciente_id}/documentos/{documento_id}/contenido")
     def contenido_documento(paciente_id: int, documento_id: int, request: Request):
