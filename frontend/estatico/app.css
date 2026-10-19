@@ -222,7 +222,7 @@ details>summary{cursor:pointer;font-weight:650;min-height:2.5rem;display:flex;al
 pre.texto{white-space:pre-wrap;font:inherit;margin:0}
 
 @media (max-width:80rem){.chat-app{grid-template-columns:minmax(0,1fr) minmax(18rem,26rem)}.conversaciones{grid-column:1/-1;position:static;max-height:none}}
-@media (max-width:56rem){.espacio{grid-template-columns:1fr}.secciones{position:static}.chat-app{grid-template-columns:1fr}.panel-hc{position:static;max-height:none}.chat-centro{position:static;height:auto}.chat-principal{flex:none;height:28rem}}
+@media (max-width:56rem){.espacio{grid-template-columns:minmax(0,1fr)}.secciones a{white-space:normal}.secciones{position:static}.chat-app{grid-template-columns:1fr}.panel-hc{position:static;max-height:none}.chat-centro{position:static;height:auto}.chat-principal{flex:none;height:28rem}}
 @media (max-width:40rem){main{padding:1rem .75rem 2.5rem}.dato{grid-template-columns:1fr}.dato dt{margin-top:.5rem}h1{font-size:1.4rem}.burbuja{max-width:100%}}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 @media print{.cabecera,.aviso-demo,.secciones,.acciones,.saltar{display:none}body{background:#fff;color:#000}.tarjeta{box-shadow:none;border-color:#000}.espacio{display:block}}
