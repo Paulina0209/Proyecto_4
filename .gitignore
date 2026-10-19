@@ -30,6 +30,9 @@ certs/
 
 # Bases de datos locales (se generan con `python -m cbioportal`)
 data/*.db
+# Capa base de cBioPortal y respaldos de la capa de trabajo (python -m datos, ver docs/datos.md)
+data/cbioportal/
+data/respaldo_*/
 patients/db/pacientes.db
 
 # SQLite temporales

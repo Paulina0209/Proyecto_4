@@ -45,8 +45,11 @@ RAIZ = Path(__file__).resolve().parent
 ANCHO = 78
 SALIDA = Path(tempfile.gettempdir()) / "copiloto_demo"
 ESTUDIO = "msk_chord_2024"
-ONCOLOGO_ID = 1
-USUARIO_ID = 10
+# Usuarios del escenario de la capa de trabajo (datos.escenario): la dra. Gómez
+# es la oncóloga de los pacientes de la demo.
+from datos.escenario import ONCOLOGO_DEMO_ID as ONCOLOGO_ID, ONCOLOGOS  # noqa: E402
+
+USUARIO_ID = ONCOLOGO_ID
 AUTOR = "dra. Gómez (oncóloga tratante)"
 
 #: Pacientes reales de MSK-CHORD elegidos para la demo (vivos, con historial
@@ -155,7 +158,15 @@ def preparar_bd_real(sin_red: bool) -> Contexto:
     from historia_clinica.db import conectar_expediente, crear_conexion, ruta_expediente
     from patients import db as db_pacientes
 
+    from datos import capas
+    from datos.__main__ import preparar as preparar_capas
+
     ruta_exp, ruta_pac = ruta_expediente(), Path(db_pacientes.RUTA_DB)
+    # Capa base (cBioPortal, intocable) + capa de trabajo con el escenario: ver docs/datos.md.
+    if not capas.es_trabajo_de_escenario(capas.RutasTrabajo.por_defecto()):
+        print("  Preparando las capas de datos (python -m datos preparar)...", flush=True)
+        if preparar_capas(sin_red=sin_red, aviso=lambda t: print(f"  {t}", flush=True)) != 0:
+            raise SystemExit("No se pudieron preparar las capas de datos.")
     conn_exp = conectar_expediente(ruta_exp)
     conn_pac = db_pacientes.conectar(ruta_pac)
     db_pacientes.inicializar(conn_pac)
@@ -275,15 +286,17 @@ def seccion_pacientes(ctx: Contexto) -> None:
         cliente.get(f"/pacientes/{id_pac}", params={"oncologo_id": ONCOLOGO_ID, "usuario_id": USUARIO_ID})
         _mostrar_360(cliente.get(f"/pacientes/{id_pac}/resumen-360", params={"oncologo_id": ONCOLOGO_ID}).json())
 
-        r = cliente.get(f"/pacientes/{id_pac}", params={"oncologo_id": 2})
+        otro = next(o for o in ONCOLOGOS if o != ONCOLOGO_ID)
+        r = cliente.get(f"/pacientes/{id_pac}", params={"oncologo_id": otro})
         print(f"\n  Otro oncólogo pide este paciente -> {r.status_code} (solo ve sus propios pacientes)")
 
         if not ctx.sin_red:
             subtitulo("HC-01 — Detalle bajo demanda: abrir un paciente del índice que nunca se ha abierto")
             with contextlib.closing(sqlite3.connect(ctx.ruta_pacientes)) as c:
+                # Un paciente del índice de la dra. Gómez que no está en la cohorte precargada.
                 fila = c.execute(
-                    "SELECT id, nombre_completo FROM pacientes WHERE numero_identificacion = ?",
-                    (f"CBIO:{ESTUDIO}:P-0014135",)).fetchone()
+                    "SELECT p.id, p.nombre_completo FROM pacientes p LEFT JOIN estudios e ON e.paciente_id = p.id "
+                    "WHERE p.oncologo_id = ? AND p.tipo_identificacion = 'externo' AND e.id IS NULL ORDER BY p.id DESC LIMIT 1", (ONCOLOGO_ID,)).fetchone()
             inicio = time.monotonic()
             r360 = cliente.get(f"/pacientes/{fila[0]}/resumen-360", params={"oncologo_id": ONCOLOGO_ID}).json()
             print(f"  {fila[1]}: detalle traído de cBioPortal en {time.monotonic() - inicio:.1f} s")
