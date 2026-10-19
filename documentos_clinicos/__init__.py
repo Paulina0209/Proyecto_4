@@ -53,6 +53,17 @@ concretos y traducen su salida al modelo genérico:
       `expediente` (consultas, laboratorios, imagenología,
       biomarcadores, comorbilidades).
 
+### NFR-03 — Accesibilidad de la exportación
+
+El PDF (`pdf_export.py`) declara idioma, muestra su título, tiene marcadores
+por sección, cumple el contraste WCAG 2.1 AA y usa letra legible; no puede ser
+un PDF etiquetado (límite de reportlab). Por eso `html_export.py` ofrece el
+mismo contenido, desde el mismo `DocumentoExportable`, como HTML con estructura
+real (encabezados, tablas con título y `scope`, regiones, modo oscuro, reflujo).
+Ver `docs/accesibilidad.md` y `accesibilidad.pdf.auditar_pdf`.
+
+    - :func:`html_export.exportar_a_html` / :func:`html_export.renderizar_html`
+
 Componentes públicos:
     - :class:`carga_documentos.DocumentoClinicoCargado`
     - :func:`carga_documentos.cargar_documento_clinico`
@@ -63,6 +74,8 @@ Componentes públicos:
       :class:`pdf_export.BloqueTexto`, :class:`pdf_export.BloqueTabla`
     - :class:`pdf_export.ResultadoExportacionPDF`
     - :func:`pdf_export.exportar_a_pdf`
+    - :func:`html_export.exportar_a_html`, :func:`html_export.renderizar_html`,
+      :class:`html_export.ResultadoExportacionHTML`
     - :func:`adaptadores.resumen_caso_a_documento_exportable`
     - :func:`adaptadores.expediente_completo_a_documento_exportable`
 """
@@ -86,6 +99,11 @@ from documentos_clinicos.pdf_export import (
     SeccionDocumento,
     exportar_a_pdf,
 )
+from documentos_clinicos.html_export import (
+    ResultadoExportacionHTML,
+    exportar_a_html,
+    renderizar_html,
+)
 from documentos_clinicos.adaptadores import (
     expediente_completo_a_documento_exportable,
     resumen_caso_a_documento_exportable,
@@ -107,6 +125,9 @@ __all__ = [
     "DocumentoInsuficienteError",
     "ResultadoExportacionPDF",
     "exportar_a_pdf",
+    "ResultadoExportacionHTML",
+    "exportar_a_html",
+    "renderizar_html",
     "resumen_caso_a_documento_exportable",
     "expediente_completo_a_documento_exportable",
 ]

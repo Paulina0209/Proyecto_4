@@ -33,6 +33,33 @@
 
 ### Añadido
 
+- **Interfaz web clínica** (`frontend/`): blanca y azul, sobria, sin paso de compilación (HTML + CSS + módulos ES que sirve FastAPI):
+  - pantallas: acceso, lista de pacientes con filtros, expediente (resumen, laboratorios con alertas y tendencia, imágenes del PACS con visor, biomarcadores, historia clínica), exportación DOC-02 y, para la dirección médica, el tablero ADM-02 en la misma navegación; tema automático/claro/oscuro;
+  - pasarela `frontend/servidor.py`: sesión SEC-01 en el servidor (cookie `__Host-`, `HttpOnly`, `Secure`, `SameSite=Strict`), `patients.api` montada **sin cambios** detrás de permisos por rol, identidad tomada de la sesión (se descartan `oncologo_id`/`usuario_id` del navegador y `revisada_por` se fija con el usuario autenticado), lista cerrada de rutas, defensa CSRF, CSP estricta sin `unsafe-inline`, solo HTTPS;
+  - **solo el rol `oncologo` ve expedientes**: enfermería y auditoría tienen `ver_expediente` en SEC-01 pero aún no hay asignación de pacientes por persona, así que se les niega con una explicación (no se adivina);
+  - modo demostración con datos sintéticos creados con las mismas funciones del sistema: `python -m frontend.demo`;
+  - `tests/frontend/` (135 pruebas): sesiones, pasarela, estáticos y Chromium real con axe-core en cada pantalla (claro, oscuro, 320 px, teclado);
+  - **no hay prueba con lectores de pantalla ni con personas usuarias**, el PDF sigue sin etiquetar y las sesiones viven en memoria del proceso; ver `docs/frontend.md`.
+  - Al probarla apareció un fallo latente de `patients/api.py::get_conn` (conexión SQLite abierta en un hilo y usada en otro con peticiones paralelas); la pasarela lo evita sin tocar `patients/`. Arreglo de raíz: `check_same_thread=False`.
+- **`accesibilidad/navegador.py`**: nueva `auditar_pagina_abierta(page, ...)` (audita el estado actual de una página ya abierta, para aplicaciones de una sola página con sesión) y `Navegador.pagina(..., ignorar_errores_https=True)` para servidores de prueba locales. Dos correcciones a la compuerta descubiertas con la interfaz: con una CSP estricta la prueba de espaciado (1.4.12) inyectaba un `<style>` que el navegador rechazaba y «pasaba» sin aplicarse (ahora usa una hoja construida por script y avisa si no pudo aplicarla), y axe-core se carga con `evaluate` en vez de `add_script_tag`; los campos de fecha nativos ya no se reportan como «sin foco visible» en la parada del botón del calendario.
+
+- **NFR-03 — Accesibilidad (WCAG 2.1 AA)** (`accesibilidad/`, `documentos_clinicos/html_export.py`):
+  - cuando se hizo esta historia el proyecto no tenía frontend propio (ahora existe `frontend/`, que pasa por la misma compuerta): se construyó una compuerta reutilizable y se aplicó a lo que existía. `contraste.py` (razones WCAG), `auditoria_html.py` (auditor estático de HTML/CSS y contraste de tokens en claro, oscuro del sistema y oscuro manual), `pdf.py` (`auditar_pdf`: título, idioma, marcadores, texto real, contraste contra el fondo real, tamaño, etiquetado) y `navegador.py` (Chromium opcional: contraste calculado, reflujo a 320 px, espaciado, teclado, axe-core);
+  - `python -m accesibilidad html|pdf|sistema [--navegador]`, con código de salida 1 si hay errores;
+  - **tablero ADM-02 corregido**: texto atenuado de 3.4:1 a 5.1:1, bordes y segmentos con contraste no textual, tablas con título, una parada de tabulación por gráfico con flechas, tooltip descartable (`Esc`) y alcanzable, «No disponible» legible por lector de pantalla, reflujo a 320 px, salto al contenido, foco visible, controles de 40 px;
+  - `GET /metricas/panel` responde con una página HTML que explica el error (y deja corregirlo) cuando el periodo no es válido; `GET /metricas` sigue devolviendo JSON;
+  - **DOC-02**: el PDF declara idioma y título visible, tiene marcadores por sección, contraste corregido (pie de 4.48:1 a 7:1) y letra más grande; no puede ser PDF etiquetado (reportlab) y se informa como aviso. Nueva alternativa accesible `exportar_a_html` / `renderizar_html` desde el mismo `DocumentoExportable`;
+  - **no hay prueba con lectores de pantalla ni con personas usuarias**: el protocolo manual y la declaración de conformidad (honesta) están en el doc; Swagger UI y OHIF son de terceros y no se auditan.
+  - Ver `docs/accesibilidad.md`.
+- **ADM-02 — Tablero de métricas de uso** (`administracion/metricas_uso.py`, `panel_metricas.py`):
+  - adopción (usuarios clínicos activos, pacientes atendidos, uso de funciones de IA), tiempo ahorrado, alertas generadas y aceptación de las recomendaciones de IA, siempre comparados con el periodo anterior y con serie semanal;
+  - solo agregados institucionales: ninguna estructura de salida ni función admite datos o filtros por persona; la aceptación se muestra como distribución con su nota de interpretación y se suprime con menos de 30 decisiones o 5 médicos (también el desglose por rol en grupos pequeños);
+  - un dato no disponible es `null`/"—", nunca cero; el tiempo ahorrado es una estimación en rango con supuestos a la vista (`coeficientes_tiempo.yaml`, sin medir: calibrar con un estudio propio);
+  - ver el tablero no cuenta como uso del sistema; las bases clínicas se leen en solo-lectura;
+  - solo el nuevo rol `director_medico` (`Accion.VER_METRICAS_USO`); cada consulta y cada intento denegado queda en AUD-01 (`TipoAccion.CONSULTAR_METRICAS`), y sin traza no se entregan datos;
+  - `GET /metricas` (JSON) y `GET /metricas/panel` (HTML autocontenido: SVG propio, claro/oscuro, tabla equivalente por gráfico, sin recursos externos) en `administracion.api`.
+  - Cambios aditivos en `seguridad/` (`Rol.DIRECTOR_MEDICO`, `Accion.VER_METRICAS_USO`) y `auditoria/` (`TipoAccion.CONSULTAR_METRICAS`).
+  - Ver `docs/administracion_metricas.md`; demo con datos sintéticos: `python -m administracion.demo_metricas [--pequeno]`.
 - **ADM-01 — Gestión de usuarios, roles y permisos** (`administracion/`):
   - alta, consulta, listado con filtros, edición, cambio de rol, baja lógica (desactivar/reactivar) y restablecimiento de contraseña;
   - solo el nuevo rol `administrador` (`Accion.GESTIONAR_USUARIOS`); el actor se relee de la base en cada operación;

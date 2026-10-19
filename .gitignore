@@ -46,3 +46,6 @@ patients/db/pacientes.db
 build/
 dist/
 *.egg-info/
+
+# Datos sinteticos de la demo de la interfaz web (python -m frontend.demo)
+salida_demo_frontend/

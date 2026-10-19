@@ -1,0 +1,41 @@
+# ADM-02 — Supuestos del cálculo de "tiempo ahorrado estimado".
+#
+# IMPORTANTE: estos valores NO están medidos. Son supuestos de partida,
+# deliberadamente conservadores y expresados como RANGO, para que el tablero
+# nunca presente una cifra puntual como si fuera un hecho. Cada institución
+# debe sustituirlos por los de su propio estudio de tiempos (por ejemplo,
+# cronometrar 20 notas hechas a mano frente a 20 con borrador de IA).
+#
+# Para usar los valores propios sin tocar este archivo, apunta
+# COPILOTO_COEFICIENTES_TIEMPO a un YAML con la misma estructura.
+#
+# Significado: cada vez que ocurre el evento, se supone que el personal se ahorró
+# entre minutos_min y minutos_max minutos de trabajo manual.
+#
+# Se cuentan solo eventos que el sistema registró de verdad; cuántos minutos
+# vale cada uno es el supuesto. Esto no mide el tiempo clínico con el paciente.
+
+coeficientes:
+  notas_ia_aprobadas:
+    descripcion: "Notas clínicas con borrador de IA revisadas y aprobadas por el médico"
+    minutos_min: 5
+    minutos_max: 12
+    origen: "Supuesto por defecto (sin medir): redactar desde cero frente a revisar un borrador."
+
+  sincronizaciones_exitosas:
+    descripcion: "Sincronizaciones exitosas con sistemas externos (transcripción manual evitada)"
+    minutos_min: 3
+    minutos_max: 10
+    origen: "Supuesto por defecto (sin medir): captura manual de resultados externos."
+
+  decisiones_tratamiento:
+    descripcion: "Decisiones de tratamiento registradas con recomendación del sistema a la vista"
+    minutos_min: 2
+    minutos_max: 8
+    origen: "Supuesto por defecto (sin medir): búsqueda y cotejo de guías clínicas."
+
+  estadificaciones_con_sugerencia:
+    descripcion: "Estadificaciones confirmadas con una sugerencia del sistema disponible"
+    minutos_min: 2
+    minutos_max: 6
+    origen: "Supuesto por defecto (sin medir): cálculo manual del estadio a partir de T, N y M."

@@ -31,6 +31,7 @@ class Accion(str, Enum):
     GESTIONAR_USUARIOS = "gestionar_usuarios"  # ADM-01
     REGISTRAR_CONSENTIMIENTO_IA = "registrar_consentimiento_ia"  # SEC-03
     CONFIGURAR_POLITICA_DATOS = "configurar_politica_datos"  # NFR-06 / NFR-04
+    VER_METRICAS_USO = "ver_metricas_uso"  # ADM-02
 
 
 PERMISOS_POR_ROL: dict[Accion, frozenset[Rol]] = {
@@ -45,6 +46,8 @@ PERMISOS_POR_ROL: dict[Accion, frozenset[Rol]] = {
     # Lo recibe quien atiende al paciente o lo admite; el auditor solo lo consulta.
     Accion.REGISTRAR_CONSENTIMIENTO_IA: frozenset({Rol.ONCOLOGO, Rol.ENFERMERIA, Rol.ADMINISTRATIVO}),
     Accion.CONFIGURAR_POLITICA_DATOS: frozenset({Rol.ADMINISTRADOR_CLINICO}),
+    # Métricas agregadas de la institución (nunca por médico): las ve la dirección médica.
+    Accion.VER_METRICAS_USO: frozenset({Rol.DIRECTOR_MEDICO}),
 }
 
 

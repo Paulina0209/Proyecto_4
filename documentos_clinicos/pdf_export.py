@@ -13,6 +13,16 @@ cubre esta historia.
 
 Usa `reportlab` (biblioteca pura de Python, sin dependencias de sistema)
 para el PDF en sí.
+
+**Accesibilidad (NFR-03, WCAG 2.1 AA).** El PDF declara su idioma y muestra su
+título en la barra de la ventana, tiene marcadores (un índice navegable por
+sección), todo el texto es texto real (no imágenes), los colores cumplen el
+contraste (``PARES_DE_COLOR``, verificado en las pruebas) y los tamaños son
+legibles (cuerpo 11 pt, nada por debajo de 9 pt). **Limitación conocida:**
+reportlab no genera PDF etiquetado (sin árbol de estructura), así que un lector
+de pantalla debe adivinar el orden de lectura; la alternativa accesible del mismo
+contenido es ``html_export.exportar_a_html`` (encabezados, tablas y regiones
+reales). ``accesibilidad.pdf.auditar_pdf`` informa esta limitación como aviso.
 """
 
 from __future__ import annotations
@@ -121,6 +131,38 @@ class ResultadoExportacionPDF:
 
 _MARGEN = 2 * cm
 
+#: Colores del documento. Todo par (texto, fondo) está en ``PARES_DE_COLOR`` y una prueba exige 4.5:1
+#: (3:1 para lo que no es texto, WCAG 1.4.3 y 1.4.11).
+COLOR_TEXTO = "#000000"
+COLOR_SUBTITULO = "#555555"
+COLOR_TITULO_SECCION = "#1a3a5c"
+COLOR_ENCABEZADO_TABLA = "#1a3a5c"
+COLOR_FILA_ALTERNA = "#f0f3f7"
+COLOR_REJILLA = "#858585"
+COLOR_FONDO_DISCLAIMER = "#fff6e0"
+COLOR_TEXTO_DISCLAIMER = "#7a5b00"
+COLOR_BORDE_DISCLAIMER = "#8a6d00"
+COLOR_ADVERTENCIA = "#8a1f11"
+COLOR_PIE = "#595959"
+
+#: (frente, fondo, tipo) con tipo "texto" o "grafico".
+PARES_DE_COLOR = (
+    (COLOR_TEXTO, "#ffffff", "texto"),
+    (COLOR_TEXTO, COLOR_FILA_ALTERNA, "texto"),
+    (COLOR_SUBTITULO, "#ffffff", "texto"),
+    (COLOR_TITULO_SECCION, "#ffffff", "texto"),
+    ("#ffffff", COLOR_ENCABEZADO_TABLA, "texto"),
+    (COLOR_TEXTO_DISCLAIMER, COLOR_FONDO_DISCLAIMER, "texto"),
+    (COLOR_ADVERTENCIA, "#ffffff", "texto"),
+    (COLOR_PIE, "#ffffff", "texto"),
+    (COLOR_REJILLA, "#ffffff", "grafico"),
+    (COLOR_REJILLA, COLOR_FILA_ALTERNA, "grafico"),
+    (COLOR_BORDE_DISCLAIMER, COLOR_FONDO_DISCLAIMER, "grafico"),
+)
+
+#: Idioma del documento (PDF /Lang): los lectores de pantalla eligen la voz con él.
+IDIOMA = "es-MX"
+
 
 def _construir_estilos():
     estilos = getSampleStyleSheet()
@@ -128,8 +170,9 @@ def _construir_estilos():
         ParagraphStyle(
             "SubtituloDocumento",
             parent=estilos["Normal"],
-            fontSize=9,
-            textColor=colors.HexColor("#555555"),
+            fontSize=10,
+            leading=13,
+            textColor=colors.HexColor(COLOR_SUBTITULO),
             spaceAfter=10,
         )
     )
@@ -137,8 +180,8 @@ def _construir_estilos():
         ParagraphStyle(
             "TituloSeccion",
             parent=estilos["Heading2"],
-            fontSize=13,
-            textColor=colors.HexColor("#1a3a5c"),
+            fontSize=14,
+            textColor=colors.HexColor(COLOR_TITULO_SECCION),
             spaceBefore=14,
             spaceAfter=6,
         )
@@ -147,25 +190,25 @@ def _construir_estilos():
         ParagraphStyle(
             "ContenidoSeccion",
             parent=estilos["BodyText"],
-            fontSize=10,
-            leading=14,
+            fontSize=11,
+            leading=15,
         )
     )
     estilos.add(
         ParagraphStyle(
             "TextoDisclaimer",
             parent=estilos["BodyText"],
-            fontSize=9,
-            leading=12,
-            textColor=colors.HexColor("#7a5b00"),
+            fontSize=10.5,
+            leading=14,
+            textColor=colors.HexColor(COLOR_TEXTO_DISCLAIMER),
         )
     )
     estilos.add(
         ParagraphStyle(
             "TituloAdvertencias",
             parent=estilos["Heading3"],
-            fontSize=11,
-            textColor=colors.HexColor("#8a1f11"),
+            fontSize=12,
+            textColor=colors.HexColor(COLOR_ADVERTENCIA),
             spaceBefore=14,
             spaceAfter=4,
         )
@@ -174,9 +217,9 @@ def _construir_estilos():
         ParagraphStyle(
             "TextoAdvertencia",
             parent=estilos["BodyText"],
-            fontSize=9,
-            leading=12,
-            textColor=colors.HexColor("#8a1f11"),
+            fontSize=10.5,
+            leading=14,
+            textColor=colors.HexColor(COLOR_ADVERTENCIA),
         )
     )
     return estilos
@@ -185,8 +228,8 @@ def _construir_estilos():
 def _tabla_encabezado_y_pie(canvas, doc, documento: DocumentoExportable) -> None:
     canvas.saveState()
     ancho, alto = doc.pagesize
-    canvas.setFont("Helvetica", 8)
-    canvas.setFillColor(colors.HexColor("#777777"))
+    canvas.setFont("Helvetica", 9)
+    canvas.setFillColor(colors.HexColor(COLOR_PIE))
     pie = (
         f"Documento generado automáticamente — {documento.paciente_ref} — "
         f"{documento.generado_en.strftime('%Y-%m-%d %H:%M')}"
@@ -194,6 +237,26 @@ def _tabla_encabezado_y_pie(canvas, doc, documento: DocumentoExportable) -> None
     canvas.drawString(_MARGEN, 1.2 * cm, pie)
     canvas.drawRightString(ancho - _MARGEN, 1.2 * cm, f"Página {doc.page}")
     canvas.restoreState()
+
+
+class _Encabezado(Paragraph):
+    """Párrafo que además registra un marcador (entrada del índice del PDF) cuando se dibuja."""
+
+    def __init__(self, texto: str, estilo, nivel: int, titulo_plano: str) -> None:
+        super().__init__(texto, estilo)
+        self.nivel_marcador = nivel
+        self.titulo_plano = titulo_plano
+
+
+class _Documento(BaseDocTemplate):
+    """``BaseDocTemplate`` que convierte los ``_Encabezado`` en marcadores (WCAG 2.4.1 / 2.4.5 en PDF)."""
+
+    def afterFlowable(self, flowable) -> None:  # noqa: N802 (nombre fijado por reportlab)
+        if isinstance(flowable, _Encabezado):
+            self._n_marcadores = getattr(self, "_n_marcadores", 0) + 1
+            clave = f"encabezado-{self._n_marcadores}"
+            self.canv.bookmarkPage(clave)
+            self.canv.addOutlineEntry(flowable.titulo_plano, clave, level=flowable.nivel_marcador, closed=0)
 
 
 def _bloque_a_flowable(bloque: Bloque, estilos):
@@ -208,12 +271,14 @@ def _bloque_a_flowable(bloque: Bloque, estilos):
         tabla.setStyle(
             TableStyle(
                 [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a3a5c")),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(COLOR_ENCABEZADO_TABLA)),
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("TEXTCOLOR", (0, 1), (-1, -1), colors.HexColor(COLOR_TEXTO)),
                     ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 8.5),
-                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f3f7")]),
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#c9c9c9")),
+                    ("FONTSIZE", (0, 0), (-1, -1), 10),
+                    ("LEADING", (0, 0), (-1, -1), 13),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor(COLOR_FILA_ALTERNA)]),
+                    ("GRID", (0, 0), (-1, -1), 0.75, colors.HexColor(COLOR_REJILLA)),
                     ("VALIGN", (0, 0), (-1, -1), "TOP"),
                     ("LEFTPADDING", (0, 0), (-1, -1), 5),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 5),
@@ -244,10 +309,14 @@ def exportar_a_pdf(documento: DocumentoExportable, ruta_destino: str) -> Resulta
     os.makedirs(os.path.dirname(os.path.abspath(ruta_destino)), exist_ok=True)
     estilos = _construir_estilos()
 
-    doc = BaseDocTemplate(
+    doc = _Documento(
         ruta_destino,
         pagesize=LETTER,
         title=documento.titulo,
+        subject=f"Documento clínico de {documento.paciente_ref}",
+        creator="Copiloto oncológico (DOC-02)",
+        lang=IDIOMA,
+        displayDocTitle=1,
         leftMargin=_MARGEN,
         rightMargin=_MARGEN,
         topMargin=_MARGEN,
@@ -268,7 +337,7 @@ def exportar_a_pdf(documento: DocumentoExportable, ruta_destino: str) -> Resulta
     doc.addPageTemplates([plantilla])
 
     historia = []
-    historia.append(Paragraph(escape(documento.titulo), estilos["Title"]))
+    historia.append(_Encabezado(escape(documento.titulo), estilos["Title"], 0, documento.titulo))
     historia.append(
         Paragraph(
             f"Paciente: {escape(documento.paciente_ref)} &nbsp;|&nbsp; "
@@ -285,8 +354,8 @@ def exportar_a_pdf(documento: DocumentoExportable, ruta_destino: str) -> Resulta
         tabla_disclaimer.setStyle(
             TableStyle(
                 [
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fff6e0")),
-                    ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor("#e0c25a")),
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(COLOR_FONDO_DISCLAIMER)),
+                    ("BOX", (0, 0), (-1, -1), 1, colors.HexColor(COLOR_BORDE_DISCLAIMER)),
                     ("LEFTPADDING", (0, 0), (-1, -1), 8),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 8),
                     ("TOPPADDING", (0, 0), (-1, -1), 6),
@@ -300,13 +369,13 @@ def exportar_a_pdf(documento: DocumentoExportable, ruta_destino: str) -> Resulta
     for seccion in documento.secciones:
         if not seccion.tiene_contenido():
             continue
-        historia.append(Paragraph(escape(seccion.titulo), estilos["TituloSeccion"]))
+        historia.append(_Encabezado(escape(seccion.titulo), estilos["TituloSeccion"], 1, seccion.titulo))
         for bloque in seccion.bloques:
             historia.append(_bloque_a_flowable(bloque, estilos))
             historia.append(Spacer(1, 4))
 
     if documento.advertencias:
-        historia.append(Paragraph("Avisos de generación", estilos["TituloAdvertencias"]))
+        historia.append(_Encabezado("Avisos de generación", estilos["TituloAdvertencias"], 1, "Avisos de generación"))
         for advertencia in documento.advertencias:
             historia.append(Paragraph(f"• {escape(advertencia)}", estilos["TextoAdvertencia"]))
 
