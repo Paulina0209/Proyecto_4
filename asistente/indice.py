@@ -70,9 +70,7 @@ class IndiceVectorial:
         import chromadb
 
         if cliente is None:
-            carpeta = config.carpeta_vectorial()
-            carpeta.mkdir(parents=True, exist_ok=True)
-            cliente = chromadb.PersistentClient(path=str(carpeta))
+            cliente = _abrir_o_reconstruir(config.carpeta_vectorial())
         self._cliente = cliente
         self._embeddings = embeddings or EmbeddingsOpenAI()
         self._coleccion = cliente.get_or_create_collection(COLECCION, metadata={"hnsw:space": "cosine"})
@@ -150,6 +148,34 @@ class IndiceVectorial:
         if paciente_id is None:
             return self._coleccion.count()
         return len(self._coleccion.get(where={"paciente_id": int(paciente_id)}).get("ids") or [])
+
+
+def _abrir_o_reconstruir(carpeta):
+    """Abre el índice; si está dañado (p. ej. binarios HNSW incompletos), lo aparta y empieza uno nuevo.
+    Es un derivado de las bases: se vuelve a llenar solo al preguntar o con ``python -m asistente indexar``."""
+    import logging
+    import time
+
+    import chromadb
+
+    carpeta.mkdir(parents=True, exist_ok=True)
+    cliente = chromadb.PersistentClient(path=str(carpeta))
+    try:
+        for nombre in (COLECCION, f"{COLECCION}_huellas"):
+            cliente.get_or_create_collection(nombre).count()
+        return cliente
+    except Exception as exc:  # noqa: BLE001 - chromadb.errors.InternalError y similares
+        logging.getLogger(__name__).warning("Índice vectorial dañado (%s): se aparta y se reconstruye.", exc)
+        cliente.clear_system_cache()
+        apartado = carpeta.with_name(f"{carpeta.name}_danado_{time.strftime('%Y%m%d_%H%M%S')}")
+        try:
+            carpeta.rename(apartado)
+        except OSError:
+            import shutil
+
+            shutil.rmtree(carpeta, ignore_errors=True)
+        carpeta.mkdir(parents=True, exist_ok=True)
+        return chromadb.PersistentClient(path=str(carpeta))
 
 
 _INDICE: Optional[IndiceVectorial] = None

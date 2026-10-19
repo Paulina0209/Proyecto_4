@@ -188,13 +188,13 @@ main:has(.chat-app){max-width:none;padding:1rem 1rem 1.5rem}
 .conversaciones a[aria-current="page"]{background:var(--suave);border-left-color:var(--primario)}
 .conversaciones small{display:block;color:var(--muted)}
 .conversaciones .btn{width:100%}
-.chat-centro{display:flex;flex-direction:column;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:.85rem;padding:1rem;box-shadow:0 1px 3px var(--sombra)}
+.chat-centro{display:flex;flex-direction:column;min-width:0;height:calc(100vh - 6rem);position:sticky;top:4.5rem;background:var(--surface);border:1px solid var(--line);border-radius:.85rem;padding:1rem;box-shadow:0 1px 3px var(--sombra)}
 .chat-cabecera{display:flex;flex-wrap:wrap;gap:.75rem 1rem;justify-content:space-between;align-items:flex-start;margin:0 0 .75rem}
 .chat-cabecera h1{font-size:1.35rem}
 .buscador-paciente{position:relative;min-width:min(100%,18rem)}
 .resultados-paciente{position:absolute;z-index:5;left:0;right:0;list-style:none;margin:.25rem 0 0;padding:.4rem;background:var(--surface);border:1px solid var(--borde);border-radius:.5rem;box-shadow:0 4px 12px var(--sombra-fuerte)}
 .resultados-paciente li{margin:0 0 .25rem}.resultados-paciente .btn{width:100%;justify-content:flex-start}
-.chat-principal{flex:1;max-height:none;min-height:24rem;height:calc(100vh - 19rem);margin:0 0 .5rem}
+.chat-principal{flex:1 1 0;max-height:none;min-height:0;margin:0 0 .5rem}
 .bienvenida{margin:auto;max-width:36rem;text-align:center;padding:2rem 1rem}
 .bienvenida .sugerencias{justify-content:center}
 .entrada-chat{display:flex;gap:.5rem;align-items:flex-end}
@@ -222,7 +222,7 @@ details>summary{cursor:pointer;font-weight:650;min-height:2.5rem;display:flex;al
 pre.texto{white-space:pre-wrap;font:inherit;margin:0}
 
 @media (max-width:80rem){.chat-app{grid-template-columns:minmax(0,1fr) minmax(18rem,26rem)}.conversaciones{grid-column:1/-1;position:static;max-height:none}}
-@media (max-width:56rem){.espacio{grid-template-columns:1fr}.secciones{position:static}.chat-app{grid-template-columns:1fr}.panel-hc{position:static;max-height:none}.chat-principal{height:auto;max-height:32rem}}
+@media (max-width:56rem){.espacio{grid-template-columns:1fr}.secciones{position:static}.chat-app{grid-template-columns:1fr}.panel-hc{position:static;max-height:none}.chat-centro{position:static;height:auto}.chat-principal{flex:none;height:28rem}}
 @media (max-width:40rem){main{padding:1rem .75rem 2.5rem}.dato{grid-template-columns:1fr}.dato dt{margin-top:.5rem}h1{font-size:1.4rem}.burbuja{max-width:100%}}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 @media print{.cabecera,.aviso-demo,.secciones,.acciones,.saltar{display:none}body{background:#fff;color:#000}.tarjeta{box-shadow:none;border-color:#000}.espacio{display:block}}

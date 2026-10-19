@@ -4,7 +4,8 @@
     OPENAI_MODEL                modelo de OpenAI que redacta (core.llm_config, por defecto gpt-6-luna)
     OLLAMA_URL / OLLAMA_MODEL   servidor y modelo local (por defecto http://localhost:11434, llama3.1:8b)
     OPENAI_EMBEDDING_MODEL      modelo de embeddings (por defecto text-embedding-3-small)
-    COPILOTO_VECTORIAL_DIR      carpeta de ChromaDB (por defecto data/vectorial)
+    COPILOTO_VECTORIAL_DIR      carpeta de ChromaDB (por defecto %LOCALAPPDATA%/copiloto_clinico/vectorial,
+                                fuera de carpetas sincronizadas como OneDrive, que dañan los binarios del índice)
     COPILOTO_UMBRAL_SIMILITUD   similitud coseno mínima para aceptar un fragmento (por defecto 0.30)
     COPILOTO_CONVERSACIONES_DB  historial de conversaciones (por defecto data/conversaciones.db)
     COPILOTO_LLM_TIMEOUT        segundos que se le dan al modelo (por defecto 8, NFR-01)
@@ -46,8 +47,13 @@ def modelo_embeddings() -> str:
 
 
 def carpeta_vectorial() -> Path:
+    """El índice es un derivado (se reconstruye con ``python -m asistente indexar``), así que vive fuera del
+    proyecto: OneDrive y similares sincronizan sus binarios a medio escribir y lo dañan."""
     _cargar_env()
-    return Path(os.environ.get("COPILOTO_VECTORIAL_DIR") or RAIZ / "data" / "vectorial")
+    if os.environ.get("COPILOTO_VECTORIAL_DIR"):
+        return Path(os.environ["COPILOTO_VECTORIAL_DIR"])
+    base = os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    return Path(base) / "copiloto_clinico" / "vectorial"
 
 
 def umbral_similitud() -> float:

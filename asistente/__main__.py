@@ -45,14 +45,22 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     try:
         pacientes = [args.paciente] if args.paciente else [pid for pid, _ in cohorte_con_detalle(conn)]
         indexados = omitidos = 0
+        fallidos = []
         for pid in pacientes:
-            r = indexar_paciente(conn, pid, idx)
+            try:
+                r = indexar_paciente(conn, pid, idx)
+            except Exception as exc:  # noqa: BLE001 - un corte de red no detiene el resto; se reintenta en la próxima corrida
+                fallidos.append(f"{pid} ({type(exc).__name__})")
+                continue
             if r is None:
                 omitidos += 1
             else:
                 indexados += 1
         print(f"Pacientes: {indexados} al día, {omitidos} sin consentimiento (fuera del índice). "
               f"{idx.cuantos()} fragmentos en total, {time.monotonic() - inicio:.0f} s.")
+        if fallidos:
+            print(f"No se pudieron indexar (vuelve a correr el comando): {', '.join(fallidos)}")
+            return 1
     finally:
         conn.close()
     return 0

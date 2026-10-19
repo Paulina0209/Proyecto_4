@@ -1,7 +1,7 @@
 /* El asistente: la forma principal de trabajar. Conversaciones a la izquierda, el chat al centro y la historia
    clínica del paciente a la derecha. Mientras el asistente trabaja se ve cada paso (entender, buscar, evaluar,
    redactar); al responder, los registros que usó se resaltan en la historia clínica. */
-import { h, anunciar, idUnico } from "./dom.js";
+import { h, anunciar, idUnico, reemplazar } from "./dom.js";
 import { api, apiFlujo } from "./api.js";
 import { edad, fecha } from "./formato.js";
 import { cargando, insignia, mensaje, vacio } from "./ui.js";
@@ -53,7 +53,14 @@ export async function vistaChat(ctx) {
       if (seccion) seccion.open = true;
       primero = primero || nodo;
     }
-    if (primero && desplazar) { primero.scrollIntoView({ block: "center", behavior: "smooth" }); primero.focus({ preventScroll: true }); }
+    if (primero && desplazar) {
+      // Solo se desplaza el panel (scrollIntoView movería toda la página y el chat se saldría de la vista).
+      if (panel.scrollHeight > panel.clientHeight) {
+        const arriba = primero.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop;
+        panel.scrollTo({ top: Math.max(0, arriba - panel.clientHeight / 3), behavior: "smooth" });
+      } else primero.scrollIntoView({ block: "center", behavior: "smooth" });
+      primero.focus({ preventScroll: true });
+    }
     anunciar(marcados.size ? `${marcados.size} ${marcados.size === 1 ? "fuente resaltada" : "fuentes resaltadas"} en la historia clínica.` : "Esa fuente no está en la historia clínica abierta.");
   }
 
@@ -71,7 +78,7 @@ export async function vistaChat(ctx) {
     }
     const c = estado.hc.consentimiento;
     const a = edad(p.fecha_nacimiento);
-    panel.replaceChildren(
+    panel.replaceChildren(...[
       h("div", { class: "panel-cabecera" },
         h("h2", {}, p.nombre),
         h("p", { class: "tenue" }, [a === null ? null : `${a} años`, p.identificacion].filter(Boolean).join(" · ")),
@@ -90,7 +97,7 @@ export async function vistaChat(ctx) {
         }
         return h("details", { class: "seccion-hc", open: clave === "ficha" || items.some((x) => marcados.has(x.id)) },
           h("summary", {}, `${titulo} (${items.length})`), lista);
-      }));
+      })].filter(Boolean));   // replaceChildren (a diferencia de h) escribiría "null"
   }
 
   async function abrirPaciente(id) {
@@ -151,7 +158,7 @@ export async function vistaChat(ctx) {
   function pintarRespuesta(contenedor, r, pasos) {
     const fuentes = r.fuentes || [];
     const alCitar = (ids) => resaltar(ids);
-    contenedor.replaceChildren(
+    reemplazar(contenedor,
       h("span", { class: "autor" }, "Copiloto", r.modelo ? h("small", {}, ` · ${r.modelo}`) : null),
       ESTADO_RESPUESTA[r.estado] ? insignia(ESTADO_RESPUESTA[r.estado]) : null,
       textoConCitas(r.respuesta, alCitar),
@@ -172,6 +179,8 @@ export async function vistaChat(ctx) {
     if (!texto || estado.ocupado) return;
     estado.ocupado = true;
     ultimaPregunta = texto;
+    const bienvenida = hilo.querySelector(".bienvenida");
+    if (bienvenida) bienvenida.remove();
     botonEnviar.disabled = true;
     hilo.append(burbujaMedico(texto));
     const progreso = h("ol", { class: "progreso" });
