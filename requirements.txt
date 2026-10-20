@@ -41,3 +41,7 @@ uvicorn>=0.30
 #   pypdf>=4.0               # accesibilidad/pdf.py (NFR-03): auditar un PDF; sin él esas pruebas se omiten
 #                            # Para las pruebas de navegador de NFR-03 (se omiten si faltan): pip install playwright
 #                            # && playwright install chromium; axe-core opcional: npm install axe-core y AXE_CORE_JS
+
+# Asistente conversacional (asistente/): base vectorial y lectura de PDF
+chromadb>=1.0
+pypdf>=4.0

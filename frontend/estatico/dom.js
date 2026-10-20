@@ -33,6 +33,13 @@ export function svg(etiqueta, atributos, ...hijos) {
   return el;
 }
 
+/* Como replaceChildren, pero ignora null/undefined/false igual que h() (replaceChildren escribiría "null"). */
+export function reemplazar(el, ...hijos) {
+  vaciar(el);
+  agregar(el, hijos);
+  return el;
+}
+
 export function vaciar(el) {
   while (el.firstChild) el.removeChild(el.firstChild);
   return el;

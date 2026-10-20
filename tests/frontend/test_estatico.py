@@ -51,7 +51,7 @@ def test_la_pagina_base_cumple_la_csp_estricta_no_hay_nada_en_linea():
 
 # --- Colores -------------------------------------------------------------------------------------------
 
-#: Pares de color que la interfaz usa de verdad (ver ``app.css``); se evalúan en claro, oscuro del sistema y oscuro manual.
+#: Pares de color que la interfaz usa de verdad (ver ``app.css``), en su único esquema claro.
 PARES = [
     # texto, 4.5:1 (1.4.3)
     ParContraste("var(--ink)", "var(--page)", "texto", "texto principal sobre la página"),
@@ -91,21 +91,23 @@ PARES = [
     ParContraste("var(--aviso)", "var(--surface)", "grafico", "punto fuera de rango de la tendencia"),
     ParContraste("var(--crit)", "var(--surface)", "grafico", "borde de un campo con error"),
     ParContraste("var(--primario)", "var(--surface)", "grafico", "subrayado de la pestaña actual"),
+    # IA: borradores y respuestas del asistente
+    ParContraste("var(--ia)", "var(--ia-bg)", "texto", "insignia de contenido generado por IA"),
+    ParContraste("var(--ink)", "var(--ia-bg)", "texto", "mensaje de IA"),
+    ParContraste("var(--ia)", "var(--surface)", "grafico", "borde de tarjetas y burbujas de IA"),
+    ParContraste("var(--primario)", "var(--suave)", "grafico", "borde de la burbuja del médico"),
 ]
 
 
-def test_los_colores_cumplen_el_contraste_en_claro_oscuro_del_sistema_y_oscuro_manual():
-    assert set(esquemas_de_color(CSS)) == {"claro", "oscuro (sistema)", "oscuro (manual)"}
+def test_los_colores_cumplen_el_contraste_en_el_esquema_claro():
+    """La interfaz es solo clara (blancos y azules, contexto clínico): un único esquema, AA verificado."""
+    assert set(esquemas_de_color(CSS)) == {"claro"}
     assert verificar_pares(CSS, PARES) == []
 
 
-def test_el_oscuro_del_sistema_y_el_manual_son_la_misma_paleta():
-    esquemas = esquemas_de_color(CSS)
-    assert esquemas["oscuro (sistema)"] == esquemas["oscuro (manual)"]
-
-
-def test_el_tema_claro_forzado_gana_sobre_un_sistema_oscuro():
-    assert re.search(r':root:where\(:not\(\[data-theme="light"\]\)\)', CSS)
+def test_no_hay_tema_oscuro_ni_boton_de_tema():
+    assert "prefers-color-scheme:dark" not in CSS.replace(" ", "") and 'data-theme="dark"' not in CSS
+    assert "btn-tema" not in INDEX and 'content="light"' in INDEX
 
 
 def test_el_css_no_tiene_hallazgos_de_accesibilidad():

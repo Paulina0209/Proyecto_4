@@ -144,7 +144,7 @@ class TestAC1AdministradorGestionaUsuarios:
         matriz = adm.matriz_de_permisos(conn, admin)
         assert Accion.CONFIRMAR_TRATAMIENTO in matriz[Rol.ONCOLOGO]
         assert Accion.CONFIRMAR_TRATAMIENTO not in matriz[Rol.ENFERMERIA]
-        assert matriz[Rol.ADMINISTRADOR] == (Accion.GESTIONAR_USUARIOS,)  # sin acceso clínico
+        assert matriz[Rol.ADMINISTRADOR] == (Accion.GESTIONAR_USUARIOS, Accion.VER_ESTADO_SISTEMA)  # sin acceso clínico
 
     def test_el_administrador_de_sistema_no_tiene_acceso_clinico(self, admin):
         for accion in (Accion.VER_EXPEDIENTE, Accion.CONFIRMAR_TRATAMIENTO, Accion.EXPORTAR_EXPEDIENTE):

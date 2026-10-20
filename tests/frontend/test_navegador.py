@@ -232,9 +232,9 @@ def test_se_puede_iniciar_sesion_solo_con_teclado_y_el_foco_cae_en_el_titulo(nav
         page.keyboard.press("Tab")
         page.keyboard.type(CLAVE_DEMO)
         page.keyboard.press("Enter")
-        page.wait_for_selector("table")
-        assert page.evaluate("document.activeElement.tagName") == "H1" and page.evaluate("document.activeElement.textContent") == "Pacientes"
-        assert page.title().startswith("Pacientes — ")
+        page.wait_for_selector(".chat-app")                                # oncología entra al asistente
+        assert page.evaluate("document.activeElement.tagName") == "TEXTAREA"  # el foco queda en la pregunta, su acción principal
+        assert page.title().startswith("Asistente clínico — ")
 
 
 def test_el_salto_al_contenido_funciona_y_cada_pantalla_tiene_un_solo_h1_y_titulo_propio(nav, sitio):
@@ -317,14 +317,11 @@ def test_el_texto_clinico_se_muestra_como_texto_nunca_como_html(nav, sitio, plan
             conn.execute("UPDATE pacientes SET nombre_completo = ? WHERE id = 6", (original,))
 
 
-def test_con_el_tema_oscuro_manual_y_el_boton_de_tema_la_pagina_sigue_sin_hallazgos(nav, sitio):
-    with abierta(nav, sitio, "dra.rios", esquema="claro") as (page, _):
-        page.click("#btn-tema")                     # automático → claro
-        page.click("#btn-tema")                     # claro → oscuro
-        assert page.get_attribute("html", "data-theme") == "dark" and "oscuro" in page.inner_text("#btn-tema")
+def test_la_interfaz_es_siempre_clara_aunque_el_sistema_prefiera_oscuro(nav, sitio):
+    with abierta(nav, sitio, "dra.rios", esquema="oscuro") as (page, _):
+        assert page.locator("#btn-tema").count() == 0                        # ya no hay selector de tema: solo claro
         _ir(page, "#/pacientes/1")
-        hallazgos, _ = _auditar(page, "[tema oscuro manual]")
+        fondo = page.evaluate("getComputedStyle(document.body).backgroundColor")
+        assert fondo == "rgb(244, 248, 253)", fondo
+        hallazgos, _ = _auditar(page, "[sistema en oscuro]")
         assert not hallazgos, "\n".join(hallazgos)
-        page.reload()
-        page.wait_for_selector("#btn-salir:visible")
-        assert page.get_attribute("html", "data-theme") == "dark"            # se recordó la preferencia (solo ese dato en localStorage)

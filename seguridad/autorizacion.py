@@ -32,6 +32,8 @@ class Accion(str, Enum):
     REGISTRAR_CONSENTIMIENTO_IA = "registrar_consentimiento_ia"  # SEC-03
     CONFIGURAR_POLITICA_DATOS = "configurar_politica_datos"  # NFR-06 / NFR-04
     VER_METRICAS_USO = "ver_metricas_uso"  # ADM-02
+    VER_AUDITORIA = "ver_auditoria"  # AUD-01 / AUD-02 desde la interfaz
+    VER_ESTADO_SISTEMA = "ver_estado_sistema"  # NFR-01 / NFR-02 desde la interfaz
 
 
 PERMISOS_POR_ROL: dict[Accion, frozenset[Rol]] = {
@@ -48,6 +50,8 @@ PERMISOS_POR_ROL: dict[Accion, frozenset[Rol]] = {
     Accion.CONFIGURAR_POLITICA_DATOS: frozenset({Rol.ADMINISTRADOR_CLINICO}),
     # Métricas agregadas de la institución (nunca por médico): las ve la dirección médica.
     Accion.VER_METRICAS_USO: frozenset({Rol.DIRECTOR_MEDICO}),
+    Accion.VER_AUDITORIA: frozenset({Rol.AUDITOR}),
+    Accion.VER_ESTADO_SISTEMA: frozenset({Rol.ADMINISTRADOR}),
 }
 
 

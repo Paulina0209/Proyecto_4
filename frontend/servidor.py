@@ -90,12 +90,14 @@ MENSAJE_SIN_ASIGNACION = (
 # ---------------------------------------------------------------------------
 
 class _Regla:
-    def __init__(self, metodo: str, patron: str, accion: Accion, reescribe: Optional[str] = None) -> None:
+    def __init__(self, metodo: str, patron: str, accion: Accion, reescribe: Optional[str] = None, con: str = "nombre_usuario") -> None:
         self.metodo = metodo
         self.patron = re.compile(patron)
         self.accion = accion
         #: Campo del cuerpo JSON que la pasarela fija con la identidad de la sesión (no confía en el navegador).
         self.reescribe = reescribe
+        #: Con qué se fija: "nombre_usuario" (quién revisó/confirmó) o "id" (oncólogo a cargo).
+        self.con = con
 
 
 _LECTURAS_DEL_PACIENTE = (
@@ -110,6 +112,15 @@ REGLAS_PACIENTES: Tuple[_Regla, ...] = (
     _Regla("GET", r"/pacientes/\d+/(" + _LECTURAS_DEL_PACIENTE + ")", Accion.VER_EXPEDIENTE),
     _Regla("GET", r"/pacientes/\d+/imagenes/[^/]+/visor", Accion.VER_EXPEDIENTE),
     _Regla("POST", r"/pacientes/\d+/alertas-laboratorio/\d+/revisar", Accion.EDITAR_EXPEDIENTE, reescribe="revisada_por"),
+    # Escrituras que la interfaz completa también usa (el autor siempre sale de la sesión).
+    _Regla("POST", r"/pacientes", Accion.EDITAR_EXPEDIENTE, reescribe="oncologo_id", con="id"),                    # PAC-01
+    _Regla("POST", r"/pacientes/\d+/(diagnosticos|tratamientos|consultas)", Accion.EDITAR_EXPEDIENTE),            # PAC-02
+    _Regla("POST", r"/pacientes/\d+/laboratorios", Accion.EDITAR_EXPEDIENTE),                                    # HC-02
+    _Regla("POST", r"/pacientes/\d+/conflictos-laboratorio/\d+/resolver", Accion.EDITAR_EXPEDIENTE, reescribe="resuelto_por"),
+    _Regla("POST", r"/pacientes/\d+/(episodios|biopsias|biomarcadores)", Accion.EDITAR_EXPEDIENTE),               # HC-04
+    _Regla("POST", r"/pacientes/\d+/biomarcadores/\d+/confirmar", Accion.EDITAR_EXPEDIENTE, reescribe="confirmado_por"),
+    _Regla("POST", r"/pacientes/\d+/biomarcadores/\d+/descartar", Accion.EDITAR_EXPEDIENTE, reescribe="revisado_por"),
+    _Regla("POST", r"/pacientes/\d+/consentimiento-ia(/retiro)?", Accion.REGISTRAR_CONSENTIMIENTO_IA),            # SEC-03
 )
 _METODOS_SEGUROS = frozenset({"GET", "HEAD", "OPTIONS"})
 
@@ -178,7 +189,7 @@ class _AppConIdentidad:
             return
         metodo = scope["method"].upper()
         ruta = _ruta_relativa(scope)
-        regla = next((r for r in REGLAS_PACIENTES if r.metodo == metodo and r.patron.fullmatch(ruta)), None)
+        regla = next((r for r in REGLAS_PACIENTES + self.pasarela.reglas_extra if r.metodo == metodo and r.patron.fullmatch(ruta)), None)
         if regla is None:
             await _responder_json(send, 404, {"detail": "No existe esa ruta."})
             return
@@ -205,11 +216,12 @@ class _AppConIdentidad:
         nuevo["query_string"] = urlencode(consulta).encode("latin-1")
         recibir = receive
         if regla.reescribe:
-            recibir, nuevo = await self._con_cuerpo_fijado(nuevo, receive, regla.reescribe, usuario.nombre_usuario)
+            valor = usuario.id if regla.con == "id" else usuario.nombre_usuario
+            recibir, nuevo = await self._con_cuerpo_fijado(nuevo, receive, regla.reescribe, valor)
         await self.destino(nuevo, recibir, send)
 
     @staticmethod
-    async def _con_cuerpo_fijado(scope, receive, campo: str, valor: str):
+    async def _con_cuerpo_fijado(scope, receive, campo: str, valor):
         """Lee el cuerpo JSON, fija ``campo`` con la identidad de la sesión y lo entrega al API."""
         trozos: List[bytes] = []
         while True:
@@ -312,12 +324,22 @@ class Pasarela:
         self._patients_app = patients_app
         # NFR-05: con COPILOTO_SESIONES_DB, sesiones compartidas entre réplicas.
         self.sesiones = sesiones if sesiones is not None else almacen_por_defecto()
+        #: Reglas de las rutas de HC-06 / CFG-02 que publique patients.api (frontend.extensiones).
+        self.reglas_extra: Tuple[_Regla, ...] = ()
         self.carpeta_estatica = Path(carpeta_estatica)
         self._metricas_db_paths = metricas_db_paths
         self._fuentes_metricas = fuentes_metricas
         #: ``None`` en producción. En la demo: {"clave": ..., "usuarios": [{"usuario", "descripcion"}]}; la interfaz
         #: muestra el aviso de «datos inventados» y la lista de usuarios de prueba.
         self.modo_demo = modo_demo
+
+    @property
+    def patients_app(self):
+        if self._patients_app is None:
+            from patients.api import app as patients_app
+
+            self._patients_app = patients_app
+        return self._patients_app
 
     # --- Usuarios -----------------------------------------------------------------------------
     def _ruta_usuarios(self) -> Path:
@@ -377,6 +399,15 @@ class Pasarela:
             "puede_revisar_alertas": clinico and verificar_permiso(usuario, Accion.EDITAR_EXPEDIENTE).permitido,
             "puede_exportar": clinico and verificar_permiso(usuario, Accion.EXPORTAR_EXPEDIENTE).permitido,
             "ver_metricas": verificar_permiso(usuario, Accion.VER_METRICAS_USO).permitido,
+            "puede_registrar": clinico and verificar_permiso(usuario, Accion.EDITAR_EXPEDIENTE).permitido,
+            "puede_juicio_dx": clinico and verificar_permiso(usuario, Accion.REGISTRAR_JUICIO_DIAGNOSTICO).permitido,
+            "puede_confirmar_estadio": clinico and verificar_permiso(usuario, Accion.CONFIRMAR_ESTADIFICACION).permitido,
+            "puede_decidir_tratamiento": clinico and verificar_permiso(usuario, Accion.CONFIRMAR_TRATAMIENTO).permitido,
+            "puede_consentimiento": clinico and verificar_permiso(usuario, Accion.REGISTRAR_CONSENTIMIENTO_IA).permitido,
+            "ver_auditoria": verificar_permiso(usuario, Accion.VER_AUDITORIA).permitido,
+            "gestionar_usuarios": verificar_permiso(usuario, Accion.GESTIONAR_USUARIOS).permitido,
+            "configurar_guias": verificar_permiso(usuario, Accion.CONFIGURAR_GUIAS_INSTITUCIONALES).permitido,
+            "ver_estado_sistema": verificar_permiso(usuario, Accion.VER_ESTADO_SISTEMA).permitido,
             "mensaje_sin_acceso_clinico": None if clinico else MENSAJE_SIN_ASIGNACION,
         }
 
@@ -427,6 +458,9 @@ class Pasarela:
 
             self._patients_app = patients_app
         patients_app = self._patients_app
+        from frontend import chat, clinica, extensiones, gestion
+
+        self.reglas_extra = extensiones.reglas_extra(patients_app)
 
         @asynccontextmanager
         async def vida(_app: FastAPI):
@@ -520,6 +554,11 @@ class Pasarela:
         @app.get("/panel/metricas", include_in_schema=False)
         def panel_metricas(request: Request, desde: Optional[str] = None, hasta: Optional[str] = None):
             return pasarela._panel(request, desde, hasta)
+
+        # --- Apoyo a la decisión, IA y gestión (antes del montaje de /api, que atrapa el resto) ---
+        app.include_router(chat.crear_router(self))
+        app.include_router(clinica.crear_router(self))
+        app.include_router(gestion.crear_router(self))
 
         # --- API de pacientes, con identidad y permisos por delante ---
         app.mount("/api", _AppConIdentidad(patients_app, self))

@@ -229,16 +229,32 @@ def test_una_sesion_inactiva_caduca(entorno):
 # --- Lista cerrada de rutas -----------------------------------------------------------------
 
 
+# Registrar paciente, diagnóstico y consentimiento ya los usa la interfaz completa (ver test_escrituras_de_la_interfaz).
 @pytest.mark.parametrize("metodo,ruta", [
-    ("POST", "/api/pacientes"), ("PUT", f"/api/pacientes/{LUCIA}"), ("DELETE", f"/api/pacientes/{LUCIA}"),
-    ("PATCH", f"/api/pacientes/{LUCIA}"), ("POST", f"/api/pacientes/{LUCIA}/diagnosticos"),
-    ("POST", f"/api/pacientes/{LUCIA}/consentimiento-ia"), ("GET", f"/api/pacientes/{LUCIA}/rutas-que-no-existen"),
+    ("PUT", f"/api/pacientes/{LUCIA}"), ("DELETE", f"/api/pacientes/{LUCIA}"),
+    ("PATCH", f"/api/pacientes/{LUCIA}"), ("POST", f"/api/pacientes/{LUCIA}/laboratorios/hl7"),
+    ("POST", f"/api/pacientes/{LUCIA}/imagenes"), ("GET", f"/api/pacientes/{LUCIA}/rutas-que-no-existen"),
     ("GET", "/api/docs"), ("GET", "/api/openapi.json"), ("GET", "/docs"), ("GET", "/openapi.json"), ("GET", "/redoc"),
 ])
 def test_lo_que_la_interfaz_no_usa_no_existe_ni_con_sesion(entrar, metodo, ruta):
     c = entrar("dra.rios")
     r = c.request(metodo, ruta, headers=H, json={} if metodo in ("POST", "PUT", "PATCH") else None)
     assert r.status_code == 404, f"{metodo} {ruta}: {r.status_code}"
+
+
+def test_escrituras_de_la_interfaz_toman_la_identidad_de_la_sesion(entrar):
+    """PAC-01: el oncólogo a cargo sale de la sesión aunque el navegador mande otro."""
+    c = entrar("dra.rios")
+    r = c.post("/api/pacientes", headers=H, json={
+        "nombre_completo": "Paciente Nuevo Interfaz", "fecha_nacimiento": "1980-01-01", "sexo": "femenino",
+        "tipo_identificacion": "cedula", "numero_identificacion": "77665544", "contacto": {"telefono": "3001112233"},
+        "oncologo_id": 999})
+    assert r.status_code == 201, r.text
+    nuevo = r.json()
+    assert c.get(f"/api/pacientes/{nuevo['id']}").status_code == 200       # es de dra.rios, no del 999
+    assert c.post(f"/api/pacientes/{nuevo['id']}/consentimiento-ia", headers=H, json={"medio": "escrito", "soporte": ""}).status_code == 400
+    sin_cabecera = c.post(f"/api/pacientes/{nuevo['id']}/diagnosticos", json={"descripcion": "x"})
+    assert sin_cabecera.status_code == 403                                  # CSRF: sin la cabecera propia no pasa
 
 
 def test_las_rutas_tramposas_no_cuelan_otra_ruta(entrar):
