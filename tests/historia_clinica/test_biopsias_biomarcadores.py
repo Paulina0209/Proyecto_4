@@ -356,3 +356,33 @@ def test_formato_desconocido_se_rechaza():
                                       "metodos": ["NGS"], "accionable": [{"terapia": "t"}]}}}
     with pytest.raises(ErrorConfiguracionBiomarcadores):
         validar_catalogo(datos, variables_de_guias())
+
+
+# --- Datos reales (cBioPortal): todo lo importado se ve, y lo accionable se destaca solo ----------
+
+
+def test_los_importados_no_accionables_se_muestran_como_informativos(conn, paciente):
+    from historia_clinica.biopsias_biomarcadores import biomarcadores_registrados
+
+    insertar_dato(conn, paciente, "cancer_type", "breast")
+    insertar_biomarcador(conn, paciente, "PIK3CA", "mutación detectada: E545K (Missense_Mutation) — muestra S1")
+    insertar_biomarcador(conn, paciente, "TMB", "5.5 mut/Mb — muestra S1")
+
+    registrados = biomarcadores_registrados(conn, paciente)
+
+    assert {b.biomarcador for b in registrados} == {"PIK3CA", "TMB"}
+    assert all(b.relevancia == INFORMATIVO and b.origen == "importado" and not b.clave for b in registrados)
+
+
+def test_asegurar_resaltado_destaca_los_accionables_importados_una_sola_vez(conn, paciente):
+    from historia_clinica.biopsias_biomarcadores import asegurar_resaltado, biomarcadores_registrados
+
+    insertar_dato(conn, paciente, "cancer_type", "NSCLC")
+    insertar_biomarcador(conn, paciente, "EGFR", "mutación detectada: L858R (Missense_Mutation) — muestra S1")
+    insertar_biomarcador(conn, paciente, "KRAS", "mutación no detectada (panel IMPACT341) — muestra S1")
+
+    assert len(asegurar_resaltado(conn, paciente)) == 1
+    assert asegurar_resaltado(conn, paciente) == []                     # idempotente
+    (clave,) = biomarcadores_clave(conn, paciente)
+    assert (clave.biomarcador, clave.relevancia, clave.variante) == ("EGFR", PENDIENTE_CONFIRMACION, "L858R")
+    assert len(biomarcadores_registrados(conn, paciente)) == 2          # el KRAS no detectado sigue visible, como informativo

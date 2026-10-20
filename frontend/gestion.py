@@ -7,6 +7,11 @@
     GET  /guias                                   CFG-01                  administrador clínico (y oncología, solo lectura)
     POST /guias                                   CFG-01                  administrador clínico
     GET  /salud                                   NFR-01 / NFR-02         administrador
+    GET  /privacidad                              NFR-06: políticas vigentes y solicitudes de derechos   administrador clínico
+    POST /privacidad/politicas                    NFR-06: publicar una política (o su nueva versión)
+    POST /privacidad/solicitudes                  NFR-06: recibir una solicitud de derechos del titular
+    POST /privacidad/solicitudes/{id}/estado      NFR-06: en trámite, atendida o rechazada
+    GET  /privacidad/solicitudes/{id}/informacion NFR-06: la información del titular, para entregarla
 """
 
 from __future__ import annotations
@@ -207,6 +212,114 @@ def crear_router(pasarela) -> APIRouter:
         if not r.exito:
             raise HTTPException(status_code=400, detail={"errores": [{"campo": "organizaciones", "mensaje": r.motivo_rechazo}]})
         return a_json(r)
+
+    # --- NFR-06: políticas de tratamiento de datos y derechos del titular ------------------------------
+
+    def _privacidad():
+        from historia_clinica.db import conectar_expediente
+        from privacidad.tratamiento_datos import inicializar_esquema
+
+        conn = conectar_expediente()
+        inicializar_esquema(conn)
+        return closing(conn)
+
+    def _titular(conn, identificacion: str) -> int:
+        """El paciente (id del expediente) por su identificación: documento, id de cBioPortal (P-…) o la clave completa."""
+        texto = (identificacion or "").strip()
+        if not texto:
+            raise HTTPException(status_code=400, detail={"errores": [{"campo": "identificacion", "mensaje": "Indica la identificación del titular."}]})
+        filas = conn.execute("SELECT id FROM pacientes WHERE identificacion = ? OR identificacion LIKE ?", (texto, f"%:{texto}")).fetchall()
+        if len(filas) != 1:
+            mensaje = "No hay ningún paciente con esa identificación." if not filas else "Esa identificación corresponde a más de un paciente: usa la completa."
+            raise HTTPException(status_code=404 if not filas else 409, detail={"errores": [{"campo": "identificacion", "mensaje": mensaje}]})
+        return filas[0][0]
+
+    @router.get("/privacidad")
+    def privacidad(request: Request):
+        from privacidad.tratamiento_datos import politicas_vigentes, solicitudes_abiertas
+
+        usuario_con(request, Accion.CONFIGURAR_POLITICA_DATOS)
+        with _privacidad() as conn:
+            cerradas = [dict(f) for f in conn.execute(
+                "SELECT s.id, s.tipo_derecho, s.solicitante, s.fecha_recepcion, p.identificacion, "
+                "(SELECT estado FROM eventos_solicitud_derechos e WHERE e.solicitud_id = s.id ORDER BY e.id DESC LIMIT 1) AS estado "
+                "FROM solicitudes_derechos s LEFT JOIN pacientes p ON p.id = s.paciente_id ORDER BY s.id DESC LIMIT 20")]
+            abiertas = solicitudes_abiertas(conn)
+            identificaciones = {s.paciente_id: (conn.execute("SELECT identificacion FROM pacientes WHERE id = ?", (s.paciente_id,)).fetchone() or [None])[0]
+                                for s in abiertas}
+            return {"politicas": a_json(politicas_vigentes(conn)),
+                    "abiertas": [{**a_json(s), "identificacion": identificaciones.get(s.paciente_id)} for s in abiertas],
+                    "recientes": cerradas, "estados": ["en_tramite", "atendida", "rechazada"]}
+
+    @router.post("/privacidad/politicas")
+    async def configurar_politica(request: Request):
+        from privacidad.models import Finalidad
+        from privacidad.tratamiento_datos import configurar_politica as configurar
+
+        usuario = usuario_con(request, Accion.CONFIGURAR_POLITICA_DATOS)
+        datos = await cuerpo(request)
+        lista = lambda clave: [str(x).strip() for x in (datos.get(clave) or []) if str(x).strip()]  # noqa: E731
+        try:
+            plazo = int(datos.get("plazo_respuesta_dias") or 0)
+        except (TypeError, ValueError):
+            plazo = 0
+        with _privacidad() as conn:
+            r = configurar(conn, usuario.id, codigo=str(datos.get("codigo") or "").strip(), jurisdiccion=str(datos.get("jurisdiccion") or "").strip(),
+                           nombre=str(datos.get("nombre") or "").strip(), marco_normativo=(str(datos.get("marco_normativo") or "").strip() or None),
+                           finalidades=[Finalidad(f, f.replace("_", " ")) for f in lista("finalidades")], bases_legales=lista("bases_legales"),
+                           derechos=lista("derechos"), plazo_respuesta_dias=plazo)
+        if not r.exito:
+            raise HTTPException(status_code=400, detail={"errores": [{"campo": "politica", "mensaje": r.motivo_rechazo}]})
+        return a_json(r.registro)
+
+    @router.post("/privacidad/solicitudes")
+    async def registrar_solicitud(request: Request):
+        from privacidad.tratamiento_datos import registrar_solicitud_derechos
+
+        usuario = usuario_con(request, Accion.CONFIGURAR_POLITICA_DATOS)
+        datos = await cuerpo(request)
+        with _privacidad() as conn:
+            r = registrar_solicitud_derechos(conn, usuario.id, paciente_id=_titular(conn, str(datos.get("identificacion") or "")),
+                                             codigo_politica=str(datos.get("codigo_politica") or "").strip(),
+                                             tipo_derecho=str(datos.get("tipo_derecho") or "").strip(),
+                                             descripcion=str(datos.get("descripcion") or "").strip(), solicitante=str(datos.get("solicitante") or "").strip())
+        if not r.exito:
+            raise HTTPException(status_code=400, detail={"errores": [{"campo": "solicitud", "mensaje": r.motivo_rechazo}]})
+        return a_json(r.registro)
+
+    @router.post("/privacidad/solicitudes/{solicitud_id}/estado")
+    async def avanzar_solicitud(solicitud_id: int, request: Request):
+        from privacidad.models import EstadoSolicitud
+        from privacidad.tratamiento_datos import actualizar_solicitud
+
+        usuario = usuario_con(request, Accion.CONFIGURAR_POLITICA_DATOS)
+        datos = await cuerpo(request)
+        try:
+            estado = EstadoSolicitud(str(datos.get("estado") or ""))
+        except ValueError:
+            raise HTTPException(status_code=400, detail={"errores": [{"campo": "estado", "mensaje": "Estado desconocido."}]})
+        with _privacidad() as conn:
+            r = actualizar_solicitud(conn, usuario.id, solicitud_id, estado, (str(datos.get("detalle") or "").strip() or None))
+        if not r.exito:
+            raise HTTPException(status_code=400, detail={"errores": [{"campo": "estado", "mensaje": r.motivo_rechazo}]})
+        return a_json(r.registro)
+
+    @router.get("/privacidad/solicitudes/{solicitud_id}/informacion")
+    def informacion_titular(solicitud_id: int, request: Request):
+        """AC4: todo lo que el sistema tiene del titular, en un archivo portable (queda en la auditoría)."""
+        from fastapi.responses import Response
+
+        from privacidad.tratamiento_datos import obtener_solicitud, recopilar_informacion_titular
+
+        usuario = usuario_con(request, Accion.CONFIGURAR_POLITICA_DATOS)
+        with _privacidad() as conn:
+            try:
+                solicitud = obtener_solicitud(conn, solicitud_id)
+            except KeyError:
+                raise HTTPException(status_code=404, detail="No existe esa solicitud.")
+            info = recopilar_informacion_titular(conn, usuario.id, solicitud.paciente_id, conn_expediente=conn, solicitud_id=solicitud_id)
+        return Response(info.a_json(), media_type="application/json",
+                        headers={"Content-Disposition": f'attachment; filename="titular-solicitud-{solicitud_id}.json"', "Cache-Control": "no-store"})
 
     # --- NFR-01 / NFR-02 ---------------------------------------------------------------------------
 

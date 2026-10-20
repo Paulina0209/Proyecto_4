@@ -1,7 +1,7 @@
 /* Pantallas de gestión, cada una para su rol: auditoría (AUD-01/02), usuarios (ADM-01), guías (CFG-01),
-   estado del sistema (NFR-01/02) y notificaciones (CFG-02, se activa sola cuando el backend la publica). */
+   privacidad y derechos del titular (NFR-06), estado del sistema (NFR-01/02) y notificaciones (CFG-02). */
 import { h, anunciar, idUnico } from "./dom.js";
-import { api } from "./api.js";
+import { api, descargar } from "./api.js";
 import { fecha, SEVERIDADES } from "./formato.js";
 import { campo, cargando, casilla, errorConReintento, formulario, insignia, listaDatos, mensaje, tabla, tarjeta, vacio } from "./ui.js";
 
@@ -104,6 +104,70 @@ export async function vistaGuias(ctx) {
       ]), ...(v.advertencias || []).map((a) => mensaje("aviso", null, a))),
       config ? tarjeta("Cambiar la configuración", config) : mensaje("info", null, "Solo la administración clínica puede cambiar las guías."),
       r.historial.length ? tabla("Historial de versiones", ["Versión", "Organizaciones", "Motivo", "Fecha"], r.historial.map((x) => [`v${x.version}`, x.organizaciones.join(" > "), x.motivo || "—", fecha((x.fecha || "").slice(0, 10))])) : null);
+  });
+}
+
+/* ---------------- Privacidad y derechos del titular (NFR-06) ---------------- */
+
+const ETIQUETA_ESTADO = { recibida: "Recibida", en_tramite: "En trámite", atendida: "Atendida", rechazada: "Rechazada" };
+const lista = (texto) => String(texto || "").split(",").map((x) => x.trim()).filter(Boolean);
+
+export async function vistaPrivacidad(ctx) {
+  if (!ctx.sesion.configurar_privacidad) return sinPermiso("Privacidad", "Las políticas de datos y las solicitudes de derechos las gestiona la administración clínica.");
+  return pantalla("Privacidad y derechos del titular", "Políticas de tratamiento de datos de la institución, con su finalidad y base legal, y solicitudes de los pacientes sobre sus datos (NFR-06). Todo queda en la auditoría.", async () => {
+    const r = await api("/api/gestion/privacidad");
+    const politicas = r.politicas || [];
+    const estado = h("div", { role: "status", "aria-live": "polite" });
+
+    const filasPoliticas = politicas.map((p) => [`${p.nombre} (v${p.version})`, p.jurisdiccion, p.marco_normativo || "—",
+      p.finalidades.map((f) => f.codigo).join(", "), p.derechos.join(", "), `${p.plazo_respuesta_dias} días`]);
+    const nuevaPolitica = formulario({ columnas: true, textoBoton: "Publicar política", campos: [
+      campo({ nombre: "codigo", etiqueta: "Código", requerido: true, ayuda: "Minúsculas, sin espacios. Si ya existe, se publica una nueva versión." }),
+      campo({ nombre: "nombre", etiqueta: "Nombre", requerido: true }),
+      campo({ nombre: "jurisdiccion", etiqueta: "Jurisdicción", requerido: true, valor: "CO" }),
+      campo({ nombre: "marco_normativo", etiqueta: "Marco normativo", valor: "Ley 1581 de 2012" }),
+      campo({ nombre: "finalidades", etiqueta: "Finalidades", requerido: true, valor: "atencion_clinica, asistencia_ia", ayuda: "Separadas por coma." }),
+      campo({ nombre: "bases_legales", etiqueta: "Bases legales", requerido: true, valor: "consentimiento_informado" }),
+      campo({ nombre: "derechos", etiqueta: "Derechos que reconoce", requerido: true, valor: "acceso, rectificacion, supresion, revocatoria" }),
+      campo({ nombre: "plazo_respuesta_dias", etiqueta: "Plazo de respuesta (días)", tipo: "number", requerido: true, valor: "15" }),
+    ], enviar: (v) => api("/api/gestion/privacidad/politicas", { metodo: "POST", cuerpo: { ...v, finalidades: lista(v.finalidades),
+      bases_legales: lista(v.bases_legales), derechos: lista(v.derechos), plazo_respuesta_dias: Number(v.plazo_respuesta_dias) } }),
+    alExito: () => { anunciar("Política publicada."); recargar(); } });
+
+    const nuevaSolicitud = politicas.length ? formulario({ columnas: true, textoBoton: "Registrar solicitud", campos: [
+      campo({ nombre: "identificacion", etiqueta: "Identificación del titular", requerido: true, ayuda: "Documento o id de cBioPortal (p. ej. P-0000057)." }),
+      campo({ nombre: "codigo_politica", etiqueta: "Política", tipo: "select", opciones: politicas.map((p) => [p.codigo, `${p.nombre} (v${p.version})`]) }),
+      campo({ nombre: "tipo_derecho", etiqueta: "Derecho", tipo: "select", opciones: [...new Set(politicas.flatMap((p) => p.derechos))].map((d) => [d, d]) }),
+      campo({ nombre: "solicitante", etiqueta: "Quién la presenta", requerido: true, ayuda: "El titular o su representante." }),
+      campo({ nombre: "descripcion", etiqueta: "Qué pide", tipo: "textarea", requerido: true }),
+    ], enviar: (v) => api("/api/gestion/privacidad/solicitudes", { metodo: "POST", cuerpo: v }),
+    alExito: () => { anunciar("Solicitud registrada."); recargar(); } }) : mensaje("aviso", null, "Primero publica una política: de ella sale el plazo de respuesta.");
+
+    const avanzar = (s, estadoNuevo) => h("button", { type: "button", class: "btn sec chico", onclick: async () => {
+      const detalle = estadoNuevo === "en_tramite" ? null : window.prompt(estadoNuevo === "atendida" ? "¿Cómo se atendió?" : "Motivo del rechazo");
+      if (estadoNuevo !== "en_tramite" && !detalle) return;
+      try {
+        await api(`/api/gestion/privacidad/solicitudes/${s.id}/estado`, { metodo: "POST", cuerpo: { estado: estadoNuevo, detalle } });
+        anunciar("Solicitud actualizada."); recargar();
+      } catch (err) { estado.replaceChildren(mensaje("error", "No se pudo actualizar", err.mensajes[0])); }
+    } }, ETIQUETA_ESTADO[estadoNuevo]);
+    const informacion = (s) => h("button", { type: "button", class: "btn sec chico", onclick: async () => {
+      try { await descargar(`/api/gestion/privacidad/solicitudes/${s.id}/informacion`); anunciar("Información del titular descargada."); }
+      catch (err) { estado.replaceChildren(mensaje("error", "No se pudo descargar", err.mensajes[0])); }
+    } }, "Descargar su información");
+    const filasAbiertas = (r.abiertas || []).map((s) => [s.identificacion || `#${s.paciente_id}`, s.tipo_derecho, s.solicitante,
+      `${fecha(s.fecha_limite.slice(0, 10))}${s.vencida ? " (vencida)" : ""}`,
+      insignia({ texto: ETIQUETA_ESTADO[s.estado] || s.estado, tono: s.vencida ? "crit" : "info", icono: s.vencida ? "alerta" : "info" }),
+      h("div", { class: "acciones" }, s.estado === "recibida" ? avanzar(s, "en_tramite") : null, avanzar(s, "atendida"), avanzar(s, "rechazada"), informacion(s))]);
+
+    return h("div", {}, estado,
+      filasPoliticas.length ? tabla("Políticas vigentes", ["Política", "Jurisdicción", "Marco normativo", "Finalidades", "Derechos", "Plazo"], filasPoliticas, { filaEncabezado: true })
+        : vacio("La institución todavía no ha publicado políticas de tratamiento de datos."),
+      h("details", { class: "tarjeta" }, h("summary", {}, "Publicar una política o una nueva versión"), nuevaPolitica),
+      filasAbiertas.length ? tabla("Solicitudes abiertas (la que vence primero arriba)", ["Titular", "Derecho", "Solicitante", "Vence", "Estado", "Acciones"], filasAbiertas, { filaEncabezado: true })
+        : vacio("No hay solicitudes de derechos abiertas."),
+      tarjeta("Registrar una solicitud de derechos", nuevaSolicitud),
+      (r.recientes || []).length ? tabla("Últimas solicitudes", ["#", "Titular", "Derecho", "Recibida", "Estado"], r.recientes.map((x) => [String(x.id), x.identificacion || "—", x.tipo_derecho, fecha((x.fecha_recepcion || "").slice(0, 10)), ETIQUETA_ESTADO[x.estado] || x.estado || "—"])) : null);
   });
 }
 

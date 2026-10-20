@@ -913,6 +913,7 @@ def listar_biomarcadores(
     expediente_id = _id_en_expediente(conn, conn_exp, paciente_id, oncologo_id, crear=False)
     if expediente_id is None:
         return []
+    hc04.asegurar_resaltado(conn_exp, expediente_id)  # los importados accionables quedan destacados (AC2)
     lista = (hc04.biomarcadores_clave if solo_clave else hc04.biomarcadores_registrados)(conn_exp, expediente_id)
     return [BiomarcadorSchema.model_validate(b) for b in lista]
 

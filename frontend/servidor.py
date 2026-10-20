@@ -408,6 +408,7 @@ class Pasarela:
             "gestionar_usuarios": verificar_permiso(usuario, Accion.GESTIONAR_USUARIOS).permitido,
             "configurar_guias": verificar_permiso(usuario, Accion.CONFIGURAR_GUIAS_INSTITUCIONALES).permitido,
             "ver_estado_sistema": verificar_permiso(usuario, Accion.VER_ESTADO_SISTEMA).permitido,
+            "configurar_privacidad": verificar_permiso(usuario, Accion.CONFIGURAR_POLITICA_DATOS).permitido,
             "mensaje_sin_acceso_clinico": None if clinico else MENSAJE_SIN_ASIGNACION,
         }
 

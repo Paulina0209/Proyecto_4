@@ -205,3 +205,31 @@ def test_fase_desconocida_es_error(conn):
 def test_paciente_inexistente_es_error(conn):
     with pytest.raises(ValueError):
         evaluar_informacion_faltante(conn, 999)
+
+
+# --- Datos reales (cBioPortal / MSK-CHORD) ---------------------------------------------------------
+
+
+def test_la_biopsia_registrada_confirma_la_histologia(conn):
+    from historia_clinica.biopsias_biomarcadores import registrar_biopsia, registrar_episodio
+    from datetime import date
+
+    paciente_id = insertar_paciente(conn, cancer_type="breast")
+    episodio = registrar_episodio(conn, paciente_id, "Carcinoma ductal infiltrante", "breast", date(2024, 1, 1))
+    registrar_biopsia(conn, paciente_id, fecha=date(2024, 1, 15), sitio="Mama", procedimiento="Muestra tumoral secuenciada",
+                      diagnostico_histologico="Breast Invasive Ductal Carcinoma", episodio_id=episodio.id)
+
+    faltantes = {f.id for f in evaluar_informacion_faltante(conn, paciente_id, fases=["diagnostico"]).faltantes}
+
+    assert "confirmacion_histologica" not in faltantes
+
+
+def test_el_estado_combinado_de_receptores_hormonales_cuenta_para_re_y_rp(conn):
+    paciente_id = insertar_paciente(conn, cancer_type="breast")
+    insertar_biomarcador(conn, paciente_id, "Receptores hormonales (HR)", "positivo")
+
+    evaluacion = evaluar_informacion_faltante(conn, paciente_id, fases=["diagnostico"])
+    faltantes = {f.id for f in evaluacion.faltantes}
+
+    assert not {"receptor_estrogeno", "receptor_progesterona"} & faltantes
+    assert "her2" in faltantes                                          # HER2 sin dato sigue faltando

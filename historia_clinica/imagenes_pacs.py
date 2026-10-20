@@ -475,6 +475,23 @@ def _registrar_consulta(
 
 
 def _describir(exc: BaseException) -> str:
+    """El motivo en palabras del médico; el detalle técnico (host, puerto, traza) va al registro, no a la pantalla."""
+    import logging
+
+    logging.getLogger(__name__).warning("Fallo al consultar el PACS: %r", exc)
+    try:
+        import requests
+    except ImportError:  # pragma: no cover - requests es dependencia del proyecto
+        requests = None
+    if requests is not None:
+        if isinstance(exc, requests.exceptions.Timeout):
+            return "el PACS tardó demasiado en responder"
+        if isinstance(exc, requests.exceptions.ConnectionError):
+            return "el PACS no responde (puede estar apagado o sin red)"
+        if isinstance(exc, requests.exceptions.HTTPError) and exc.response is not None:
+            codigo = exc.response.status_code
+            return ("el PACS rechazó las credenciales configuradas" if codigo in (401, 403)
+                    else f"el PACS respondió con un error ({codigo})")
     return str(exc) or exc.__class__.__name__
 
 

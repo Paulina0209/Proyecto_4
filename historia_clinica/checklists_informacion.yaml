@@ -32,6 +32,7 @@ tipos_cancer:
         evidencias:
           - variable: histopathology_confirmed
           - variable: diagnosis_confirmed
+          - biopsia: con_diagnostico     # HC-04: biopsia registrada con su diagnóstico histológico
       - id: imagen_mamaria
         descripcion: Estudio de imagen mamaria (mamografía, ecografía o resonancia)
         fases: [diagnostico]
@@ -43,12 +44,17 @@ tipos_cancer:
         evidencias:
           - variable: er_status
           - biomarcador: [re, er, receptor de estrogeno, receptor estrogenico, estrogen receptor]
+          # Algunas fuentes (cBioPortal/MSK-CHORD) solo informan el estado combinado de receptores hormonales.
+          - variable: hormone_receptor_status
+          - biomarcador: [receptores hormonales, receptores hormonales hr, hormone receptor]
       - id: receptor_progesterona
         descripcion: Estado del receptor de progesterona (RP)
         fases: [diagnostico, tratamiento]
         evidencias:
           - variable: pr_status
           - biomarcador: [rp, pr, receptor de progesterona, progesterone receptor]
+          - variable: hormone_receptor_status
+          - biomarcador: [receptores hormonales, receptores hormonales hr, hormone receptor]
       - id: her2
         descripcion: Estado de HER2
         fases: [diagnostico, tratamiento]
@@ -135,6 +141,7 @@ tipos_cancer:
         fases: [diagnostico, tratamiento]
         evidencias:
           - variable: diagnosis_confirmed
+          - biopsia: con_diagnostico
       - id: categoria_t
         descripcion: Categoría T (espesor de Breslow / ulceración)
         fases: [estadificacion]
@@ -161,6 +168,7 @@ tipos_cancer:
         fases: [diagnostico, tratamiento]
         evidencias:
           - variable: histopathology_confirmed
+          - biopsia: con_diagnostico
       - id: subtipo_histologico
         descripcion: Subtipo histológico (células claras / no claras)
         fases: [diagnostico, tratamiento]
