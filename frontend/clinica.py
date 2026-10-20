@@ -149,7 +149,9 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
 
     @contextmanager
     def contexto(request: Request, paciente_id: int, accion: Accion = Accion.VER_EXPEDIENTE,
-                 crear_expediente: bool = False) -> Iterator[Contexto]:
+                 crear_expediente: bool = False, solo_oncologia: bool = False) -> Iterator[Contexto]:
+        """El paciente, si quien pide puede verlo: oncología (los suyos) o su equipo de atención.
+        ``solo_oncologia``: apoyo a la decisión (DX, EST, TX, evidencia, agentes): es del oncólogo tratante."""
         from frontend.servidor import MENSAJE_SIN_ASIGNACION
         from historia_clinica.db import conectar_expediente
         from patients import api as papi
@@ -158,14 +160,16 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
 
         usuario, nombre = _identidad(request)
         _permiso(usuario, accion)
-        if usuario.rol != Rol.ONCOLOGO:
+        if not pasarela.oncologos_visibles(usuario):
             raise HTTPException(status_code=403, detail=MENSAJE_SIN_ASIGNACION)
+        if solo_oncologia and usuario.rol != Rol.ONCOLOGO:
+            raise HTTPException(status_code=403, detail="El apoyo a la decisión (diagnóstico, estadificación, tratamiento y evidencia) es del oncólogo tratante.")
         conn = papi.db.conectar(papi.DB_PATH, check_same_thread=False)
         ruta = papi._ruta_expediente()
         conn_exp = conectar_expediente(ruta, check_same_thread=False)
         _db.usar_expediente(ruta)  # las tools de TX trabajan sobre el mismo expediente
         try:
-            paciente = papi._paciente_del_oncologo_o_404(conn, paciente_id, usuario.id)
+            paciente = papi._paciente_del_oncologo_o_404(conn, paciente_id, pasarela.oncologo_responsable(usuario, paciente_id))
             expediente_id = paciente_en_expediente(conn, conn_exp, paciente_id, crear=crear_expediente)
             yield Contexto(usuario, nombre or usuario.nombre_usuario, conn, conn_exp, paciente, expediente_id)
         except ConsentimientoIARequerido as exc:
@@ -248,7 +252,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
         pregunta = _texto(datos, "pregunta", "tu pregunta", 500)
         aclaracion = Clarification(concept=datos.get("concepto") or None, episode_id=datos.get("episodio") or None,
                                    confirm_active_patient=bool(datos.get("confirmar_paciente")))
-        with contexto(request, paciente_id) as ctx:
+        with contexto(request, paciente_id, solo_oncologia=True) as ctx:
             servicio = NaturalLanguageClinicalQueryService(SQLiteClinicalRepository(ctx.conn_exp))
             respuesta = servicio.ask(str(ctx.exigir_expediente()), pregunta, clarification=aclaracion)
             ctx.auditar(TipoAccion.VER, "IA-01: consulta en lenguaje natural")
@@ -273,7 +277,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
         from dx_clinica.recomendacion_estudios import recomendar_estudios
         from ia_clinica.explainability import PatientRecommendationService
 
-        with contexto(request, paciente_id) as ctx:
+        with contexto(request, paciente_id, solo_oncologia=True) as ctx:
             paciente, hallazgos, resultado = _diferencial(ctx)
             inicializar_esquema(ctx.conn_exp)
             explicaciones = PatientRecommendationService().for_patient(paciente, hallazgos)
@@ -318,7 +322,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
         from estadificacion.confirmacion import inicializar_esquema, obtener_estadificacion_vigente
         from estadificacion.incompleta import analizar_estadificacion_incompleta
 
-        with contexto(request, paciente_id) as ctx:
+        with contexto(request, paciente_id, solo_oncologia=True) as ctx:
             propuesta = _propuesta(ctx)
             inicializar_esquema(ctx.conn_exp)
             return {"propuesta": a_json(propuesta), "incompleta": a_json(analizar_estadificacion_incompleta(propuesta)),
@@ -365,7 +369,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
         from tx_clinica.tools.recommendation_tools import obtener_recomendaciones_tratamiento_por_id
         from tx_clinica.tools.registro_tools import definiciones_variables, variables_de_biomarcadores
 
-        with contexto(request, paciente_id) as ctx:
+        with contexto(request, paciente_id, solo_oncologia=True) as ctx:
             eid = ctx.exigir_expediente()
             recomendacion = _tool(obtener_recomendaciones_tratamiento_por_id, {"patient_id": eid}, ctx.usuario.id)
             medicacion = _tool(consultar_medicacion_actual, {"patient_id": eid}, ctx.usuario.id)
@@ -408,7 +412,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
     def tratamiento_interacciones(paciente_id: int, request: Request, regimen: str):
         from tx_clinica.tools.interaction_tools import chequear_interacciones_tratamiento
 
-        with contexto(request, paciente_id) as ctx:
+        with contexto(request, paciente_id, solo_oncologia=True) as ctx:
             return _tool(chequear_interacciones_tratamiento, {"patient_id": ctx.exigir_expediente(), "regimen_id": regimen},
                          ctx.usuario.id)
 
@@ -575,7 +579,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
         from ia_clinica.summary.llm_client import RuleBasedSummaryLLMClient
 
         await _cuerpo(request)
-        with contexto(request, paciente_id) as ctx:
+        with contexto(request, paciente_id, solo_oncologia=True) as ctx:
             cliente = _cliente_llm(RuleBasedSummaryLLMClient())
             resumen = CaseSummaryGenerator(llm_client=cliente).generate_summary(
                 construir_contexto_resumen_caso(ctx.conn_exp, ctx.exigir_expediente()))
@@ -589,7 +593,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
         from evidencia_clinica import EvidenceSearchService
         from expediente.repository import obtener_paciente
 
-        with contexto(request, paciente_id) as ctx:
+        with contexto(request, paciente_id, solo_oncologia=True) as ctx:
             eid = ctx.exigir_expediente()
             servicio = EvidenceSearchService()
             if q and q.strip():
@@ -623,6 +627,146 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
                 return {"autorizaciones": []}
             inicializar_esquema(ctx.conn_exp)
             return {"autorizaciones": a_json(historial_autorizaciones(ctx.conn_exp, ctx.expediente_id))}
+
+    # --- Órdenes médicas: el oncólogo prescribe, enfermería suministra ---------------------------------
+
+    def _decision_vigente(ctx: Contexto) -> Optional[dict]:
+        """La decisión de tratamiento del oncólogo (TX-04), como punto de partida de las órdenes."""
+        try:
+            from clinical_decision.registro import obtener_decision_vigente
+
+            d = obtener_decision_vigente(ctx.conn_exp, ctx.expediente_id) if ctx.expediente_id else None
+        except sqlite3.Error:
+            return None
+        if d is None or getattr(d, "tipo_decision", None) == "reject":
+            return None
+        regimen = getattr(d, "regimen_final_id", None) or getattr(d, "regimen_sugerido_id", None)
+        farmacos: List[str] = []
+        try:
+            snapshot = getattr(d, "recomendacion_ia_snapshot", None) or {}
+            snapshot = json.loads(snapshot) if isinstance(snapshot, str) else snapshot
+            for c in snapshot.get("candidatos") or []:
+                if c.get("regimen_id") == regimen:
+                    farmacos = list(c.get("farmacos") or [])
+        except (TypeError, ValueError):
+            pass
+        return {"id": d.id, "fecha": d.fecha, "tipo": d.tipo_decision, "regimen": regimen, "farmacos": farmacos}
+
+    @router.get("/pacientes/{paciente_id}/ordenes")
+    def ordenes(paciente_id: int, request: Request):
+        from historia_clinica import ordenes_medicas as om
+
+        with contexto(request, paciente_id, Accion.VER_ORDENES_MEDICAS) as ctx:
+            if ctx.expediente_id is None:
+                lista, horario, decision = [], [], None
+            else:
+                lista = om.ordenes_de(ctx.conn_exp, ctx.expediente_id)
+                horario = om.horario(ctx.conn_exp, [ctx.expediente_id], horas=48)
+                decision = _decision_vigente(ctx)
+            ctx.auditar(TipoAccion.VER, "Órdenes médicas y horario de administración")
+            return {"ordenes": [o.a_dict() for o in lista], "horario": [d.a_dict() for d in horario], "decision": decision,
+                    "vias": om.VIAS, "frecuencias": {str(k): v for k, v in om.FRECUENCIAS.items()},
+                    "puede_prescribir": verificar_permiso(ctx.usuario, Accion.PRESCRIBIR_MEDICAMENTO).permitido}
+
+    @router.post("/pacientes/{paciente_id}/ordenes")
+    async def prescribir(paciente_id: int, request: Request):
+        from historia_clinica import ordenes_medicas as om
+
+        datos = await _cuerpo(request)
+        with contexto(request, paciente_id, Accion.PRESCRIBIR_MEDICAMENTO, crear_expediente=True) as ctx:
+            decision = _decision_vigente(ctx)
+            try:
+                orden = om.prescribir(ctx.conn_exp, ctx.exigir_expediente(), medicamento=str(datos.get("medicamento") or ""),
+                                      dosis=str(datos.get("dosis") or ""), via=str(datos.get("via") or ""),
+                                      intervalo_horas=datos.get("intervalo_horas"), fecha_inicio=str(datos.get("fecha_inicio") or ""),
+                                      hora_inicio=str(datos.get("hora_inicio") or ""), fecha_fin=datos.get("fecha_fin") or None,
+                                      indicaciones=datos.get("indicaciones"), ordenado_por=ctx.autor,
+                                      decision_id=decision["id"] if decision and datos.get("desde_decision") else None)
+            except om.ErrorOrden as exc:
+                raise HTTPException(status_code=400, detail={"errores": [{"campo": c, "mensaje": m} for c, m in exc.errores]}) from exc
+            ctx.auditar(TipoAccion.EDITAR, f"Orden médica #{orden.id}: {orden.medicamento} {orden.dosis}")
+            return orden.a_dict()
+
+    @router.post("/pacientes/{paciente_id}/ordenes/{orden_id}/suspender")
+    async def suspender_orden(paciente_id: int, orden_id: int, request: Request):
+        from historia_clinica import ordenes_medicas as om
+
+        datos = await _cuerpo(request)
+        with contexto(request, paciente_id, Accion.PRESCRIBIR_MEDICAMENTO) as ctx:
+            try:
+                orden = om.suspender(ctx.conn_exp, ctx.exigir_expediente(), orden_id, suspendida_por=ctx.autor, motivo=str(datos.get("motivo") or ""))
+            except om.ErrorOrden as exc:
+                raise HTTPException(status_code=400, detail={"errores": [{"campo": c, "mensaje": m} for c, m in exc.errores]}) from exc
+            ctx.auditar(TipoAccion.EDITAR, f"Orden médica #{orden.id} suspendida")
+            return orden.a_dict()
+
+    def _pacientes_del_alcance(request: Request, accion: Accion):
+        """(usuario, conexiones, {id_expediente: paciente}) de los pacientes que la persona puede ver."""
+        from frontend.servidor import MENSAJE_SIN_ASIGNACION
+        from historia_clinica.db import conectar_expediente
+        from patients import api as papi
+
+        usuario, _nombre = _identidad(request)
+        _permiso(usuario, accion)
+        oncologos = pasarela.oncologos_visibles(usuario)
+        if not oncologos:
+            raise HTTPException(status_code=403, detail=MENSAJE_SIN_ASIGNACION)
+        pedido = request.query_params.get("equipo")
+        if pedido and pedido.isdigit() and int(pedido) in oncologos:
+            oncologos = [int(pedido)]
+        return usuario, oncologos, papi.db.conectar(papi.DB_PATH, check_same_thread=False), conectar_expediente(papi._ruta_expediente(), check_same_thread=False)
+
+    @router.get("/enfermeria/horario")
+    def horario_enfermeria(request: Request, horas: int = 24):
+        """Lo que toca administrar en las próximas horas a los pacientes del equipo, en orden de hora."""
+        from historia_clinica import ordenes_medicas as om
+
+        usuario, oncologos, conn, conn_exp = _pacientes_del_alcance(request, Accion.VER_ORDENES_MEDICAS)
+        try:
+            om.inicializar_esquema(conn_exp)
+            con_ordenes = [f[0] for f in conn_exp.execute("SELECT DISTINCT paciente_id FROM ordenes_medicamento WHERE suspendida_en IS NULL")]
+            marcas = ",".join("?" * len(oncologos))
+            pacientes = {}
+            for eid in con_ordenes:
+                ficha = conn_exp.execute("SELECT identificacion FROM pacientes WHERE id = ?", (eid,)).fetchone()
+                if ficha is None:
+                    continue
+                fila = conn.execute(f"SELECT id, nombre_completo, numero_identificacion FROM pacientes WHERE numero_identificacion = ? "
+                                    f"AND oncologo_id IN ({marcas})", (ficha[0], *oncologos)).fetchone()
+                if fila is not None:
+                    pacientes[eid] = {"id": fila[0], "nombre": fila[1], "identificacion": fila[2]}
+            dosis = om.horario(conn_exp, list(pacientes), horas=max(1, min(int(horas), 72)))
+            for p in pacientes.values():
+                registrar_acceso(conn, usuario.id, TipoAccion.VER, paciente_id=p["id"], detalle="Horario de administración de medicamentos")
+            return {"dosis": [{**d.a_dict(), "paciente": pacientes[d.paciente_id]} for d in dosis],
+                    "pacientes": list(pacientes.values()), "horas": horas}
+        finally:
+            conn_exp.close()
+            conn.close()
+
+    @router.get("/admision/pacientes")
+    def admision(request: Request, q: str = ""):
+        """Admisiones: los pacientes del equipo con sus datos de admisión (sin datos clínicos) y su consentimiento."""
+        from privacidad.consentimiento_ia import estado_consentimiento_ia
+
+        usuario, oncologos, conn, conn_exp = _pacientes_del_alcance(request, Accion.VER_DATOS_ADMISION)
+        try:
+            marcas = ",".join("?" * len(oncologos))
+            texto = f"%{q.strip()}%"
+            filas = conn.execute(
+                f"SELECT id, nombre_completo, fecha_nacimiento, sexo, tipo_identificacion, numero_identificacion, oncologo_id "
+                f"FROM pacientes WHERE oncologo_id IN ({marcas}) AND (nombre_completo LIKE ? OR numero_identificacion LIKE ?) "
+                f"ORDER BY id DESC LIMIT 30", (*oncologos, texto, texto)).fetchall()
+            resultado = []
+            for f in filas:
+                exp = conn_exp.execute("SELECT id FROM pacientes WHERE identificacion = ?", (f[5],)).fetchone()
+                consentimiento = estado_consentimiento_ia(conn_exp, exp[0]).etiqueta if exp else "pendiente"
+                resultado.append({"id": f[0], "nombre_completo": f[1], "fecha_nacimiento": f[2], "sexo": f[3], "tipo_identificacion": f[4],
+                                  "numero_identificacion": f[5], "oncologo_id": f[6], "consentimiento_ia": consentimiento})
+            return {"pacientes": resultado}
+        finally:
+            conn_exp.close()
+            conn.close()
 
     # --- DOC-01 ----------------------------------------------------------------------------------------
 
@@ -724,14 +868,14 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
     async def agente_mensaje(paciente_id: int, request: Request):
         datos = await _cuerpo(request)
         mensaje = _texto(datos, "mensaje", "tu mensaje", 2000)
-        with contexto(request, paciente_id) as ctx:
+        with contexto(request, paciente_id, solo_oncologia=True) as ctx:
             eid = ctx.exigir_expediente()
             return agentes.enviar(ctx.usuario, ctx.paciente.id, eid, mensaje, datos.get("hilo"))
 
     @router.post("/pacientes/{paciente_id}/agente/{hilo}/decision")
     async def agente_decision(paciente_id: int, hilo: str, request: Request):
         datos = await _cuerpo(request)
-        with contexto(request, paciente_id) as ctx:
+        with contexto(request, paciente_id, solo_oncologia=True) as ctx:
             eid = ctx.exigir_expediente()
             if datos.get("aprobar") and not verificar_permiso(ctx.usuario, Accion.CONFIRMAR_TRATAMIENTO).permitido:
                 raise HTTPException(status_code=403, detail="Tu rol no puede aprobar acciones del asistente.")

@@ -10,6 +10,7 @@ y así esta decisión es explicable y no puede "alucinar".
     estadificacion  "¿en qué estadio está?", "TNM"
     tratamiento     "opciones de tratamiento", "¿qué esquema…?", "interacciones"
     faltantes       "¿qué falta para decidir?"
+    medicacion      "¿qué le toca a las 14:00?", "¿qué dosis tiene ordenada?"  (órdenes médicas: lo de enfermería)
     evidencia       "¿qué dice la guía ESMO…?"  (no necesita paciente)
     saludo          "hola", "gracias"
 """
@@ -21,17 +22,21 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Optional
 
-INTENCIONES = ("dato", "resumen", "diagnostico", "estadificacion", "tratamiento", "faltantes", "evidencia", "saludo")
+INTENCIONES = ("dato", "resumen", "diagnostico", "estadificacion", "tratamiento", "faltantes", "medicacion", "evidencia", "saludo")
 
 ETIQUETAS = {
     "dato": "Buscar un dato del expediente", "resumen": "Resumir el caso", "diagnostico": "Apoyo al diagnóstico",
     "estadificacion": "Estadificación", "tratamiento": "Opciones de tratamiento", "faltantes": "Información faltante",
-    "evidencia": "Evidencia de las guías", "saludo": "Conversación",
+    "evidencia": "Evidencia de las guías", "saludo": "Conversación", "medicacion": "Medicamentos, dosis y horarios",
 }
 
 _REGLAS = (
     ("saludo", r"^(hola|buen(os|as)\s+(dias|tardes|noches)|gracias|muchas gracias|ok|listo|perfecto)\W*$"),
     ("faltantes", r"\b(que|cuales)\s+(datos?\s+)?falta|informacion faltante|falta(n)?\s+para\s+decidir|incomplet"),
+    # Antes que "tratamiento": preguntar por lo ORDENADO (dosis, vía, horario) no es pedir una recomendación.
+    ("medicacion", r"\borden(es)? medica|\bdosis\b|\bhorario|a que hora|le toca|toca (darle|aplicar|administrar)|administra(r|cion)|"
+                   r"suministr|aplicarle|\bvia (oral|iv|intravenosa|subcutanea)|cada cuant|(por|que) via\b|medicamentos? (ordenad|indicad|que (toma|tiene|recibe))|"
+                   r"medicacion (actual|ordenada|indicada)|que (medicamentos|medicacion) (tiene|toma|recibe)|infusion|pastillas?\b"),
     ("estadificacion", r"\bestadi(o|ficacion|ficar|ar)\b|\btnm\b|\bajcc\b|\bcategoria\s+[tnm]\b"),
     ("tratamiento", r"\btratamiento|terapia|esquema|regimen|quimio|inmunoterapia|primera linea|segunda linea|interaccion|"
                     r"que (le )?(doy|damos|indico|recomiendas)|opciones terapeuticas|farmaco|medicamento"),

@@ -34,6 +34,10 @@ class Accion(str, Enum):
     VER_METRICAS_USO = "ver_metricas_uso"  # ADM-02
     VER_AUDITORIA = "ver_auditoria"  # AUD-01 / AUD-02 desde la interfaz
     VER_ESTADO_SISTEMA = "ver_estado_sistema"  # NFR-01 / NFR-02 desde la interfaz
+    REGISTRAR_PACIENTE = "registrar_paciente"  # PAC-01 (oncología y admisiones)
+    VER_DATOS_ADMISION = "ver_datos_admision"  # listado y ficha demográfica, sin datos clínicos
+    PRESCRIBIR_MEDICAMENTO = "prescribir_medicamento"  # órdenes médicas
+    VER_ORDENES_MEDICAS = "ver_ordenes_medicas"  # órdenes y horario de administración (enfermería las suministra)
 
 
 PERMISOS_POR_ROL: dict[Accion, frozenset[Rol]] = {
@@ -41,7 +45,8 @@ PERMISOS_POR_ROL: dict[Accion, frozenset[Rol]] = {
     Accion.CONFIRMAR_ESTADIFICACION: frozenset({Rol.ONCOLOGO}),
     Accion.REGISTRAR_JUICIO_DIAGNOSTICO: frozenset({Rol.ONCOLOGO}),
     Accion.VER_EXPEDIENTE: frozenset({Rol.ONCOLOGO, Rol.ENFERMERIA, Rol.AUDITOR}),
-    Accion.EDITAR_EXPEDIENTE: frozenset({Rol.ONCOLOGO, Rol.ENFERMERIA}),
+    # Enfermería consulta el expediente pero no lo modifica; lo suyo son las órdenes médicas que suministra.
+    Accion.EDITAR_EXPEDIENTE: frozenset({Rol.ONCOLOGO}),
     Accion.EXPORTAR_EXPEDIENTE: frozenset({Rol.ONCOLOGO, Rol.ADMINISTRATIVO}),
     Accion.CONFIGURAR_GUIAS_INSTITUCIONALES: frozenset({Rol.ADMINISTRADOR_CLINICO}),
     Accion.GESTIONAR_USUARIOS: frozenset({Rol.ADMINISTRADOR}),
@@ -52,6 +57,10 @@ PERMISOS_POR_ROL: dict[Accion, frozenset[Rol]] = {
     Accion.VER_METRICAS_USO: frozenset({Rol.DIRECTOR_MEDICO}),
     Accion.VER_AUDITORIA: frozenset({Rol.AUDITOR}),
     Accion.VER_ESTADO_SISTEMA: frozenset({Rol.ADMINISTRADOR}),
+    Accion.REGISTRAR_PACIENTE: frozenset({Rol.ONCOLOGO, Rol.ADMINISTRATIVO}),
+    Accion.VER_DATOS_ADMISION: frozenset({Rol.ONCOLOGO, Rol.ENFERMERIA, Rol.ADMINISTRATIVO}),
+    Accion.PRESCRIBIR_MEDICAMENTO: frozenset({Rol.ONCOLOGO}),
+    Accion.VER_ORDENES_MEDICAS: frozenset({Rol.ONCOLOGO, Rol.ENFERMERIA}),
 }
 
 

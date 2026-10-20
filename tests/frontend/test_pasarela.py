@@ -183,11 +183,11 @@ def test_los_roles_sin_asignacion_de_pacientes_no_ven_expedientes(entrar, usuari
     assert c.post(f"/api/pacientes/{LUCIA}/alertas-laboratorio/1/revisar", json={}, headers=H).status_code == 403
 
 
-@pytest.mark.parametrize("usuario,motivo", [("enf.mora", MENSAJE_SIN_ASIGNACION), ("auditor.demo", MENSAJE_SIN_ASIGNACION)])
-def test_enfermeria_y_auditoria_reciben_la_explicacion_y_no_un_error_opaco(entrar, usuario, motivo):
+@pytest.mark.parametrize("usuario,explicacion", [("enf.mora", "asignado al equipo"), ("auditor.demo", MENSAJE_SIN_ASIGNACION)])
+def test_enfermeria_sin_equipo_y_auditoria_reciben_la_explicacion_y_no_un_error_opaco(entrar, usuario, explicacion):
     r = entrar(usuario).get("/api/pacientes")
-    assert r.status_code == 403 and r.json()["detail"] == motivo
-    assert entrar(usuario).get("/api/sesion").json()["mensaje_sin_acceso_clinico"] == motivo
+    assert r.status_code == 403 and r.json()["detail"] == MENSAJE_SIN_ASIGNACION
+    assert explicacion in entrar(usuario).get("/api/sesion").json()["mensaje_sin_acceso_clinico"]
 
 
 def test_solo_direccion_medica_ve_las_metricas(entrar):

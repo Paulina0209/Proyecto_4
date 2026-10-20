@@ -332,3 +332,60 @@ def test_historial_por_usuario(tmp_path, monkeypatch):
     assert [m["rol"] for m in historial.mensajes_de(cid)] == ["medico", "asistente"]
     assert historial.mensajes_de(cid)[1]["fuentes"] == [{"id": "biomarcador-1"}]
     assert historial.conversaciones_de(2)[0]["mensajes"] == 2 and historial.conversaciones_de(3) == []
+
+
+# --- Enfermería: órdenes médicas, dosis y horarios ----------------------------------------------------
+
+
+def _enfermeria(conn, ids, indice):
+    import dataclasses
+
+    return dataclasses.replace(deps(conn, ids, indice), perfil="enfermeria")
+
+
+def _ordenar(conn, paciente_id, **cambios):
+    from datetime import date
+
+    from historia_clinica import ordenes_medicas as om
+
+    datos = {"medicamento": "Ondansetrón", "dosis": "8 mg", "via": "VO", "intervalo_horas": 8, "fecha_inicio": date.today().isoformat(),
+             "hora_inicio": "08:00", "ordenado_por": "Dra. Ana Gómez (dra.gomez)", **cambios}
+    return om.prescribir(conn, paciente_id, **datos)
+
+
+def test_enfermeria_pregunta_por_las_ordenes_y_se_citan(expediente, indice):
+    conn, ids = expediente
+    orden = _ordenar(conn, ids["paciente_maria"], indicaciones="Antes de la quimioterapia")
+    r = g.ejecutar("¿Qué medicamentos tiene ordenados?", _enfermeria(conn, ids, indice), paciente_activo=ids["paciente_maria"])
+    assert r["intencion"] == "medicacion" and r["estado"] == "respondida"
+    assert "Ondansetrón 8 mg" in r["respuesta"] and f"orden-{orden.id}" in [f["id"] for f in r["fuentes"]]
+    assert "Próximas administraciones" in r["respuesta"]
+
+
+def test_sin_ordenes_lo_dice_sin_inventar(expediente, indice):
+    conn, ids = expediente
+    r = g.ejecutar("¿Qué le toca hoy y a qué hora?", _enfermeria(conn, ids, indice), paciente_activo=ids["paciente_maria"])
+    assert r["estado"] == "respondida" and "No hay órdenes médicas activas" in r["respuesta"]
+
+
+def test_enfermeria_no_recibe_recomendaciones_de_tratamiento(expediente, indice):
+    conn, ids = expediente
+    r = g.ejecutar("¿Qué opciones de tratamiento tiene?", _enfermeria(conn, ids, indice), paciente_activo=ids["paciente_maria"])
+    assert r["estado"] == "fuera_de_rol" and "oncólogo tratante" in r["respuesta"]
+    assert "recuperar" not in nodos(r) and not r.get("fuentes")
+
+
+def test_enfermeria_si_consulta_datos_del_expediente(expediente, indice):
+    conn, ids = expediente
+    r = g.ejecutar("¿Cuál es el HER2?", _enfermeria(conn, ids, indice), paciente_activo=ids["paciente_maria"])
+    assert r["estado"] == "respondida" and "negativo" in r["respuesta"].lower()
+
+
+def test_las_ordenes_suspendidas_no_salen_como_vigentes(expediente, indice):
+    from historia_clinica import ordenes_medicas as om
+
+    conn, ids = expediente
+    o = _ordenar(conn, ids["paciente_maria"])
+    om.suspender(conn, ids["paciente_maria"], o.id, suspendida_por="Dra. Gómez", motivo="Náuseas controladas")
+    r = g.ejecutar("¿Qué medicamentos tiene ordenados?", _enfermeria(conn, ids, indice), paciente_activo=ids["paciente_maria"])
+    assert "No hay órdenes médicas activas" in r["respuesta"] and "Náuseas controladas" in r["respuesta"]

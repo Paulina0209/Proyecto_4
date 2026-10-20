@@ -10,6 +10,7 @@ import { vistaRegistroPaciente } from "./vista_registro.js";
 import { vistaExpediente } from "./vista_expediente.js";
 import { vistaMetricas } from "./vista_metricas.js";
 import { vistaAuditoria, vistaGuias, vistaNotificaciones, vistaPrivacidad, vistaSistema, vistaUsuarios } from "./vista_gestion.js";
+import { vistaAdmisiones, vistaMedicamentos } from "./vista_equipo.js";
 
 const NOMBRE_APP = "Copiloto oncológico";
 const principal = document.getElementById("contenido");
@@ -18,10 +19,12 @@ const estado = { sesion: null, info: { modo_demo: false }, capacidades: SIN_CAPA
 
 /* ---------------- Cabecera según la sesión ---------------- */
 const MENU = [
+  ["nav-medicamentos", (s) => s.ver_ordenes && s.solo_lectura],
+  ["nav-admisiones", (s) => s.acceso_admision],
   ["nav-asistente", (s) => s.acceso_clinico],
   ["nav-pacientes", (s) => s.acceso_clinico],
-  ["nav-notificaciones", (s, c) => s.acceso_clinico && c.extensiones.notificaciones.disponible],
-  ["nav-guias", (s) => s.acceso_clinico || s.configurar_guias],
+  ["nav-notificaciones", (s, c) => s.apoyo_decision && c.extensiones.notificaciones.disponible],
+  ["nav-guias", (s) => s.apoyo_decision || s.configurar_guias],
   ["nav-privacidad", (s) => s.configurar_privacidad],
   ["nav-metricas", (s) => s.ver_metricas],
   ["nav-auditoria", (s) => s.ver_auditoria],
@@ -58,7 +61,7 @@ function pintarContador(n) {
 
 async function actualizarContadorNotificaciones() {
   const s = estado.sesion;
-  if (!s || !s.acceso_clinico || !estado.capacidades.extensiones.notificaciones.disponible) {
+  if (!s || !s.apoyo_decision || !estado.capacidades.extensiones.notificaciones.disponible) {
     avisos.sinLeer = null; pintarContador(0); return;
   }
   const mia = ++avisos.consulta;
@@ -83,7 +86,9 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) actu
 /* Primera pantalla de cada rol. */
 function inicio(s) {
   if (!s) return "#/ingresar";
+  if (s.ver_ordenes && s.solo_lectura) return "#/medicamentos";
   if (s.acceso_clinico) return "#/asistente";
+  if (s.acceso_admision) return "#/admisiones";
   if (s.ver_metricas) return "#/metricas";
   if (s.ver_auditoria) return "#/auditoria";
   if (s.gestionar_usuarios) return "#/usuarios";
@@ -104,7 +109,9 @@ const RUTAS = [
   { patron: /^\/sin-acceso$/, vista: sinAcceso },
   { patron: /^\/asistente(?:\/([\w-]+))?$/, vista: clinica(vistaChat), parametros: ["conversacion"] },
   { patron: /^\/pacientes$/, vista: clinica(vistaPacientes) },
-  { patron: /^\/pacientes\/nuevo$/, vista: clinica(vistaRegistroPaciente) },
+  { patron: /^\/pacientes\/nuevo$/, vista: vistaRegistroPaciente },
+  { patron: /^\/medicamentos$/, vista: vistaMedicamentos },
+  { patron: /^\/admisiones$/, vista: vistaAdmisiones },
   { patron: /^\/pacientes\/(\d+)(?:\/([a-z-]+))?$/, vista: clinica(vistaExpediente), parametros: ["id", "seccion"] },
   { patron: /^\/notificaciones$/, vista: clinica(vistaNotificaciones) },
   { patron: /^\/guias$/, vista: vistaGuias },

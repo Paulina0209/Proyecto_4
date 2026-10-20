@@ -271,6 +271,82 @@ def registrar_consultas_de_revision(
 # ---------------------------------------------------------------------------
 
 
+#: Equipo de atención del escenario: enfermería y admisiones trabajan con la Dra. Gómez.
+EQUIPOS = {"enf.mora": ("dra.gomez",), "adm.lopez": ("dra.gomez",)}
+
+#: Órdenes médicas de demostración (inventadas, como las consultas de revisión): lo que enfermería ve en su horario.
+#: (paciente de cBioPortal, [(medicamento, dosis, vía, horas entre dosis, hora de inicio, días desde el inicio, indicaciones)])
+ORDENES_DEMO = (
+    ("P-0006895", [("Pembrolizumab", "200 mg", "IV", 504, "09:00", 0, "Diluir en 100 ml de SSN 0,9 %; pasar en 30 minutos. Orden de demostración del escenario."),
+                   ("Ondansetrón", "8 mg", "VO", 8, "08:00", 0, "Antiemético. Orden de demostración del escenario."),
+                   ("Dexametasona", "4 mg", "VO", 12, "08:00", 0, "Con alimentos, durante 3 días. Orden de demostración del escenario.")]),
+    ("P-0008538", [("Capecitabina", "1000 mg/m²", "VO", 12, "08:00", 0, "Dentro de los 30 minutos después de comer. Orden de demostración del escenario."),
+                   ("Metoclopramida", "10 mg", "VO", 8, "07:00", 0, "Antes de las comidas, si hay náuseas. Orden de demostración del escenario.")]),
+)
+
+
+def asegurar_equipos(conn_usuarios: sqlite3.Connection) -> int:
+    """Asigna el equipo del escenario si todavía no hay ninguno (idempotente: no toca lo que el administrador ya armó)."""
+    from administracion import equipo
+
+    equipo.inicializar_esquema(conn_usuarios)
+    if conn_usuarios.execute("SELECT 1 FROM equipo_atencion LIMIT 1").fetchone():
+        return 0
+    ids = {f[1]: f[0] for f in conn_usuarios.execute("SELECT id, nombre_usuario FROM usuarios")}
+    admin = conn_usuarios.execute("SELECT id, nombre_usuario FROM usuarios WHERE rol = ? AND activo = 1 ORDER BY id LIMIT 1",
+                                  (Rol.ADMINISTRADOR.value,)).fetchone()
+    if admin is None:
+        return 0
+    actor = Usuario(admin[0], admin[1], Rol.ADMINISTRADOR, True)
+    asignadas = 0
+    for persona, oncologos in EQUIPOS.items():
+        for oncologo in oncologos:
+            if persona in ids and oncologo in ids:
+                equipo.asignar(conn_usuarios, actor, ids[persona], ids[oncologo])
+                asignadas += 1
+    return asignadas
+
+
+def asegurar_ordenes_demo(conn_exp: sqlite3.Connection, conn_pac: sqlite3.Connection, fecha: Optional[date] = None) -> int:
+    """Las órdenes de demostración, si el expediente todavía no tiene ninguna orden médica (idempotente)."""
+    from historia_clinica import ordenes_medicas as om
+    from patients.expediente import paciente_en_expediente
+
+    om.inicializar_esquema(conn_exp)
+    if conn_exp.execute("SELECT 1 FROM ordenes_medicamento LIMIT 1").fetchone():
+        return 0
+    fecha = fecha or date.today()
+    creadas = 0
+    for cbio, ordenes in ORDENES_DEMO:
+        fila = conn_pac.execute("SELECT id FROM pacientes WHERE numero_identificacion LIKE ?", (f"%:{cbio}",)).fetchone()
+        eid = paciente_en_expediente(conn_pac, conn_exp, fila[0], crear=False) if fila else None
+        if eid is None:
+            continue
+        for medicamento, dosis, via, intervalo, hora, dias, indicaciones in ordenes:
+            om.prescribir(conn_exp, eid, medicamento=medicamento, dosis=dosis, via=via, intervalo_horas=intervalo,
+                          fecha_inicio=(fecha - timedelta(days=dias)).isoformat(), hora_inicio=hora, indicaciones=indicaciones,
+                          ordenado_por="Dra. Ana Gómez (dra.gomez)")
+            creadas += 1
+    return creadas
+
+
+def asegurar_equipo_y_ordenes(rutas) -> Tuple[int, int]:
+    """Para capas de trabajo armadas antes de existir el equipo de atención y las órdenes médicas."""
+    from administracion import usuarios as adm
+    from historia_clinica.db import conectar_expediente
+    from patients import db as db_pacientes
+
+    conn_usu = adm.crear_conexion(str(rutas.usuarios))
+    conn_exp = conectar_expediente(rutas.expediente)
+    conn_pac = db_pacientes.conectar(rutas.pacientes)
+    try:
+        return asegurar_equipos(conn_usu), asegurar_ordenes_demo(conn_exp, conn_pac)
+    finally:
+        conn_usu.close()
+        conn_exp.close()
+        conn_pac.close()
+
+
 def aplicar_escenario(rutas, fecha_referencia: Optional[date] = None, demo: Sequence[str] = None) -> ResumenEscenario:
     """Aplica el escenario sobre una capa de trabajo recién copiada de la base."""
     from administracion import usuarios as adm
@@ -296,6 +372,8 @@ def aplicar_escenario(rutas, fecha_referencia: Optional[date] = None, demo: Sequ
         resumen.consentimientos = dict(Counter(casos.values()))
         resumen.investigacion = registrar_autorizaciones_investigacion(conn_exp, cohorte, fecha)
         resumen.consultas_de_revision = registrar_consultas_de_revision(conn_exp, cohorte, demo, fecha)
+        asegurar_equipos(conn_usu)
+        asegurar_ordenes_demo(conn_exp, conn_pac, fecha)
         conn_exp.execute(
             "CREATE TABLE IF NOT EXISTS escenario_copiloto (version INTEGER PRIMARY KEY, aplicado_en TEXT NOT NULL, resumen_json TEXT NOT NULL)"
         )

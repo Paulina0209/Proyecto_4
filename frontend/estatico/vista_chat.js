@@ -5,14 +5,20 @@ import { h, anunciar, idUnico, reemplazar } from "./dom.js";
 import { api, apiFlujo } from "./api.js";
 import { edad, fecha } from "./formato.js";
 import { cargando, insignia, mensaje, vacio } from "./ui.js";
+import { leerComoBase64 } from "./secciones_paciente.js";
 
 const SECCIONES_HC = [["ficha", "Ficha"], ["consultas", "Consultas"], ["laboratorios", "Laboratorios"], ["imagenes", "Imágenes"],
-  ["biomarcadores", "Biomarcadores"], ["antecedentes", "Antecedentes"], ["datos", "Datos clínicos"], ["documentos", "Documentos"], ["guias", "Guías clínicas"]];
+  ["biomarcadores", "Biomarcadores"], ["antecedentes", "Antecedentes"], ["datos", "Datos clínicos"], ["ordenes", "Órdenes médicas"], ["documentos", "Documentos"],
+  ["guias", "Guías clínicas"]];
 const SUGERENCIAS = ["Resúmeme el caso", "¿Cuál es el EGFR?", "¿Qué diagnóstico diferencial sugieres?", "¿En qué estadio está?",
   "¿Qué opciones de tratamiento tiene?", "¿Qué falta para decidir?"];
+const SUGERENCIAS_ENFERMERIA = ["¿Qué medicamentos tiene ordenados?", "¿Qué le toca hoy y a qué hora?", "¿Cuándo es la próxima dosis?",
+  "¿Por qué vía se administra?", "¿Cuál es el último potasio?"];
+const FORMATOS_ADJUNTO = ".pdf,.jpg,.jpeg,.png,.dcm";
 const ESTADO_RESPUESTA = {
   rechazada: { texto: "Sin sustento: no respondo", tono: "aviso", icono: "alerta" },
   aclaracion: { texto: "Necesito una aclaración", tono: "info", icono: "info" },
+  fuera_de_rol: { texto: "Consulta para el oncólogo tratante", tono: "info", icono: "info" },
 };
 
 /* Texto del asistente: líneas, **negrita**, viñetas y citas [id] como botones que resaltan la fuente en la HC. */
@@ -220,18 +226,64 @@ export async function vistaChat(ctx) {
     }
   }
 
-  const entrada = h("textarea", { id: idUnico("pregunta"), rows: 2, placeholder: "Pregunta sobre un paciente, pide un resumen, un diagnóstico diferencial, la estadificación o las opciones de tratamiento…" });
+  const enfermeria = Boolean(ctx.sesion.solo_lectura);
+  const entrada = h("textarea", { id: idUnico("pregunta"), rows: 2, placeholder: enfermeria
+    ? "Pregunta por las órdenes médicas de un paciente: medicamentos, dosis, vías y horarios…"
+    : "Pregunta sobre un paciente, pide un resumen, un diagnóstico diferencial, la estadificación o las opciones de tratamiento…" });
   entrada.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); formulario.requestSubmit(); } });
   const botonEnviar = h("button", { type: "submit", class: "btn" }, "Enviar");
+  /* Adjuntar un documento al expediente del paciente activo (DOC-01): queda cifrado y, con consentimiento de IA,
+     entra a la base de conocimiento del asistente, así que se le puede preguntar enseguida. */
+  const archivo = h("input", { type: "file", id: idUnico("adjunto"), accept: FORMATOS_ADJUNTO, class: "vh", tabindex: "-1" });
+  const botonAdjuntar = ctx.sesion.puede_registrar ? h("button", { type: "button", class: "btn sec", title: "PDF, imagen o DICOM, hasta 15 MB",
+    onclick: () => {
+      if (!estado.paciente) {
+        hilo.append(h("div", { class: "burbuja asistente" }, mensaje("info", null, "Primero abre al paciente (arriba) para adjuntarle el documento.")));
+        hilo.scrollTop = hilo.scrollHeight;
+        return;
+      }
+      archivo.click();
+    } }, "Adjuntar documento") : null;
+  archivo.addEventListener("change", async () => {
+    const f = archivo.files && archivo.files[0];
+    archivo.value = "";
+    if (!f || !estado.paciente) return;
+    const bienvenida = hilo.querySelector(".bienvenida");
+    if (bienvenida) bienvenida.remove();
+    hilo.append(burbujaMedico(`Adjunté «${f.name}» al expediente de ${estado.paciente.nombre}.`));
+    const aviso = h("div", { class: "burbuja asistente", "aria-busy": "true" }, h("span", { class: "autor" }, "Copiloto"), h("p", { class: "tenue" }, "Guardando el documento…"));
+    hilo.append(aviso);
+    hilo.scrollTop = hilo.scrollHeight;
+    try {
+      if (f.size > 15 * 1024 * 1024) throw Object.assign(new Error("El archivo supera los 15 MB."), { mensajes: ["El archivo supera los 15 MB."] });
+      const d = await api(`/api/clinica/pacientes/${estado.paciente.id}/documentos`, { metodo: "POST",
+        cuerpo: { nombre: f.name, contenido_base64: await leerComoBase64(f) } });
+      const p = d.procesamiento || {};
+      aviso.replaceChildren(h("span", { class: "autor" }, "Copiloto"),
+        mensaje(p.indexado ? "ok" : "info", "Documento guardado en el expediente", `${d.nombre_archivo_original} (${d.tipo_documento}). ${p.mensaje || ""}`),
+        p.indexado ? h("p", { class: "tenue" }, "Ya puedes preguntarme por su contenido.") : null);
+      anunciar("Documento guardado.");
+      const id = estado.paciente.id;
+      estado.hc = null;
+      await abrirPaciente(id);
+    } catch (err) {
+      aviso.replaceChildren(mensaje("error", "No se pudo adjuntar el documento", err.mensajes ? err.mensajes[0] : String(err)));
+    } finally {
+      aviso.removeAttribute("aria-busy");
+      hilo.scrollTop = hilo.scrollHeight;
+    }
+  });
   const formulario = h("form", { class: "entrada-chat", onsubmit: (e) => { e.preventDefault(); const t = entrada.value; entrada.value = ""; enviar(t); } },
-    h("label", { for: entrada.id, class: "vh" }, "Tu pregunta"), entrada, botonEnviar);
+    h("label", { for: entrada.id, class: "vh" }, "Tu pregunta"), archivo, botonAdjuntar, entrada, botonEnviar);
 
   async function cargarConversacion() {
     if (!estado.conversacion) {
       hilo.replaceChildren(h("div", { class: "bienvenida" },
         h("h2", {}, `Hola, ${ctx.sesion.usuario.nombre_completo.split(" ").slice(0, 2).join(" ")}`),
-        h("p", {}, "Pregúntame por tus pacientes. Respondo solo con lo que hay en sus historias clínicas y en las guías de la institución, y te muestro de dónde sale cada dato."),
-        h("div", { class: "sugerencias" }, SUGERENCIAS.map((s) => h("button", { type: "button", class: "btn sec chico", onclick: () => enviar(s) }, s)))));
+        h("p", {}, enfermeria
+          ? "Pregúntame por las órdenes médicas de tus pacientes: qué medicamento, qué dosis, por qué vía y a qué hora. Respondo solo con lo que ordenó el oncólogo y te muestro la orden."
+          : "Pregúntame por tus pacientes. Respondo solo con lo que hay en sus historias clínicas y en las guías de la institución, y te muestro de dónde sale cada dato."),
+        h("div", { class: "sugerencias" }, (enfermeria ? SUGERENCIAS_ENFERMERIA : SUGERENCIAS).map((s) => h("button", { type: "button", class: "btn sec chico", onclick: () => enviar(s) }, s)))));
       return;
     }
     hilo.replaceChildren(cargando("Cargando la conversación…"));
@@ -258,7 +310,8 @@ export async function vistaChat(ctx) {
         h("div", {}, h("h1", {}, "Asistente clínico"), etiquetaActivo),
         h("div", { class: "buscador-paciente" }, selectorPaciente, resultadosPaciente)),
       hilo,
-      h("p", { class: "ayuda" }, "Enter envía; Mayús+Enter, nueva línea. Es apoyo a la decisión: las decisiones clínicas son tuyas."),
+      h("p", { class: "ayuda" }, enfermeria ? "Enter envía; Mayús+Enter, nueva línea. Las órdenes las prescribe y cambia el oncólogo tratante."
+        : "Enter envía; Mayús+Enter, nueva línea. Es apoyo a la decisión: las decisiones clínicas son tuyas."),
       formulario),
     panel);
   pintarPanel();

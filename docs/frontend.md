@@ -109,7 +109,12 @@ la pantalla de imágenes lo dice y muestra lo último sincronizado y los informe
 | Notificaciones | CFG-02: bandeja (resultados críticos, estudios pendientes, interacciones) y qué avisa por qué canal; el enlace del menú cuenta las no leídas y se actualiza solo (`docs/configuracion_notificaciones.md`) |
 | Exportar | HTML accesible (recomendado) o PDF, con traza de auditoría (`exportar_expediente_html/pdf`) |
 | Métricas de uso | El tablero ADM-02 dentro de la navegación, solo para dirección médica |
-| Sin pantallas de expediente | Explica por qué un rol no ve pacientes (ver «Límites») |
+| Expediente › Órdenes médicas | El oncólogo prescribe (medicamento, dosis, vía, frecuencia, hora de inicio, indicaciones), partiendo de su decisión de tratamiento (TX-04), y suspende con motivo; enfermería las consulta con el horario de las próximas 48 horas |
+| Medicamentos (enfermería) | El horario de administración de las próximas 24 horas de los pacientes de su equipo, según las órdenes médicas |
+| Admisiones (administrativo) | Pacientes del equipo con datos de admisión (sin datos clínicos): registrar pacientes, el consentimiento de IA y exportar el resumen |
+| Asistente | Además de preguntar: **Adjuntar documento** (oncología) al expediente del paciente activo; enfermería conversa sobre órdenes, dosis y horarios |
+| Privacidad (administración clínica) | NFR-06: políticas de tratamiento de datos y solicitudes de derechos del titular |
+| Sin pantallas de expediente | Explica por qué un rol no ve pacientes (ver «Quién ve qué») |
 
 Tema automático, claro u oscuro (botón de la cabecera; solo se recuerda esa preferencia en
 `localStorage`, nunca datos clínicos).
@@ -133,20 +138,30 @@ manual»). El PDF sigue sin estar etiquetado (reportlab); la alternativa accesib
 incrustado (ADM-02) y el visor de imágenes (OHIF, de terceros) tienen su propia cobertura o ninguna: el
 visor se abre en otra pestaña y su accesibilidad es la del visor.
 
+## Quién ve qué (equipo de atención)
+
+Cada paciente pertenece a su oncólogo. El administrador asigna, en **Usuarios**, a qué oncólogos asiste cada
+persona de enfermería o de admisiones (`administracion/equipo.py`, auditado; retirar no borra). La pasarela
+resuelve de quién es cada paciente y solo deja pasar si ese oncólogo está en el equipo de quien pide.
+
+| Rol | Ve | Puede |
+|---|---|---|
+| Oncología | Sus pacientes, todo el expediente y el apoyo a la decisión | Todo lo clínico, prescribir órdenes médicas, adjuntar documentos |
+| Enfermería | Expediente de los pacientes de su equipo (**solo lectura**), órdenes médicas y su horario | Preguntar al asistente por medicamentos, dosis, vías y horarios (solo con las órdenes del oncólogo); registrar el consentimiento |
+| Administrativo | Datos de admisión de los pacientes de su equipo (nada clínico) | Registrar pacientes para un oncólogo de su equipo, el consentimiento y exportar el resumen |
+| Auditoría, administración, dirección | Sus propias pantallas | — |
+
+Sin equipo asignado, enfermería y admisiones no ven pacientes (fail-closed) y la pantalla lo explica.
+Las notificaciones (CFG-02) siguen siendo la bandeja personal del oncólogo.
+
 ## Límites conocidos
 
-- **Solo el rol `oncologo` ve expedientes.** SEC-01 da `ver_expediente` también a enfermería y
-  auditoría, pero el modelo de datos todavía no dice a qué oncólogo asiste cada persona (no hay
-  asignación de pacientes). Mientras no exista, se les niega con una explicación en lugar de adivinar
-  o enseñar todo. Es una decisión de seguridad, no un olvido; cuando exista la asignación, basta con
-  ampliar la regla en `frontend/servidor.py`.
 - **Sesiones.** Por defecto viven en la memoria del proceso (reiniciar el servidor las cierra). Con
   `COPILOTO_SESIONES_DB` (o `--workers` mayor que 1 en `seguridad.servidor_tls`) se guardan en una base
   compartida (`AlmacenSesionesSQLite`, NFR-05): cualquier réplica atiende a cualquier usuario y reiniciar
   no cierra las sesiones.
-- **Casi todo es de solo lectura.** La única escritura es revisar una alerta de laboratorio. No hay aún
-  pantallas para resolver conflictos de laboratorio, registrar el consentimiento de IA, cargar
-  documentos (DOC-01) ni las funciones de IA (resumen, estadificación, recomendación de tratamiento).
+- **Administración de dosis.** Enfermería ve qué toca y a qué hora, pero el registro de «dosis administrada»
+  (hoja de administración) aún no existe.
 - **Sin pruebas en navegadores distintos de Chromium** ni con lectores de pantalla (ver arriba).
 - Al probar la interfaz apareció un fallo de `patients.api` con peticiones simultáneas (`ProgrammingError`
   de SQLite: la conexión se abría en un hilo y se usaba en otro). Se arregló de raíz en NFR-02

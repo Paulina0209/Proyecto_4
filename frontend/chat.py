@@ -37,9 +37,14 @@ def crear_router(pasarela) -> APIRouter:
         permiso = verificar_permiso(usuario, Accion.VER_EXPEDIENTE)
         if not permiso.permitido:
             raise HTTPException(status_code=403, detail=permiso.motivo_rechazo)
-        if usuario.rol != Rol.ONCOLOGO:
+        if not pasarela.oncologos_visibles(usuario):
             raise HTTPException(status_code=403, detail=MENSAJE_SIN_ASIGNACION)
         return usuario, nombre
+
+    def alcance(usuario) -> Tuple[List[int], str]:
+        """Los oncólogos cuyos pacientes ve la persona, como marcadores SQL."""
+        visibles = pasarela.oncologos_visibles(usuario)
+        return visibles, ",".join("?" * len(visibles))
 
     def conexiones():
         from historia_clinica.db import conectar_expediente
@@ -81,9 +86,10 @@ def crear_router(pasarela) -> APIRouter:
             paciente_activo = None
 
         conn, conn_exp = conexiones()
+        visibles, marcas = alcance(usuario)
         if paciente_activo is not None:
             fila = conn.execute("SELECT oncologo_id FROM pacientes WHERE id = ?", (paciente_activo,)).fetchone()
-            if fila is None or fila[0] != usuario.id:
+            if fila is None or fila[0] not in visibles:
                 conn.close()
                 conn_exp.close()
                 raise HTTPException(status_code=404, detail=f"No existe un paciente con id {paciente_activo}.")
@@ -93,11 +99,11 @@ def crear_router(pasarela) -> APIRouter:
         def buscar_pacientes(texto: str) -> List[Tuple[int, str, str]]:
             patron = f"%{texto.strip()}%"
             return [(f[0], f[1], f[2]) for f in conn.execute(
-                "SELECT id, nombre_completo, numero_identificacion FROM pacientes WHERE oncologo_id = ? AND "
-                "(nombre_completo LIKE ? OR numero_identificacion LIKE ?) ORDER BY id LIMIT 7", (usuario.id, patron, patron)).fetchall()]
+                f"SELECT id, nombre_completo, numero_identificacion FROM pacientes WHERE oncologo_id IN ({marcas}) AND "
+                "(nombre_completo LIKE ? OR numero_identificacion LIKE ?) ORDER BY id LIMIT 7", (*visibles, patron, patron)).fetchall()]
 
         def expediente_de(paciente_id: int) -> Tuple[Optional[int], str]:
-            fila = conn.execute("SELECT nombre_completo FROM pacientes WHERE id = ? AND oncologo_id = ?", (paciente_id, usuario.id)).fetchone()
+            fila = conn.execute(f"SELECT nombre_completo FROM pacientes WHERE id = ? AND oncologo_id IN ({marcas})", (paciente_id, *visibles)).fetchone()
             if fila is None:
                 return None, f"paciente {paciente_id}"
             return paciente_en_expediente(conn, conn_exp, paciente_id), fila[0]
@@ -114,7 +120,8 @@ def crear_router(pasarela) -> APIRouter:
 
         eventos: "queue.Queue[Optional[dict]]" = queue.Queue()
         deps = Dependencias(usuario_id=usuario.id, conn_exp=conn_exp, indice=None, buscar_pacientes=buscar_pacientes,
-                            expediente_de=expediente_de, guardar=guardar)
+                            expediente_de=expediente_de, guardar=guardar,
+                            perfil="enfermeria" if usuario.rol == Rol.ENFERMERIA else "oncologia")
 
         def trabajar():
             try:
@@ -169,12 +176,13 @@ def crear_router(pasarela) -> APIRouter:
         from ia_clinica.notes.models import split_sentences
         from patients import api as papi
         from patients.expediente import paciente_en_expediente
+        from historia_clinica.ordenes_medicas import ordenes_de
         from privacidad.consentimiento_ia import estado_consentimiento_ia
 
         usuario, _ = oncologo(request)
         conn, conn_exp = conexiones()
         try:
-            paciente = papi._paciente_del_oncologo_o_404(conn, paciente_id, usuario.id)
+            paciente = papi._paciente_del_oncologo_o_404(conn, paciente_id, pasarela.oncologo_responsable(usuario, paciente_id))
             eid = paciente_en_expediente(conn, conn_exp, paciente_id)
             base = {"paciente": {"id": paciente.id, "nombre": paciente.nombre_completo, "identificacion": paciente.numero_identificacion,
                                  "fecha_nacimiento": paciente.fecha_nacimiento.isoformat() if paciente.fecha_nacimiento else None,
@@ -194,6 +202,8 @@ def crear_router(pasarela) -> APIRouter:
                 if conn_exp.execute("SELECT 1 FROM sqlite_master WHERE name = 'antecedentes_externos'").fetchone() else [],
                 "datos": [{"id": f"dato-{f[0]}", "texto": f"{f[1]} = {f[2]}", "fecha": f[3]} for f in conn_exp.execute(
                     "SELECT id, variable, valor, fecha FROM datos_clinicos_estructurados WHERE paciente_id = ? ORDER BY id", (eid,)).fetchall()],
+                "ordenes": [{"id": f"orden-{o.id}", "texto": o.texto(), "fecha": o.fecha_inicio, "grupo": "Vigentes" if o.activa else "Suspendidas o terminadas"}
+                            for o in ordenes_de(conn_exp, eid)],
             }
             for clave in ("laboratorios", "imagenes", "biomarcadores", "antecedentes"):
                 secciones[clave].sort(key=lambda x: str(x.get("fecha") or ""), reverse=True)
@@ -231,7 +241,7 @@ def crear_router(pasarela) -> APIRouter:
         usuario, _ = oncologo(request)
         conn, conn_exp = conexiones()
         try:
-            papi._paciente_del_oncologo_o_404(conn, paciente_id, usuario.id)
+            papi._paciente_del_oncologo_o_404(conn, paciente_id, pasarela.oncologo_responsable(usuario, paciente_id))
             eid = paciente_en_expediente(conn, conn_exp, paciente_id)
             return {"fragmentos": indice().cuantos(eid) if eid is not None else 0}
         finally:

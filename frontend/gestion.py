@@ -4,6 +4,8 @@
     GET  /usuarios                                ADM-01                  administrador
     POST /usuarios                                ADM-01: alta            administrador
     POST /usuarios/{id}/rol | /desactivar | /reactivar                   administrador
+    GET  /equipos                                 equipo de atención: oncólogos y asignaciones   administrador
+    POST /equipos/{id}                            asignar (o retirar) un oncólogo del equipo de la persona
     GET  /guias                                   CFG-01                  administrador clínico (y oncología, solo lectura)
     POST /guias                                   CFG-01                  administrador clínico
     GET  /salud                                   NFR-01 / NFR-02         administrador
@@ -178,6 +180,44 @@ def crear_router(pasarela) -> APIRouter:
             except (adm.OperacionNoPermitidaError, adm.UsuarioNoEncontradoError) as exc:
                 raise HTTPException(status_code=409 if isinstance(exc, adm.OperacionNoPermitidaError) else 404, detail=str(exc)) from exc
             return _usuario_json(hecho)
+
+    # --- Equipo de atención: a qué oncólogos asiste cada persona de enfermería o admisiones ----------
+
+    @router.get("/equipos")
+    def equipos(request: Request):
+        from administracion import equipo
+
+        usuario_con(request, Accion.GESTIONAR_USUARIOS)
+        with pasarela.conexion_usuarios() as conn:
+            oncologos = [{"id": f[0], "nombre": f[1] or f[2]} for f in conn.execute(
+                "SELECT u.id, p.nombre_completo, u.nombre_usuario FROM usuarios u LEFT JOIN perfiles_usuario p ON p.usuario_id = u.id "
+                "WHERE u.rol = ? AND u.activo = 1 ORDER BY u.id", (Rol.ONCOLOGO.value,))]
+            miembros = [f[0] for f in conn.execute("SELECT id FROM usuarios WHERE rol IN (?, ?) AND activo = 1",
+                                                   tuple(r.value for r in equipo.ROLES_DE_EQUIPO))]
+            return {"oncologos": oncologos,
+                    "asignaciones": {str(m): [a.oncologo_id for a in equipo.asignaciones_de(conn, m)] for m in miembros}}
+
+    @router.post("/equipos/{usuario_id}")
+    async def asignar_equipo(usuario_id: int, request: Request):
+        from administracion import equipo
+        from administracion import usuarios as adm
+
+        actor = usuario_con(request, Accion.GESTIONAR_USUARIOS)
+        datos = await cuerpo(request)
+        with pasarela.conexion_usuarios() as conn:
+            try:
+                oncologo = int(datos.get("oncologo_id"))
+                if datos.get("retirar"):
+                    equipo.retirar(conn, actor, usuario_id, oncologo)
+                else:
+                    equipo.asignar(conn, actor, usuario_id, oncologo)
+            except (TypeError, ValueError):
+                raise HTTPException(status_code=400, detail={"errores": [{"campo": "oncologo_id", "mensaje": "Elige un oncólogo."}]})
+            except adm.ErrorValidacion as exc:
+                raise error_400(exc) from exc
+            except adm.UsuarioNoEncontradoError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+            return {"usuario_id": usuario_id, "oncologos": equipo.oncologos_de(conn, usuario_id)}
 
     # --- CFG-01 ------------------------------------------------------------------------------------
 

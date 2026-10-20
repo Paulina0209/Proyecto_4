@@ -7,16 +7,23 @@ import { graficaDeSerie } from "./grafica.js";
 import { campo, cargando, errorConReintento, formulario, insignia, listaDatos, mensaje, tabla, tarjeta } from "./ui.js";
 import { secAsistente, secJunta, secNotas } from "./secciones_ia.js";
 import { secDiagnostico, secEstadificacion, secEvidencia, secTratamiento } from "./secciones_decision.js";
-import { secConsentimiento, secDocumentos, secLineaTiempo } from "./secciones_paciente.js";
+import { secConsentimiento, secDocumentos, secLineaTiempo, secOrdenes } from "./secciones_paciente.js";
 
 const GRUPOS = [
   ["Expediente", [["resumen", "Resumen"], ["historia", "Historia clínica"], ["laboratorios", "Laboratorios"], ["imagenes", "Imágenes"],
-    ["biomarcadores", "Biomarcadores y biopsias"], ["documentos", "Documentos"], ["linea-tiempo", "Línea de tiempo"]]],
+    ["biomarcadores", "Biomarcadores y biopsias"], ["documentos", "Documentos"], ["linea-tiempo", "Línea de tiempo"], ["ordenes", "Órdenes médicas"]]],
   ["Asistente de IA", [["asistente", "Preguntas y asistente"], ["notas", "Notas de consulta"], ["junta", "Resumen para junta"]]],
   ["Apoyo a la decisión", [["diagnostico", "Diagnóstico"], ["estadificacion", "Estadificación"], ["tratamiento", "Tratamiento"], ["evidencia", "Evidencia científica"]]],
   ["Paciente", [["consentimiento", "Consentimiento y privacidad"]]],
 ];
 const SECCIONES = GRUPOS.flatMap(([, s]) => s);
+
+/* Enfermería consulta el expediente y las órdenes médicas que suministra; el apoyo a la decisión y las herramientas
+   de IA del expediente son del oncólogo tratante (el backend también lo exige). */
+function gruposDe(ctx) {
+  if (ctx.sesion.apoyo_decision) return GRUPOS;
+  return GRUPOS.filter(([g]) => g === "Expediente" || (g === "Paciente" && ctx.sesion.puede_consentimiento));
+}
 
 const vacio = (texto) => h("p", { class: "tenue" }, texto);
 const tiempo = (iso) => (iso ? h("time", { datetime: iso }, fecha(iso)) : "—");
@@ -71,7 +78,7 @@ function marco(ctx, paciente, consentimiento, seccion, contenido) {
     estado,
     h("div", { class: "espacio" },
       h("nav", { class: "secciones", "aria-label": "Secciones del expediente" },
-        GRUPOS.map(([grupo, items]) => [h("h2", {}, grupo), h("ul", {}, items.map(([clave, texto]) =>
+        gruposDe(ctx).map(([grupo, items]) => [h("h2", {}, grupo), h("ul", {}, items.map(([clave, texto]) =>
           h("li", {}, h("a", { href: `#/pacientes/${paciente.id}${clave === "resumen" ? "" : `/${clave}`}`, "aria-current": clave === seccion ? "page" : null },
             texto, clave === "linea-tiempo" && !lt.disponible ? h("span", { class: "insignia neutra" }, "pronto") : null))))])),
       h("div", {}, contenido)));
@@ -95,7 +102,8 @@ async function secResumen(ctx, p) {
         ["Diagnóstico", r.diagnostico_principal || "Sin registrar"],
         ["Estadio", r.estadio || "Sin registrar"],
         ["Tratamiento", t ? h("span", {}, ESTADOS_TRATAMIENTO[t.estado] ? insignia(ESTADOS_TRATAMIENTO[t.estado]) : t.estado, " ", t.regimen || "", t.fecha_inicio ? h("span", { class: "tenue" }, ` · desde ${fecha(t.fecha_inicio)}`) : null) : "Sin tratamiento registrado"],
-      ]), h("p", { class: "acciones" }, enlace("tratamiento", "Opciones de tratamiento"), enlace("estadificacion", "Estadificación"))),
+      ]), ctx.sesion.apoyo_decision ? h("p", { class: "acciones" }, enlace("tratamiento", "Opciones de tratamiento"), enlace("estadificacion", "Estadificación"))
+        : h("p", { class: "acciones" }, enlace("ordenes", "Órdenes médicas y horario"))),
       tarjeta("Alertas activas", lista(r.alertas_activas, "No hay alertas activas.", (al) =>
         h("div", { class: "alerta-item" },
           h("span", {}, h("strong", {}, TIPOS_ALERTA[al.tipo] || al.tipo), ": ", al.descripcion, " ", h("span", { class: "tenue" }, `(${fecha(al.fecha)})`)),
@@ -109,7 +117,7 @@ async function secResumen(ctx, p) {
         faltantes.faltantes.length > 8 ? h("p", { class: "tenue" }, `Y ${faltantes.faltantes.length - 8} más.`) : null) : null,
       tarjeta("Laboratorios recientes", lista(r.labs_recientes, "Sin laboratorios recientes.", acceso), h("p", {}, enlace("laboratorios", "Ver laboratorios y tendencias"))),
       tarjeta("Imágenes recientes", lista(r.imagenes_recientes, "Sin imágenes recientes.", acceso), h("p", {}, enlace("imagenes", "Ver estudios de imagen"))),
-      tarjeta("Notas recientes", lista(r.notas_recientes, "Sin notas recientes.", acceso), h("p", {}, enlace("notas", "Notas de consulta con IA")))));
+      tarjeta("Notas recientes", lista(r.notas_recientes, "Sin notas recientes.", acceso), ctx.sesion.apoyo_decision ? h("p", {}, enlace("notas", "Notas de consulta con IA")) : null)));
 }
 
 async function secLaboratorios(ctx, p) {
@@ -277,7 +285,7 @@ async function secHistoria(ctx, p) {
 
 const CARGADORES = {
   resumen: secResumen, historia: secHistoria, laboratorios: secLaboratorios, imagenes: secImagenes, biomarcadores: secBiomarcadores,
-  documentos: secDocumentos, "linea-tiempo": secLineaTiempo,
+  documentos: secDocumentos, "linea-tiempo": secLineaTiempo, ordenes: secOrdenes,
   asistente: secAsistente, notas: secNotas, junta: secJunta,
   diagnostico: secDiagnostico, estadificacion: secEstadificacion, tratamiento: secTratamiento, evidencia: secEvidencia,
   consentimiento: secConsentimiento,
@@ -287,6 +295,12 @@ const CARGADORES = {
 
 export async function vistaExpediente(ctx) {
   const { id, seccion = "resumen" } = ctx.parametros;
+  const permitida = gruposDe(ctx).some(([, items]) => items.some(([c]) => c === seccion));
+  if (CARGADORES[seccion] && !permitida) {
+    return { titulo: "No disponible", nodo: h("div", {}, h("h1", {}, "Sección no disponible para tu rol"),
+      mensaje("info", null, "El apoyo a la decisión y las herramientas de IA del expediente son del oncólogo tratante."),
+      h("p", {}, h("a", { href: `#/pacientes/${id}` }, "Volver al expediente"))) };
+  }
   if (!CARGADORES[seccion]) return { titulo: "No encontrado", nodo: h("div", {}, h("h1", {}, "Sección no encontrada"), h("p", {}, h("a", { href: `#/pacientes/${id}` }, "Volver al expediente"))) };
   let paciente;
   try {

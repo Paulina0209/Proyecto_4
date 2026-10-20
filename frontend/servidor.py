@@ -17,9 +17,9 @@ Qué hace y qué no:
     - Muestra el tablero ADM-02 (``/panel/metricas``) con la sesión, para el rol director médico.
     - Exporta el expediente (DOC-02) a HTML accesible o PDF (``/api/pacientes/{id}/exportar``).
 
-Limitación consciente: en esta versión solo el rol ``oncologo`` ve expedientes. Enfermería y auditoría
-tienen permiso ``ver_expediente`` en SEC-01, pero el modelo de datos aún no dice a qué oncólogo asiste
-cada una (no hay asignación de pacientes); mientras no exista, se les niega en vez de adivinar.
+Quién ve qué pacientes: oncología, los suyos; enfermería (solo lectura, más las órdenes médicas que suministra)
+y admisiones (datos de admisión), los de los oncólogos de su equipo de atención (``administracion/equipo.py``,
+lo asigna el administrador). Sin equipo asignado no se muestra ningún paciente (fail-closed).
 """
 from __future__ import annotations
 
@@ -80,8 +80,7 @@ ETIQUETAS_ROL = {
 }
 
 MENSAJE_SIN_ASIGNACION = (
-    "Tu rol no tiene pantallas de expediente en esta versión: el sistema todavía no registra a qué "
-    "oncólogo asiste cada persona, y por seguridad no se muestran pacientes sin esa asignación."
+    "Tu rol no trabaja con expedientes de pacientes: tus pantallas están en el menú de arriba."
 )
 
 
@@ -113,7 +112,7 @@ REGLAS_PACIENTES: Tuple[_Regla, ...] = (
     _Regla("GET", r"/pacientes/\d+/imagenes/[^/]+/visor", Accion.VER_EXPEDIENTE),
     _Regla("POST", r"/pacientes/\d+/alertas-laboratorio/\d+/revisar", Accion.EDITAR_EXPEDIENTE, reescribe="revisada_por"),
     # Escrituras que la interfaz completa también usa (el autor siempre sale de la sesión).
-    _Regla("POST", r"/pacientes", Accion.EDITAR_EXPEDIENTE, reescribe="oncologo_id", con="id"),                    # PAC-01
+    _Regla("POST", r"/pacientes", Accion.REGISTRAR_PACIENTE, reescribe="oncologo_id", con="id"),                   # PAC-01 (también admisiones)
     _Regla("POST", r"/pacientes/\d+/(diagnosticos|tratamientos|consultas)", Accion.EDITAR_EXPEDIENTE),            # PAC-02
     _Regla("POST", r"/pacientes/\d+/laboratorios", Accion.EDITAR_EXPEDIENTE),                                    # HC-02
     _Regla("POST", r"/pacientes/\d+/conflictos-laboratorio/\d+/resolver", Accion.EDITAR_EXPEDIENTE, reescribe="resuelto_por"),
@@ -204,19 +203,27 @@ class _AppConIdentidad:
         if not permiso.permitido:
             await _responder_json(send, 403, {"detail": permiso.motivo_rechazo})
             return
-        if usuario.rol != Rol.ONCOLOGO:
+        if not self.pasarela.oncologos_visibles(usuario):
             await _responder_json(send, 403, {"detail": MENSAJE_SIN_ASIGNACION})
             return
+        if ruta.startswith("/notificaciones") and usuario.rol != Rol.ONCOLOGO:
+            # La bandeja (CFG-02) es personal del oncólogo: su equipo no la lee ni la marca por él.
+            await _responder_json(send, 403, {"detail": "Las notificaciones son la bandeja personal del oncólogo."})
+            return
 
-        # La identidad sale de la sesión; lo que mande el navegador con esos nombres se descarta.
-        consulta = [(k, v) for k, v in parse_qsl(scope.get("query_string", b"").decode("latin-1"), keep_blank_values=True)
-                    if k not in ("oncologo_id", "usuario_id")]
-        consulta += [("oncologo_id", str(usuario.id)), ("usuario_id", str(usuario.id))]
+        # La identidad sale de la sesión; lo que mande el navegador con esos nombres se descarta. El oncólogo del
+        # alcance es el propio (oncología) o, para su equipo, el del paciente pedido si está entre los suyos.
+        pares = parse_qsl(scope.get("query_string", b"").decode("latin-1"), keep_blank_values=True)
+        pedido = next((v for k, v in pares if k == "equipo"), None)
+        coincidencia = re.match(r"^/pacientes/(\d+)", ruta)
+        oncologo = self.pasarela.oncologo_responsable(usuario, int(coincidencia.group(1)) if coincidencia else None, pedido)
+        consulta = [(k, v) for k, v in pares if k not in ("oncologo_id", "usuario_id", "equipo")]
+        consulta += [("oncologo_id", str(oncologo)), ("usuario_id", str(usuario.id))]
         nuevo = dict(scope)
         nuevo["query_string"] = urlencode(consulta).encode("latin-1")
         recibir = receive
         if regla.reescribe:
-            valor = usuario.id if regla.con == "id" else usuario.nombre_usuario
+            valor = oncologo if regla.con == "id" else usuario.nombre_usuario
             recibir, nuevo = await self._con_cuerpo_fijado(nuevo, receive, regla.reescribe, valor)
         await self.destino(nuevo, recibir, send)
 
@@ -358,6 +365,37 @@ class Pasarela:
         finally:
             conn.close()
 
+    # --- Equipo de atención: qué pacientes ve cada quien ----------------------------------------
+    def oncologos_visibles(self, usuario: Usuario) -> List[int]:
+        """Oncología ve a sus pacientes; enfermería y admisiones, los de los oncólogos de su equipo; nadie más."""
+        from administracion import equipo
+
+        if usuario.rol == Rol.ONCOLOGO:
+            return [usuario.id]
+        if usuario.rol in equipo.ROLES_DE_EQUIPO:
+            with self.conexion_usuarios() as conn:
+                return equipo.oncologos_de(conn, usuario.id)
+        return []
+
+    def oncologo_responsable(self, usuario: Usuario, paciente_id: Optional[int] = None, pedido: Optional[str] = None) -> int:
+        """El oncólogo con el que se filtra la consulta. Si el paciente no es de nadie del equipo, un id que no
+        corresponde a ningún oncólogo: la API responde 404 (no se revela si el paciente existe)."""
+        from patients import api as papi
+
+        visibles = self.oncologos_visibles(usuario)
+        if paciente_id is not None:
+            conn = papi.db.conectar(papi.DB_PATH)
+            try:
+                fila = conn.execute("SELECT oncologo_id FROM pacientes WHERE id = ?", (paciente_id,)).fetchone()
+            finally:
+                conn.close()
+            if fila is not None and fila[0] in visibles:
+                return fila[0]
+            return usuario.id if usuario.rol == Rol.ONCOLOGO else -1
+        if pedido and pedido.isdigit() and int(pedido) in visibles:
+            return int(pedido)
+        return visibles[0] if visibles else -1
+
     def _leer_usuario(self, usuario_id: int) -> Optional[Tuple[Usuario, Optional[str]]]:
         """El usuario tal como está AHORA en la base: una cuenta desactivada o con otro rol se nota en la siguiente petición."""
         with self.conexion_usuarios() as conn:
@@ -386,30 +424,48 @@ class Pasarela:
             self.sesiones.cerrar(token)
         return encontrado
 
-    @staticmethod
-    def cuerpo_de_sesion(usuario: Usuario, nombre_completo: Optional[str]) -> Dict[str, Any]:
-        clinico = usuario.rol == Rol.ONCOLOGO
+    def cuerpo_de_sesion(self, usuario: Usuario, nombre_completo: Optional[str]) -> Dict[str, Any]:
+        from administracion import equipo as eq
+
+        oncologo = usuario.rol == Rol.ONCOLOGO
+        visibles = self.oncologos_visibles(usuario)
+        con_pacientes = bool(visibles)
+        puede = lambda accion: verificar_permiso(usuario, accion).permitido  # noqa: E731
+        equipo = []
+        if usuario.rol in eq.ROLES_DE_EQUIPO:
+            with self.conexion_usuarios() as conn:
+                equipo = [{"id": a.oncologo_id, "nombre": a.oncologo_nombre} for a in eq.asignaciones_de(conn, usuario.id)]
+        sin_equipo = ("Todavía no estás asignado al equipo de ningún oncólogo: pídele al administrador del sistema que te asigne "
+                      "(Gestión de usuarios) para ver a sus pacientes.")
         return {
             "autenticado": True,
             "usuario": {"id": usuario.id, "nombre_usuario": usuario.nombre_usuario,
                         "nombre_completo": nombre_completo or usuario.nombre_usuario, "rol": usuario.rol.value,
                         "rol_etiqueta": ETIQUETAS_ROL.get(usuario.rol, usuario.rol.value)},
             "permisos": [a.value for a in permisos_del_rol(usuario.rol)],
-            "acceso_clinico": clinico and verificar_permiso(usuario, Accion.VER_EXPEDIENTE).permitido,
-            "puede_revisar_alertas": clinico and verificar_permiso(usuario, Accion.EDITAR_EXPEDIENTE).permitido,
-            "puede_exportar": clinico and verificar_permiso(usuario, Accion.EXPORTAR_EXPEDIENTE).permitido,
-            "ver_metricas": verificar_permiso(usuario, Accion.VER_METRICAS_USO).permitido,
-            "puede_registrar": clinico and verificar_permiso(usuario, Accion.EDITAR_EXPEDIENTE).permitido,
-            "puede_juicio_dx": clinico and verificar_permiso(usuario, Accion.REGISTRAR_JUICIO_DIAGNOSTICO).permitido,
-            "puede_confirmar_estadio": clinico and verificar_permiso(usuario, Accion.CONFIRMAR_ESTADIFICACION).permitido,
-            "puede_decidir_tratamiento": clinico and verificar_permiso(usuario, Accion.CONFIRMAR_TRATAMIENTO).permitido,
-            "puede_consentimiento": clinico and verificar_permiso(usuario, Accion.REGISTRAR_CONSENTIMIENTO_IA).permitido,
-            "ver_auditoria": verificar_permiso(usuario, Accion.VER_AUDITORIA).permitido,
-            "gestionar_usuarios": verificar_permiso(usuario, Accion.GESTIONAR_USUARIOS).permitido,
-            "configurar_guias": verificar_permiso(usuario, Accion.CONFIGURAR_GUIAS_INSTITUCIONALES).permitido,
-            "ver_estado_sistema": verificar_permiso(usuario, Accion.VER_ESTADO_SISTEMA).permitido,
-            "configurar_privacidad": verificar_permiso(usuario, Accion.CONFIGURAR_POLITICA_DATOS).permitido,
-            "mensaje_sin_acceso_clinico": None if clinico else MENSAJE_SIN_ASIGNACION,
+            "equipo": equipo,
+            # Expediente: oncología (los suyos) y enfermería (los de su equipo, solo lectura).
+            "acceso_clinico": con_pacientes and puede(Accion.VER_EXPEDIENTE),
+            "solo_lectura": con_pacientes and puede(Accion.VER_EXPEDIENTE) and not puede(Accion.EDITAR_EXPEDIENTE),
+            "acceso_admision": con_pacientes and puede(Accion.VER_DATOS_ADMISION) and not puede(Accion.VER_EXPEDIENTE),
+            "ver_ordenes": con_pacientes and puede(Accion.VER_ORDENES_MEDICAS),
+            "puede_prescribir": oncologo and puede(Accion.PRESCRIBIR_MEDICAMENTO),
+            "apoyo_decision": oncologo,
+            "puede_revisar_alertas": oncologo and puede(Accion.EDITAR_EXPEDIENTE),
+            "puede_exportar": con_pacientes and puede(Accion.EXPORTAR_EXPEDIENTE),
+            "ver_metricas": puede(Accion.VER_METRICAS_USO),
+            "puede_registrar": oncologo and puede(Accion.EDITAR_EXPEDIENTE),
+            "puede_registrar_paciente": con_pacientes and puede(Accion.REGISTRAR_PACIENTE),
+            "puede_juicio_dx": oncologo and puede(Accion.REGISTRAR_JUICIO_DIAGNOSTICO),
+            "puede_confirmar_estadio": oncologo and puede(Accion.CONFIRMAR_ESTADIFICACION),
+            "puede_decidir_tratamiento": oncologo and puede(Accion.CONFIRMAR_TRATAMIENTO),
+            "puede_consentimiento": con_pacientes and puede(Accion.REGISTRAR_CONSENTIMIENTO_IA),
+            "ver_auditoria": puede(Accion.VER_AUDITORIA),
+            "gestionar_usuarios": puede(Accion.GESTIONAR_USUARIOS),
+            "configurar_guias": puede(Accion.CONFIGURAR_GUIAS_INSTITUCIONALES),
+            "ver_estado_sistema": puede(Accion.VER_ESTADO_SISTEMA),
+            "configurar_privacidad": puede(Accion.CONFIGURAR_POLITICA_DATOS),
+            "mensaje_sin_acceso_clinico": None if con_pacientes else (sin_equipo if usuario.rol in eq.ROLES_DE_EQUIPO else MENSAJE_SIN_ASIGNACION),
         }
 
     # --- Salud (NFR-02) -----------------------------------------------------------------------
@@ -608,7 +664,7 @@ class Pasarela:
         permiso = verificar_permiso(usuario, Accion.EXPORTAR_EXPEDIENTE)
         if not permiso.permitido:
             raise HTTPException(status_code=403, detail=permiso.motivo_rechazo)
-        if usuario.rol != Rol.ONCOLOGO:
+        if not self.oncologos_visibles(usuario):
             raise HTTPException(status_code=403, detail=MENSAJE_SIN_ASIGNACION)
         if formato not in ("html", "pdf"):
             raise HTTPException(status_code=400, detail={"errores": [{"campo": "formato", "mensaje": "Elige html o pdf."}]})
@@ -620,7 +676,7 @@ class Pasarela:
         conn = papi.db.conectar(papi.DB_PATH)
         conn_exp = conectar_expediente(ruta, check_same_thread=False)
         try:
-            papi._paciente_del_oncologo_o_404(conn, paciente_id, usuario.id)
+            papi._paciente_del_oncologo_o_404(conn, paciente_id, self.oncologo_responsable(usuario, paciente_id))
             expediente_id = paciente_en_expediente(conn, conn_exp, paciente_id, crear=False)
             if expediente_id is None:
                 raise sin_expediente
