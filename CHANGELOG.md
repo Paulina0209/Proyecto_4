@@ -10,8 +10,8 @@
   aproximadas. La pantalla «Línea de tiempo» del expediente se activa sola. Ver `docs/historia_clinica_linea_tiempo.md`.
 - **CFG-02 — Notificaciones y alertas** (`configuracion/notificaciones.py`, `/notificaciones...` en `patients.api`):
   cada oncólogo elige qué eventos le avisan (resultado crítico, estudio pendiente, interacción) y por qué canal; bandeja
-  con «Marcar como leída». La pantalla «Notificaciones» trae el formulario de preferencias. El canal de correo se guarda
-  pero aún no envía. El enlace «Notificaciones» del menú muestra cuántas hay sin leer, se actualiza solo (cada 45 s, al
+  con «Marcar como leída». La pantalla «Notificaciones» trae el formulario de preferencias. El único canal es la
+  aplicación (no hay correo). El enlace «Notificaciones» del menú muestra cuántas hay sin leer, se actualiza solo (cada 45 s, al
   cambiar de pantalla y al volver a la pestaña) y anuncia a lectores de pantalla cuando llega una nueva. Ver
   `docs/configuracion_notificaciones.md`.
 - La demo de la interfaz incluye dos antecedentes externos con fecha aproximada (Lucía Herrera).

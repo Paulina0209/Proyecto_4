@@ -366,7 +366,7 @@ def test_guardar_preferencias_y_marcar_leida_cambian_la_bandeja_en_pantalla(nav,
         _ir(page, "#/notificaciones")
         page.wait_for_selector("button:has-text('Guardar preferencias')")
         assert page.locator("text=Aún no has cambiado nada").count() == 1
-        assert page.locator("text=aún no se envía").count() == 3                       # correo: se guarda, no se envía
+        assert page.locator("text=Correo").count() == 0                                # sin canal de correo
         lista = page.locator("ul.lista-limpia > li")
         total = lista.count()
         interacciones = lista.filter(has_text="Interacción detectada").count()
