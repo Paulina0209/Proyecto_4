@@ -73,6 +73,7 @@ input[aria-invalid="true"],textarea[aria-invalid="true"],select[aria-invalid="tr
 .campo{margin:0 0 1rem}
 .campo-check{display:flex;gap:.6rem;align-items:center;margin:0 0 1rem;font-weight:600}
 .campo-check label{margin:0}
+.preferencias input[type="checkbox"]{width:1.5rem;height:1.5rem;min-height:1.5rem;flex:none}
 .ayuda{color:var(--muted);font-size:.9rem;margin:.25rem 0 0}
 .error-campo{color:var(--crit);font-weight:600;margin:.25rem 0 0}
 .filtros{display:grid;gap:.75rem 1rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));align-items:end}
@@ -156,7 +157,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .linea-tiempo{list-style:none;margin:0;padding:0 0 0 1.25rem;border-left:3px solid var(--line)}
 .linea-tiempo li{position:relative;margin:0 0 1rem;padding:.5rem .75rem;background:var(--surface);border:1px solid var(--line);border-radius:.6rem}
 .linea-tiempo li::before{content:"";position:absolute;left:-1.85rem;top:.9rem;width:.9rem;height:.9rem;border-radius:50%;background:var(--surface);border:3px solid var(--primario)}
-.linea-tiempo li.aproximada::before{border-style:dashed}
+.linea-tiempo li.aproximada,.linea-tiempo li.aproximada::before{border-style:dashed}
 
 /* Gráfica de tendencia (SVG accesible; los datos están también en la tabla de abajo) */
 .zona-grafica{overflow-x:auto;margin:0 0 1rem}
@@ -201,6 +202,9 @@ main:has(.chat-app){max-width:none;padding:1rem 1rem 1.5rem}
 .entrada-chat{display:flex;gap:.5rem;align-items:flex-end}
 .entrada-chat textarea{min-height:3.25rem}
 .respuesta p{margin:0 0 .4rem}.respuesta li{margin:0 0 .25rem 1rem}
+.burbuja .md{white-space:normal}.md p{margin:0 0 .5rem}.md>:last-child{margin-bottom:0}.md .md-titulo{font-size:1rem;margin:.75rem 0 .35rem}.md>.md-titulo:first-child{margin-top:0}
+.md .md-lista{margin:0 0 .6rem;padding-left:1.4rem}.md .md-lista li{margin:0 0 .3rem}.md code{font-family:ui-monospace,Consolas,monospace;font-size:.9em;background:var(--suave);padding:0 .3rem;border-radius:.3rem;overflow-wrap:anywhere}
+.md hr{border:0;border-top:1px solid var(--line);margin:.75rem 0}.md .tabla-region{margin:.5rem 0}.md table{min-width:0}
 .cita{display:inline-flex;align-items:center;min-height:2.5rem;padding:0 .5rem;margin:0 .15rem;border-radius:.4rem;border:1px solid var(--ia);background:var(--ia-bg);color:var(--ia);font:inherit;font-size:.85rem;font-weight:650;cursor:pointer}
 .cita:hover{background:var(--surface)}
 .fuentes{display:flex;flex-wrap:wrap;gap:.25rem;align-items:center;margin:.5rem 0 0;padding:.5rem 0 0;border-top:1px solid var(--line)}

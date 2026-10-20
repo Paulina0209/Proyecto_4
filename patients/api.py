@@ -1,7 +1,8 @@
 """API HTTP del módulo de pacientes: HC-01 (registro), PAC-02 (búsqueda y
 datos clínicos), PAC-03 (resumen 360), HC-02 (laboratorios), HC-04
-(biopsias y biomarcadores), HC-03 (imágenes diagnósticas del PACS) y
-SEC-03 (consentimiento informado para el uso de IA).
+(biopsias y biomarcadores), HC-03 (imágenes diagnósticas del PACS),
+HC-06 (línea de tiempo del paciente), SEC-03 (consentimiento informado para
+el uso de IA) y CFG-02 (notificaciones y alertas del oncólogo).
 
     python -m seguridad.servidor_tls --cert cert.pem --key clave.pem
 
@@ -41,9 +42,11 @@ from fastapi.responses import JSONResponse
 from auditoria.models import TipoAccion
 from auditoria.registro_acceso import inicializar_schema as inicializar_schema_auditoria
 from auditoria.registro_acceso import registrar_acceso
+from configuracion import notificaciones as cfg02
 from historia_clinica import biopsias_biomarcadores as hc04
 from historia_clinica import imagenes_pacs as hc03
 from historia_clinica import laboratorios as hc02
+from historia_clinica import linea_tiempo as hc06
 from historia_clinica.db import conectar_expediente, ruta_expediente
 from historia_clinica.integracion_externa import importar_mensaje_hl7
 from privacidad import consentimiento_ia as sec03
@@ -81,7 +84,12 @@ from .schemas import (
     BiomarcadorSchema,
     BiopsiaCreateSchema,
     BiopsiaSchema,
+    BandejaNotificacionesSchema,
     BusquedaPacientesResponse,
+    GuardarPreferenciasSchema,
+    LineaTiempoSchema,
+    NotificacionSchema,
+    PreferenciasNotificacionSchema,
     ConsentimientoIACreateSchema,
     ConsentimientoIASchema,
     ConfirmarBiomarcadorSchema,
@@ -1145,3 +1153,109 @@ def retirar_consentimiento_ia(
     if not resultado.exito:
         raise HTTPException(status_code=400, detail={"errores": [{"campo": "consentimiento", "mensaje": resultado.motivo_rechazo}]})
     return _a_schema_consentimiento(sec03.estado_consentimiento_ia(conn_exp, expediente_id), paciente_id)
+
+
+# ---------------------------------------------------------------------------
+# HC-06: línea de tiempo del paciente
+# ---------------------------------------------------------------------------
+
+def get_conn_expediente_si_existe():
+    """El expediente solo para leer: si todavía no existe, ``None`` (leer nunca lo crea)."""
+    ruta = _ruta_expediente()
+    conn = conectar_expediente(ruta, check_same_thread=False) if ruta.is_file() else None
+    try:
+        yield conn
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@app.get(
+    "/pacientes/{paciente_id}/linea-tiempo",
+    response_model=LineaTiempoSchema,
+    responses={**_RESPUESTA_404, 400: {"model": ErroresValidacionResponse, "description": "Tipo de evento desconocido"}},
+    summary="HC-06: eventos clínicos en orden cronológico (filtrables por tipo; fechas aproximadas marcadas)",
+)
+def linea_tiempo(
+    paciente_id: int,
+    tipo: Optional[list[str]] = Query(None, description=f"Filtra por tipo de evento ({', '.join(hc06.TIPOS_EVENTO)}); se puede repetir"),
+    oncologo_id: int = OncologoId,
+    usuario_id: Optional[int] = _USUARIO_AUDITORIA,
+    conn: sqlite3.Connection = Depends(get_conn),
+    conn_exp: Optional[sqlite3.Connection] = Depends(get_conn_expediente_si_existe),
+):
+    _paciente_del_oncologo_o_404(conn, paciente_id, oncologo_id)
+    _asegurar_detalle(conn, paciente_id)
+    expediente_id = paciente_en_expediente(conn, conn_exp, paciente_id) if conn_exp is not None else None
+    try:
+        eventos = hc06.linea_de_tiempo(conn, paciente_id, conn_exp, expediente_id, tipos=tipo)
+    except hc06.TipoEventoDesconocido as exc:
+        raise _error_400([ErrorValidacion("tipo", str(exc))])
+    if usuario_id is not None:
+        registrar_acceso(conn, usuario_id, TipoAccion.VER, paciente_id=paciente_id, detalle="linea_tiempo")
+    return LineaTiempoSchema(
+        paciente_id=paciente_id,
+        eventos=[e.a_dict() for e in eventos],
+        tipos=[{"valor": v, "etiqueta": t} for v, t in hc06.TIPOS_EVENTO.items()],
+    )
+
+
+# ---------------------------------------------------------------------------
+# CFG-02: notificaciones y alertas del oncólogo
+# ---------------------------------------------------------------------------
+
+@app.get(
+    "/notificaciones",
+    response_model=BandejaNotificacionesSchema,
+    summary="CFG-02: notificaciones del oncólogo según sus preferencias (no leídas y más graves primero)",
+)
+def listar_notificaciones(
+    oncologo_id: int = OncologoId,
+    conn: sqlite3.Connection = Depends(get_conn),
+    conn_exp: Optional[sqlite3.Connection] = Depends(get_conn_expediente_si_existe),
+):
+    lista = cfg02.notificaciones_de(conn, conn_exp, oncologo_id)
+    return BandejaNotificacionesSchema(notificaciones=[n.a_dict() for n in lista], no_leidas=sum(not n.leida for n in lista))
+
+
+@app.get(
+    "/notificaciones/preferencias",
+    response_model=PreferenciasNotificacionSchema,
+    summary="CFG-02: qué eventos avisan al oncólogo y por qué canal",
+)
+def leer_preferencias_notificacion(oncologo_id: int = OncologoId, conn: sqlite3.Connection = Depends(get_conn)):
+    return PreferenciasNotificacionSchema.model_validate(cfg02.obtener_preferencias(conn, oncologo_id).a_dict())
+
+
+@app.put(
+    "/notificaciones/preferencias",
+    response_model=PreferenciasNotificacionSchema,
+    responses={400: {"model": ErroresValidacionResponse, "description": "Evento o canal desconocido, o evento activo sin canal"}},
+    summary="CFG-02: guardar las preferencias de notificación (todo o nada)",
+)
+def guardar_preferencias_notificacion(
+    payload: GuardarPreferenciasSchema, oncologo_id: int = OncologoId, conn: sqlite3.Connection = Depends(get_conn),
+):
+    try:
+        config = cfg02.guardar_preferencias(conn, oncologo_id, [p.model_dump() for p in payload.preferencias])
+    except cfg02.ErrorPreferencias as exc:
+        raise _error_400_hc(exc)
+    return PreferenciasNotificacionSchema.model_validate(config.a_dict())
+
+
+@app.post(
+    "/notificaciones/{notificacion_id}/leida",
+    response_model=NotificacionSchema,
+    responses={404: {"description": "La notificación no está en la bandeja del oncólogo"}},
+    summary="CFG-02: marcar una notificación como leída (no resuelve la alerta de origen)",
+)
+def marcar_notificacion_leida(
+    notificacion_id: str,
+    oncologo_id: int = OncologoId,
+    conn: sqlite3.Connection = Depends(get_conn),
+    conn_exp: Optional[sqlite3.Connection] = Depends(get_conn_expediente_si_existe),
+):
+    try:
+        return cfg02.marcar_leida(conn, conn_exp, oncologo_id, notificacion_id).a_dict()
+    except cfg02.NotificacionNoEncontrada as exc:
+        raise HTTPException(status_code=404, detail=str(exc))

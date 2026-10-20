@@ -59,6 +59,56 @@ export function tabla(titulo, columnas, filas, { numericas = [], filaEncabezado 
           : h("td", { class: numericas.includes(i) ? "num" : null }, celda)))))));
 }
 
+/* Markdown sencillo de las respuestas del modelo: títulos, párrafos, viñetas, listas numeradas, tablas, **negrita**,
+   *cursiva* y `código`. Construye nodos (nunca innerHTML): lo que escriba el modelo no puede inyectar HTML. */
+function enLinea(texto) {
+  return String(texto).split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*\s][^*]*\*)/).filter(Boolean).map((t) =>
+    /^\*\*[^*]+\*\*$/.test(t) ? h("strong", {}, enLinea(t.slice(2, -2)))
+      : /^`[^`]+`$/.test(t) ? h("code", {}, t.slice(1, -1))
+        : /^\*[^*\s][^*]*\*$/.test(t) ? h("em", {}, t.slice(1, -1)) : t);
+}
+
+const celdas = (linea) => linea.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+
+export function textoMarkdown(texto, { nivelTitulo = 3 } = {}) {
+  const lineas = String(texto || "").replace(/\r\n?/g, "\n").split("\n");
+  // El título más alto del texto toma «nivelTitulo» (el modelo empieza a veces en ## o ###).
+  const minimo = Math.min(6, ...lineas.map((l) => (/^\s*(#{1,6})\s/.exec(l) || [, "######"])[1].length));
+  const bloques = [];
+  let lista = null;
+  const cerrarLista = () => { lista = null; };
+  for (let i = 0; i < lineas.length; i++) {
+    const linea = lineas[i];
+    if (!linea.trim()) { cerrarLista(); continue; }
+    const titulo = /^\s*(#{1,6})\s+(.*)$/.exec(linea);
+    if (titulo) {
+      cerrarLista();
+      bloques.push(h(`h${Math.min(6, nivelTitulo + titulo[1].length - minimo)}`, { class: "md-titulo" }, enLinea(titulo[2].replace(/\s*#+\s*$/, ""))));
+      continue;
+    }
+    if (/^\s*\|/.test(linea) && i + 1 < lineas.length && /^\s*\|?\s*:?-{2,}/.test(lineas[i + 1])) {
+      cerrarLista();
+      const columnas = celdas(linea);
+      const filas = [];
+      for (i += 2; i < lineas.length && /^\s*\|/.test(lineas[i]); i++) filas.push(celdas(lineas[i]).map(enLinea));
+      i--;
+      bloques.push(tabla("Tabla de la respuesta", columnas.map(enLinea), filas));
+      continue;
+    }
+    const item = /^(\s*)([-*•]|\d+[.)])\s+(.*)$/.exec(linea);
+    if (item) {
+      const tipo = /\d/.test(item[2]) ? "ol" : "ul";
+      if (!lista || lista.tipo !== tipo) { lista = { tipo, nodo: h(tipo, { class: "md-lista" }) }; bloques.push(lista.nodo); }
+      lista.nodo.append(h("li", {}, enLinea(item[3])));
+      continue;
+    }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(linea)) { cerrarLista(); bloques.push(h("hr", {})); continue; }
+    cerrarLista();
+    bloques.push(h("p", {}, enLinea(linea.trim())));
+  }
+  return h("div", { class: "md" }, bloques);
+}
+
 export function listaDatos(pares) {
   return h("dl", { class: "dato" }, pares.flatMap(([k, v]) => [h("dt", {}, k), h("dd", {}, v === null || v === undefined || v === "" ? "—" : v)]));
 }

@@ -1,9 +1,10 @@
 """Partes de la interfaz que se activan solas cuando el backend las trae.
 
-Hoy faltan dos historias de Toro: **HC-06** (línea de tiempo) y **CFG-02**
-(notificaciones y alertas). La interfaz ya tiene sus pantallas; no hay que
-tocarla cuando él las termine. Basta con que ``patients.api`` publique estas
-rutas (cualquiera de los nombres de la lista):
+**HC-06** (línea de tiempo) y **CFG-02** (notificaciones y alertas) ya las
+publica ``patients.api`` (``historia_clinica/linea_tiempo.py`` y
+``configuracion/notificaciones.py``). La interfaz las activa al detectar
+estas rutas (cualquiera de los nombres de la lista); sin ellas, muestra
+«Pendiente de integrar»:
 
     HC-06  GET /pacientes/{paciente_id}/linea-tiempo      (o /linea-de-tiempo, /timeline)
            -> lista de eventos, o {"eventos": [...]}; cada evento con

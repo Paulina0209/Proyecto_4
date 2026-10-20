@@ -142,6 +142,8 @@ PANTALLAS_ONCOLOGIA = [
     ("imágenes", "#/pacientes/1/imagenes"),
     ("biomarcadores", "#/pacientes/1/biomarcadores"),
     ("historia clínica", "#/pacientes/1/historia"),
+    ("línea de tiempo", "#/pacientes/1/linea-tiempo"),
+    ("notificaciones y preferencias", "#/notificaciones"),
     ("expediente incompleto", "#/pacientes/5"),
     ("expediente sin datos clínicos", "#/pacientes/6/laboratorios"),
     ("paciente que no es suyo", "#/pacientes/7"),
@@ -287,6 +289,37 @@ def test_la_grafica_de_tendencia_tiene_nombre_descripcion_tabla_y_formas_distint
         assert page.get_attribute(".zona-grafica", "tabindex") == "0"                    # 2.1.1: la región desplazable se alcanza con teclado
 
 
+def test_la_linea_de_tiempo_filtra_por_tipo_y_dice_en_texto_que_una_fecha_es_aproximada(nav, sitio):
+    with abierta(nav, sitio, "dra.rios") as (page, _):
+        _ir(page, "#/pacientes/1/linea-tiempo")
+        page.wait_for_selector("ol.linea-tiempo > li.aproximada")     # la sección se pinta después de cargar la página
+        total = page.locator("ol.linea-tiempo > li").count()
+        aproximadas = page.locator("ol.linea-tiempo > li.aproximada")
+        assert total > 5 and aproximadas.count() == 2
+        assert "(fecha aproximada: solo año)" in aproximadas.nth(0).inner_text()
+        assert "(fecha aproximada: solo mes y año)" in aproximadas.nth(1).inner_text()
+        page.select_option("select[name=tipo]", "biopsia")
+        page.wait_for_function("() => document.querySelectorAll('ol.linea-tiempo > li').length === 1")
+        assert "Biopsia" in page.inner_text("ol.linea-tiempo")
+        page.select_option("select[name=tipo]", "")
+        page.wait_for_function(f"() => document.querySelectorAll('ol.linea-tiempo > li').length === {total}")
+
+
+def test_las_preferencias_de_notificacion_explican_el_error_junto_al_evento(nav, sitio):
+    with abierta(nav, sitio, "dra.rios") as (page, _):
+        _ir(page, "#/notificaciones")
+        page.wait_for_selector("button:has-text('Guardar preferencias')")
+        assert page.locator("text=Resultado crítico de laboratorio").count() >= 1
+        grupo = page.locator("fieldset:has(legend:text-is('Estudio pendiente'))")
+        grupo.get_by_label("En la aplicación").uncheck()           # sigue activo, pero sin canal: no se guarda
+        page.click("button:has-text('Guardar preferencias')")
+        error = grupo.locator(".error-campo")
+        error.wait_for(state="visible")
+        assert "Elige al menos un canal" in error.inner_text()
+        assert page.locator("[role=alert]:has-text('No se guardaron las preferencias')").count() == 1
+        assert page.evaluate("() => document.activeElement.type") == "checkbox"   # el foco va al grupo con el problema
+
+
 def test_cerrar_sesion_vuelve_al_acceso_con_aviso_y_el_boton_atras_no_muestra_datos(nav, sitio):
     with abierta(nav, sitio, "dra.rios") as (page, _):
         _ir(page, "#/pacientes/1")
@@ -325,3 +358,100 @@ def test_la_interfaz_es_siempre_clara_aunque_el_sistema_prefiera_oscuro(nav, sit
         assert fondo == "rgb(244, 248, 253)", fondo
         hallazgos, _ = _auditar(page, "[sistema en oscuro]")
         assert not hallazgos, "\n".join(hallazgos)
+
+
+def test_guardar_preferencias_y_marcar_leida_cambian_la_bandeja_en_pantalla(nav, sitio):
+    # Cambia el estado del sitio (compartido en el módulo): va al final y deja las preferencias como estaban.
+    with abierta(nav, sitio, "dra.rios") as (page, _):
+        _ir(page, "#/notificaciones")
+        page.wait_for_selector("button:has-text('Guardar preferencias')")
+        assert page.locator("text=Aún no has cambiado nada").count() == 1
+        assert page.locator("text=aún no se envía").count() == 3                       # correo: se guarda, no se envía
+        lista = page.locator("ul.lista-limpia > li")
+        total = lista.count()
+        interacciones = lista.filter(has_text="Interacción detectada").count()
+        assert interacciones >= 1
+
+        grupo = page.locator("fieldset:has(legend:text-is('Interacción detectada'))")
+        grupo.get_by_label("Avisarme").uncheck()
+        page.click("button:has-text('Guardar preferencias')")
+        page.wait_for_function(f"() => document.querySelectorAll('ul.lista-limpia > li').length === {total - interacciones}")
+        assert page.locator("text=Aún no has cambiado nada").count() == 0
+        assert not page.locator("fieldset:has(legend:text-is('Interacción detectada'))").get_by_label("Avisarme").is_checked()
+
+        titulo = page.locator("h2:has-text('notificaciones')").first.inner_text()
+        page.locator("ul.lista-limpia > li").first.locator("button:has-text('Marcar como leída')").click()
+        page.wait_for_function("t => [...document.querySelectorAll('h2')].some(h => h.textContent.includes('notificaciones') && h.textContent !== t)",
+                               arg=titulo)                                               # baja el «sin leer»
+        ultima = page.locator("ul.lista-limpia > li").last
+        assert ultima.locator("text='Leída'").count() == 1 and ultima.locator("button:has-text('Marcar como leída')").count() == 0
+
+        page.locator("fieldset:has(legend:text-is('Interacción detectada'))").get_by_label("Avisarme").check()
+        page.click("button:has-text('Guardar preferencias')")
+        page.wait_for_function(f"() => document.querySelectorAll('ul.lista-limpia > li').length === {total}")
+
+
+def test_el_menu_cuenta_las_no_leidas_y_avisa_cuando_llega_una_nueva(nav, sitio):
+    import sqlite3
+
+    from patients import api as papi
+
+    contador = "#nav-notificaciones .contador"
+    with abierta(nav, sitio, "dra.rios") as (page, _):
+        _ir(page, "#/pacientes")                                          # en otra pantalla, no en Notificaciones
+        page.wait_for_selector(contador)
+        antes = int(page.get_attribute(contador, "data-sin-leer"))
+        assert antes > 0 and page.inner_text("#nav-notificaciones").startswith("Notificaciones")
+        assert page.locator(f"{contador} .vh:text-is(' sin leer')").count() == 1      # el lector oye «3 sin leer», no «3»
+
+        with sqlite3.connect(papi.DB_PATH) as c:                          # llega una alerta mientras trabaja
+            nueva = c.execute("INSERT INTO alertas (paciente_id, tipo, severidad, descripcion, fecha) VALUES "
+                              "(1, 'estudio_pendiente', 'alta', 'TAC de control pendiente (dato sintético)', date('now'))").lastrowid
+        try:
+            page.evaluate("() => document.dispatchEvent(new Event('visibilitychange'))")   # lo mismo que hace el temporizador
+            page.wait_for_function(f"() => document.querySelector('{contador}')?.dataset.sinLeer === '{antes + 1}'")
+            page.wait_for_function("() => document.getElementById('anuncios').textContent.includes('1 notificación nueva')")
+
+            _ir(page, "#/notificaciones")                                 # al leerla, el contador baja
+            page.locator("ul.lista-limpia > li", has_text="TAC de control").locator("button:has-text('Marcar como leída')").click()
+            page.wait_for_function(f"() => document.querySelector('{contador}')?.dataset.sinLeer === '{antes}'")
+        finally:
+            with sqlite3.connect(papi.DB_PATH) as c:
+                c.execute("DELETE FROM alertas WHERE id = ?", (nueva,))
+
+
+@pytest.mark.parametrize("usuario", ["dr.vega", "enf.mora"])
+def test_sin_notificaciones_el_menu_no_muestra_contador(nav, sitio, usuario):
+    with abierta(nav, sitio, usuario) as (page, _):
+        page.wait_for_function(ESPERA_CARGA)
+        page.wait_for_timeout(300)
+        assert page.locator("#nav-notificaciones .contador").count() == 0
+
+
+def test_las_respuestas_del_agente_se_ven_con_formato_y_sin_inyectar_html(nav, sitio):
+    texto = ("## Opciones\n"
+             "Para el paciente **5370**, aún no se puede determinar si hay una guía:\n\n"
+             "- **disease_setting**: indique `early` o `metastatic`.\n"
+             "- Si es *metastásica*, también falta `molecular_pathway_status`.\n\n"
+             "1. Primero\n2. Segundo\n\n"
+             "| Régimen | Evidencia |\n|---|---|\n| Pembrolizumab | **I, A** |\n\n"
+             "<img src=x onerror=\"window.inyectado=1\"> **<b>no</b>**")
+    with abierta(nav, sitio, "dra.rios") as (page, _):
+        r = page.evaluate("""async (t) => {
+            const { textoMarkdown } = await import('/ui/ui.js');
+            const n = textoMarkdown(t);
+            document.querySelector('main').append(n);
+            await new Promise((ok) => setTimeout(ok, 50));
+            return { h3: n.querySelector('h3')?.textContent, fuertes: [...n.querySelectorAll('strong')].map((x) => x.textContent),
+                     codigos: [...n.querySelectorAll('code')].map((x) => x.textContent), em: n.querySelector('em')?.textContent,
+                     vinetas: n.querySelectorAll('ul > li').length, numeradas: n.querySelectorAll('ol > li').length,
+                     celdas: [...n.querySelectorAll('table th, table td')].map((x) => x.textContent),
+                     img: n.querySelectorAll('img, b').length, inyectado: window.inyectado === 1, crudo: n.textContent.includes('**') };
+        }""", texto)
+    assert r["h3"] == "Opciones"
+    assert r["fuertes"][:2] == ["5370", "disease_setting"] and "I, A" in r["fuertes"]
+    assert r["codigos"] == ["early", "metastatic", "molecular_pathway_status"] and r["em"] == "metastásica"
+    assert (r["vinetas"], r["numeradas"]) == (2, 2)
+    assert r["celdas"] == ["Régimen", "Evidencia", "Pembrolizumab", "I, A"]
+    assert r["img"] == 0 and not r["inyectado"]                  # el HTML del modelo queda como texto
+    assert not r["crudo"]                                         # no quedan asteriscos a la vista

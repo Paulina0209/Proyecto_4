@@ -43,6 +43,42 @@ function actualizarCabecera() {
   });
 }
 
+/* ---------------- Contador de notificaciones sin leer (CFG-02) ----------------
+   Se consulta al cambiar de pantalla, al volver a la pestaña y cada INTERVALO_NOTIFICACIONES_MS mientras está
+   visible. Si sube, se anuncia a lectores de pantalla; la primera lectura de la sesión no se anuncia. */
+const INTERVALO_NOTIFICACIONES_MS = 45000;
+const avisos = { sinLeer: null, consulta: 0 };
+
+function pintarContador(n) {
+  const enlace = document.getElementById("nav-notificaciones");
+  enlace.replaceChildren("Notificaciones");
+  if (n > 0) enlace.append(" ", h("span", { class: "contador", "data-sin-leer": String(n) }, String(n), h("span", { class: "vh" }, " sin leer")));
+}
+
+async function actualizarContadorNotificaciones() {
+  const s = estado.sesion;
+  if (!s || !s.acceso_clinico || !estado.capacidades.extensiones.notificaciones.disponible) {
+    avisos.sinLeer = null; pintarContador(0); return;
+  }
+  const mia = ++avisos.consulta;
+  let n;
+  try {
+    const lista = await api("/api/notificaciones");
+    n = Number.isInteger(lista && lista.no_leidas) ? lista.no_leidas : (lista.notificaciones || lista || []).filter((x) => !x.leida).length;
+  } catch (e) { return; }                                        // sin red, el contador se queda como estaba
+  if (mia !== avisos.consulta || estado.sesion !== s) return;
+  const antes = avisos.sinLeer;
+  avisos.sinLeer = n;
+  pintarContador(n);
+  if (antes !== null && n > antes) {
+    const nuevas = n - antes;
+    anunciar(nuevas === 1 ? `Tienes 1 notificación nueva. ${n} sin leer.` : `Tienes ${nuevas} notificaciones nuevas. ${n} sin leer.`);
+  }
+}
+
+window.setInterval(() => { if (!document.hidden) actualizarContadorNotificaciones(); }, INTERVALO_NOTIFICACIONES_MS);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) actualizarContadorNotificaciones(); });
+
 /* Primera pantalla de cada rol. */
 function inicio(s) {
   if (!s) return "#/ingresar";
@@ -133,6 +169,7 @@ async function navegar() {
   }
   estado.primera = false;
   anunciar(resultado.titulo);
+  actualizarContadorNotificaciones();
   if (resultado.alMostrar) await resultado.alMostrar();
 }
 
@@ -144,6 +181,8 @@ async function cargarCapacidades() {
 function irAIngresar(aviso) {
   estado.sesion = null;
   estado.aviso = aviso || null;
+  avisos.sinLeer = null;
+  pintarContador(0);
   actualizarCabecera();
   if (window.location.hash === "#/ingresar") navegar(); else window.location.hash = "#/ingresar";
 }

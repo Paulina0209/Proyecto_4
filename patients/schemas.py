@@ -484,3 +484,86 @@ class ConsentimientoIASchema(_Esquema):
     fecha: Optional[str] = None
     medio: Optional[str] = None
     soporte: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# HC-06 · Línea de tiempo del paciente
+# ---------------------------------------------------------------------------
+
+class EventoLineaTiempoSchema(_Esquema):
+    #: AAAA-MM-DD, AAAA-MM o AAAA según ``precision``; None si se desconoce.
+    fecha: Optional[str]
+    #: dia | mes | anio | desconocida
+    precision: str
+    fecha_aproximada: bool
+    tipo: str
+    tipo_etiqueta: str
+    descripcion: str
+    fuente: str
+
+
+class TipoEventoSchema(_Esquema):
+    valor: str
+    etiqueta: str
+
+
+class LineaTiempoSchema(_Esquema):
+    paciente_id: int
+    #: Del más antiguo al más reciente; los sin fecha, al final.
+    eventos: list[EventoLineaTiempoSchema]
+    #: Todos los tipos que se pueden filtrar (``?tipo=``), tengan o no eventos.
+    tipos: list[TipoEventoSchema]
+
+
+# ---------------------------------------------------------------------------
+# CFG-02 · Notificaciones y alertas
+# ---------------------------------------------------------------------------
+
+class PreferenciaNotificacionSchema(_Esquema):
+    evento: str
+    activo: bool = True
+    canales: list[str] = Field(default_factory=list)
+
+
+class GuardarPreferenciasSchema(_Esquema):
+    preferencias: list[PreferenciaNotificacionSchema]
+
+
+class EventoNotificacionSchema(_Esquema):
+    evento: str
+    etiqueta: str
+    descripcion: str
+    activo: bool
+    canales: list[str]
+
+
+class CanalNotificacionSchema(_Esquema):
+    valor: str
+    etiqueta: str
+    disponible: bool
+    nota: Optional[str] = None
+
+
+class PreferenciasNotificacionSchema(_Esquema):
+    eventos: list[EventoNotificacionSchema]
+    canales: list[CanalNotificacionSchema]
+    actualizado_en: Optional[str] = None
+    es_por_defecto: bool
+
+
+class NotificacionSchema(_Esquema):
+    id: str
+    evento: str
+    titulo: str
+    mensaje: str
+    severidad: str
+    fecha: str
+    paciente_id: int
+    paciente: str
+    canales: list[str]
+    leida: bool
+
+
+class BandejaNotificacionesSchema(_Esquema):
+    notificaciones: list[NotificacionSchema]
+    no_leidas: int

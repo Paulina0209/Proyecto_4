@@ -1,9 +1,9 @@
 /* Pantallas de gestión, cada una para su rol: auditoría (AUD-01/02), usuarios (ADM-01), guías (CFG-01),
    estado del sistema (NFR-01/02) y notificaciones (CFG-02, se activa sola cuando el backend la publica). */
-import { h, anunciar } from "./dom.js";
+import { h, anunciar, idUnico } from "./dom.js";
 import { api } from "./api.js";
-import { fecha } from "./formato.js";
-import { campo, cargando, errorConReintento, formulario, insignia, listaDatos, mensaje, tabla, tarjeta, vacio } from "./ui.js";
+import { fecha, SEVERIDADES } from "./formato.js";
+import { campo, cargando, casilla, errorConReintento, formulario, insignia, listaDatos, mensaje, tabla, tarjeta, vacio } from "./ui.js";
 
 const sinPermiso = (titulo, texto) => ({ titulo, nodo: h("div", {}, h("h1", {}, titulo), mensaje("aviso", "Sin permiso", texto)) });
 const recargar = () => window.dispatchEvent(new HashChangeEvent("hashchange"));
@@ -128,6 +128,43 @@ export async function vistaSistema(ctx) {
 
 /* ---------------- Notificaciones (CFG-02, se conecta sola) ---------------- */
 
+/* Qué eventos avisan y por qué canal: un grupo por evento, con su error junto al grupo y un resumen arriba (WCAG 3.3.1). */
+function formularioPreferencias(prefs) {
+  const grupos = prefs.eventos.map((ev) => {
+    const activo = casilla({ nombre: `${ev.evento}-activo`, etiqueta: "Avisarme", marcada: ev.activo });
+    const canales = prefs.canales.map((c) => ({ valor: c.valor, ...casilla({ nombre: `${ev.evento}-${c.valor}`,
+      etiqueta: c.disponible ? c.etiqueta : `${c.etiqueta} (se guarda; aún no se envía)`, marcada: ev.canales.includes(c.valor) }) }));
+    const error = h("p", { class: "error-campo", id: idUnico(`error-${ev.evento}`), hidden: true });
+    const grupoCanales = h("fieldset", { "aria-describedby": error.id }, h("legend", {}, "Por qué canal"), canales.map((c) => c.nodo));
+    return { ev, activo, canales, error, grupoCanales,
+      nodo: h("fieldset", {}, h("legend", {}, ev.etiqueta), h("p", { class: "ayuda" }, ev.descripcion), activo.nodo, grupoCanales, error) };
+  });
+  const resumen = h("div", { tabindex: "-1" });
+  const boton = h("button", { type: "submit", class: "btn" }, "Guardar preferencias");
+  const notas = prefs.canales.filter((c) => !c.disponible && c.nota).map((c) => mensaje("info", c.etiqueta, c.nota));
+  return h("div", {}, resumen, h("form", { class: "preferencias", novalidate: true, onsubmit: async (e) => {
+    e.preventDefault();
+    resumen.replaceChildren();
+    grupos.forEach((g) => { g.error.hidden = true; g.error.textContent = ""; g.grupoCanales.removeAttribute("aria-invalid"); });
+    boton.disabled = true; boton.setAttribute("aria-busy", "true");
+    try {
+      await api("/api/notificaciones/preferencias", { metodo: "PUT", cuerpo: { preferencias: grupos.map((g) => ({
+        evento: g.ev.evento, activo: g.activo.control.checked, canales: g.canales.filter((c) => c.control.checked).map((c) => c.valor) })) } });
+      anunciar("Preferencias guardadas."); recargar();
+    } catch (err) {
+      let primero = null;
+      for (const g of grupos) {
+        const texto = err.campos && err.campos[`canales.${g.ev.evento}`];
+        if (texto) { g.error.textContent = texto; g.error.hidden = false; g.grupoCanales.setAttribute("aria-invalid", "true"); primero = primero || g.canales[0].control; }
+      }
+      resumen.replaceChildren(mensaje("error", "No se guardaron las preferencias", ...(err.mensajes.length > 1 ? [h("ul", {}, err.mensajes.map((m) => h("li", {}, m)))] : [err.mensajes[0]])));
+      (primero || resumen).focus();
+    } finally {
+      boton.disabled = false; boton.removeAttribute("aria-busy");
+    }
+  } }, grupos.map((g) => g.nodo), ...notas, h("div", { class: "acciones" }, boton)));
+}
+
 export async function vistaNotificaciones(ctx) {
   const ext = ctx.capacidades.extensiones.notificaciones;
   if (!ext.disponible) {
@@ -137,15 +174,21 @@ export async function vistaNotificaciones(ctx) {
   return pantalla("Notificaciones y alertas", "Resultados críticos, estudios pendientes e interacciones que no debes perderte (CFG-02).", async () => {
     const [lista, prefs] = await Promise.all([api("/api/notificaciones"), ext.preferencias ? api("/api/notificaciones/preferencias").catch(() => null) : null]);
     const items = Array.isArray(lista) ? lista : lista.notificaciones || lista.items || [];
+    const noLeidas = items.filter((n) => !n.leida).length;
     const pintar = (n) => h("li", {}, h("strong", {}, n.titulo || n.tipo || "Notificación"), " ",
-      n.severidad ? insignia({ texto: n.severidad, tono: n.severidad === "critica" || n.severidad === "alta" ? "crit" : "info", icono: "alerta" }) : null,
+      n.severidad ? insignia(SEVERIDADES[n.severidad] || { texto: n.severidad, tono: "info", icono: "alerta" }) : null, " ",
+      n.leida ? insignia({ texto: "Leída", tono: "neutra", icono: "ok" }) : null,
+      n.paciente_id !== undefined ? h("p", {}, "Paciente: ", h("a", { href: `#/pacientes/${n.paciente_id}${n.evento === "resultado_critico" ? "/laboratorios" : ""}` }, n.paciente || `#${n.paciente_id}`)) : null,
       h("p", {}, n.mensaje || n.descripcion || n.detalle || ""), h("p", { class: "ayuda" }, fecha(String(n.fecha || n.creada_en || "").slice(0, 10))),
       ext.marcar_leida && n.id !== undefined && !n.leida ? h("button", { type: "button", class: "btn sec chico", onclick: async () => {
-        try { await api(`/api/notificaciones/${n.id}/leida`, { metodo: "POST", cuerpo: {} }); recargar(); } catch (err) { anunciar(err.mensajes[0]); }
+        try { await api(`/api/notificaciones/${encodeURIComponent(n.id)}/leida`, { metodo: "POST", cuerpo: {} }); anunciar("Notificación marcada como leída."); recargar(); } catch (err) { anunciar(err.mensajes[0]); }
       } }, "Marcar como leída") : null);
-    const nodoPrefs = prefs ? tarjeta("Mis preferencias",
-      h("pre", { class: "texto" }, JSON.stringify(prefs, null, 2)),
-      ext.guardar_preferencias ? h("p", { class: "ayuda" }, "Edita las preferencias desde la configuración de CFG-02.") : null) : null;
-    return h("div", {}, items.length ? tarjeta(`${items.length} notificaciones`, h("ul", { class: "lista-limpia" }, items.map(pintar))) : tarjeta("Notificaciones", vacio("No tienes notificaciones.")), nodoPrefs);
+    const nodoPrefs = prefs && Array.isArray(prefs.eventos) ? tarjeta("Qué me avisa y por dónde",
+      prefs.es_por_defecto ? h("p", { class: "ayuda" }, "Aún no has cambiado nada: todos los eventos te avisan en la aplicación.") : null,
+      ext.guardar_preferencias ? formularioPreferencias(prefs)
+        : tabla("Preferencias", ["Evento", "Avisa", "Canales"], prefs.eventos.map((ev) => [ev.etiqueta, ev.activo ? "Sí" : "No", ev.canales.join(", ") || "—"]), { filaEncabezado: true }))
+      : null;
+    return h("div", {}, items.length ? tarjeta(`${items.length} notificaciones${noLeidas ? ` (${noLeidas} sin leer)` : ""}`, h("ul", { class: "lista-limpia" }, items.map(pintar)))
+      : tarjeta("Notificaciones", vacio("No tienes notificaciones.")), nodoPrefs);
   });
 }

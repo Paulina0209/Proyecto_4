@@ -91,6 +91,16 @@ function valor(evento, nombres) {
   return null;
 }
 
+const MESES_LARGOS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+/* AC2: una fecha con solo mes y año (o solo año) se dice aproximada, con texto y no solo con el borde punteado. */
+function fechaEvento(e) {
+  if (!e.fecha) return "Fecha desconocida";
+  if (!e.aproximada) return fecha(e.fecha);
+  const m = /^(\d{4})-(\d{2})/.exec(e.fecha);
+  return m ? `${MESES_LARGOS[Number(m[2]) - 1]} de ${m[1]} (fecha aproximada: solo mes y año)` : `${e.fecha.slice(0, 4)} (fecha aproximada: solo año)`;
+}
+
 export async function secLineaTiempo(ctx, p) {
   const ext = ctx.capacidades.extensiones.linea_tiempo;
   if (!ext.disponible) {
@@ -101,21 +111,27 @@ export async function secLineaTiempo(ctx, p) {
   const crudo = await api(`/api${ext.ruta.replace("{id}", p.id)}`);
   const eventos = (Array.isArray(crudo) ? crudo : crudo.eventos || []).map((e) => {
     const precision = e.precision || e.precision_fecha;
-    return { fecha: String(valor(e, ext.campos.fecha) || ""), tipo: String(valor(e, ext.campos.tipo) || "evento"),
-      descripcion: String(valor(e, ext.campos.descripcion) || ""), aproximada: Boolean(valor(e, ext.campos.aproximada)) || (precision && precision !== "dia") };
-  }).sort((a, b) => a.fecha.localeCompare(b.fecha));
-  const tipos = [...new Set(eventos.map((e) => e.tipo))].sort();
+    const tipo = String(valor(e, ext.campos.tipo) || "evento");
+    return { fecha: valor(e, ext.campos.fecha) ? String(valor(e, ext.campos.fecha)) : "", tipo, etiqueta: String(e.tipo_etiqueta || tipo),
+      descripcion: String(valor(e, ext.campos.descripcion) || ""), aproximada: Boolean(valor(e, ext.campos.aproximada)) || precision === "mes" || precision === "anio" };
+  }).sort((a, b) => (!a.fecha) - (!b.fecha) || a.fecha.localeCompare(b.fecha));  // sin fecha, al final
+  const tipos = [...new Map(eventos.map((e) => [e.tipo, e.etiqueta])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
   const lista = h("ol", { class: "linea-tiempo" });
   const pintar = (tipo) => {
     const visibles = eventos.filter((e) => !tipo || e.tipo === tipo);
     lista.replaceChildren(...visibles.map((e) => h("li", { class: e.aproximada ? "aproximada" : null },
-      h("strong", {}, e.aproximada ? `${e.fecha.slice(0, 7)} (fecha aproximada)` : fecha(e.fecha)), " · ", insignia({ texto: e.tipo, tono: "info", icono: "info" }),
+      h("strong", {}, fechaEvento(e)), " · ", insignia({ texto: e.etiqueta, tono: "info", icono: "info" }),
       h("p", {}, e.descripcion))));
     anunciar(`${visibles.length} eventos.`);
   };
   pintar("");
-  const filtro = campo({ nombre: "tipo", etiqueta: "Tipo de evento", tipo: "select", opciones: [["", "Todos"], ...tipos.map((t) => [t, t])] });
+  const filtro = campo({ nombre: "tipo", etiqueta: "Tipo de evento", tipo: "select", opciones: [["", `Todos (${eventos.length})`],
+    ...tipos.map(([t, etiqueta]) => [t, `${etiqueta} (${eventos.filter((e) => e.tipo === t).length})`])] });
   filtro.control.addEventListener("change", () => pintar(filtro.control.value));
-  return h("div", {}, tarjeta("Línea de tiempo del paciente (HC-06)", filtro.nodo,
-    h("p", { class: "ayuda" }, "Borde punteado: el evento solo tiene mes y año."), eventos.length ? lista : vacio("Sin eventos registrados.")));
+  const aproximadas = eventos.filter((e) => e.aproximada).length;
+  return h("div", {}, tarjeta("Línea de tiempo del paciente (HC-06)",
+    h("p", { class: "ayuda" }, "Del evento más antiguo al más reciente. Los laboratorios de un mismo día se agrupan en un solo evento."),
+    filtro.nodo,
+    aproximadas ? h("p", { class: "ayuda" }, `Borde punteado: fecha aproximada (${aproximadas} ${aproximadas === 1 ? "evento solo tiene" : "eventos solo tienen"} mes y año, o solo año).`) : null,
+    eventos.length ? lista : vacio("Sin eventos registrados.")));
 }
