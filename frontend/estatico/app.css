@@ -132,8 +132,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ficha-cabecera .insignias{display:flex;flex-wrap:wrap;gap:.4rem}
 .espacio{display:grid;gap:1.25rem;grid-template-columns:15.5rem minmax(0,1fr);align-items:start}
 .secciones{position:sticky;top:4.5rem;background:var(--surface);border:1px solid var(--line);border-radius:.85rem;padding:.5rem;box-shadow:0 1px 3px var(--sombra)}
-.secciones h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:.75rem .6rem .25rem}
-.secciones h2:first-child{margin-top:.25rem}
+.secciones h2{font-size:.85rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ink);margin:.6rem .6rem .25rem;padding-top:.6rem;border-top:1px solid var(--line)}
+.secciones h2:first-child{margin-top:.25rem;padding-top:0;border-top:0}
 .secciones ul{list-style:none;margin:0;padding:0}
 .secciones a{display:flex;align-items:center;gap:.5rem;min-height:2.6rem;padding:.25rem .75rem;color:var(--ink2);text-decoration:none;font-weight:600;border-radius:.5rem;border-left:4px solid transparent}
 .secciones a:hover{color:var(--ink);background:var(--suave)}
