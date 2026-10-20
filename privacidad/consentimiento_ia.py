@@ -84,7 +84,7 @@ class ConsentimientoIARequerido(PermissionError):
         self.motivo = motivo
         super().__init__(
             f"Las funciones de IA no están habilitadas para el paciente {paciente_id}: {motivo} "
-            "Registre el consentimiento informado del paciente (SEC-03) para habilitarlas."
+            "Registre el consentimiento informado del paciente para habilitarlas."
         )
 
 

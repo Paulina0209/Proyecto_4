@@ -60,4 +60,4 @@ def test_un_dato_de_tratamiento_invalido_dice_cual_y_por_que(medica):
     errores = r.json()["detail"]["errores"]
     campos = {e["campo"] for e in errores}
     assert {"pdl1_tps", "treatment_line"} <= campos
-    assert any("HC-04" in e["mensaje"] for e in errores)
+    assert any("Biomarcadores y biopsias" in e["mensaje"] for e in errores)

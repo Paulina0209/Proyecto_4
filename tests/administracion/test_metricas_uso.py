@@ -275,7 +275,7 @@ class TestAceptacionIA:
 
     def test_diagnostico_se_declara_sin_comparacion(self, equipo):
         ac = _consultar(equipo).aceptacion_ia
-        assert any("DX-03" in x for x in ac.dominios_sin_comparacion)
+        assert any(x.startswith("Diagnóstico") for x in ac.dominios_sin_comparacion)
         assert {d.dominio for d in ac.dominios} == {"TX", "EST"}
 
     def test_los_umbrales_son_configurables(self, equipo):

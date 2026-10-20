@@ -75,7 +75,7 @@ export async function vistaAdmisiones(ctx) {
     const zonaConsentimiento = h("div", {});
     const consentir = (p) => {
       zonaConsentimiento.replaceChildren(tarjeta(`Consentimiento de IA — ${p.nombre_completo}`,
-        mensaje("info", null, "Registra lo que el paciente decidió y el documento que lo respalda (SEC-03)."),
+        mensaje("info", null, "Registra lo que el paciente decidió y el documento que lo respalda."),
         formulario({ campos: [
           campo({ nombre: "otorgado", etiqueta: "Decisión del paciente", tipo: "select", opciones: [["si", "Otorga el consentimiento"], ["no", "No lo otorga"]] }),
           campo({ nombre: "medio", etiqueta: "Medio", tipo: "select", opciones: [["escrito", "Escrito (firmado)"], ["digital", "Digital"], ["verbal_registrado", "Verbal, con registro"]] }),

@@ -23,7 +23,7 @@ export async function vistaAuditoria(ctx) {
   if (!ctx.sesion.ver_auditoria) return sinPermiso("Auditoría", "Solo el rol de auditoría consulta los registros.");
   const paciente = ctx.consulta.get("paciente_id") || "";
   const usuario = ctx.consulta.get("usuario_id") || "";
-  return pantalla("Auditoría", "Quién hizo qué y cuándo sobre cada expediente (AUD-01), y qué sugirió la IA frente a lo que decidió el médico (AUD-02). Los registros no se pueden modificar.", async () => {
+  return pantalla("Auditoría", "Quién hizo qué y cuándo sobre cada expediente, y qué sugirió la IA frente a lo que decidió el médico. Los registros no se pueden modificar.", async () => {
     const r = await api("/api/gestion/auditoria", { consulta: { paciente_id: paciente, usuario_id: usuario } });
     const filtros = h("form", { class: "tarjeta filtros", role: "search", onsubmit: (e) => {
       e.preventDefault();
@@ -37,10 +37,10 @@ export async function vistaAuditoria(ctx) {
       r.eventos.length ? tabla(`${r.eventos.length} eventos (los más recientes primero)`, ["Fecha", "Usuario", "Paciente", "Acción", "Detalle", "Base"],
         r.eventos.map((e) => [`${fecha(e.fecha.slice(0, 10))} ${e.fecha.slice(11, 19)}`, e.usuario, e.paciente_id ?? "—", e.accion, e.detalle || "—", e.origen]))
         : tarjeta("Eventos", vacio("No hay eventos con esos filtros.")),
-      paciente ? (r.trazabilidad_ia.length ? tabla("Trazabilidad IA frente a médico (AUD-02)", ["Dominio", "Sugerencia del sistema", "Decisión del médico", "¿Difiere?"],
+      paciente ? (r.trazabilidad_ia.length ? tabla("Trazabilidad de la IA frente al médico", ["Dominio", "Sugerencia del sistema", "Decisión del médico", "¿Difiere?"],
         r.trazabilidad_ia.map((t) => [t.dominio, String(t.recomendacion_sistema || "—").slice(0, 160), String(t.decision_medico || "—").slice(0, 160),
           t.difiere_de_sugerencia ? insignia({ texto: "Sí", tono: "aviso", icono: "alerta" }) : insignia({ texto: "No", tono: "ok", icono: "ok" })]))
-        : tarjeta("Trazabilidad IA frente a médico (AUD-02)", vacio("Sin decisiones registradas para este paciente."))) : null);
+        : tarjeta("Trazabilidad de la IA frente al médico", vacio("Sin decisiones registradas para este paciente."))) : null);
   });
 }
 
@@ -48,7 +48,7 @@ export async function vistaAuditoria(ctx) {
 
 export async function vistaUsuarios(ctx) {
   if (!ctx.sesion.gestionar_usuarios) return sinPermiso("Usuarios", "Solo el administrador del sistema gestiona usuarios.");
-  return pantalla("Usuarios y roles", "Alta, cambio de rol y baja lógica (ADM-01). Nadie se borra: el historial se conserva. Enfermería y admisiones ven los pacientes de los oncólogos de su equipo.", async () => {
+  return pantalla("Usuarios y roles", "Alta, cambio de rol y baja lógica. Nadie se borra: el historial se conserva. Enfermería y admisiones ven los pacientes de los oncólogos de su equipo.", async () => {
     const [r, eq] = await Promise.all([api("/api/gestion/usuarios"), api("/api/gestion/equipos")]);
     const nombreOncologo = Object.fromEntries(eq.oncologos.map((o) => [o.id, o.nombre]));
     const estado = h("div", { role: "status", "aria-live": "polite" });
@@ -102,7 +102,7 @@ export async function vistaUsuarios(ctx) {
 
 export async function vistaGuias(ctx) {
   if (!ctx.sesion.acceso_clinico && !ctx.sesion.configurar_guias) return sinPermiso("Guías clínicas", "Las guías las consulta oncología y las configura la administración clínica.");
-  return pantalla("Guías clínicas institucionales", "Qué guías usa la institución por defecto para la evidencia y las recomendaciones (CFG-01).", async () => {
+  return pantalla("Guías clínicas institucionales", "Qué guías usa la institución por defecto para la evidencia y las recomendaciones.", async () => {
     const r = await api("/api/gestion/guias");
     const v = r.vigente;
     const config = r.puede_configurar ? formulario({ textoBoton: "Publicar nueva versión", campos: [
@@ -132,7 +132,7 @@ const lista = (texto) => String(texto || "").split(",").map((x) => x.trim()).fil
 
 export async function vistaPrivacidad(ctx) {
   if (!ctx.sesion.configurar_privacidad) return sinPermiso("Privacidad", "Las políticas de datos y las solicitudes de derechos las gestiona la administración clínica.");
-  return pantalla("Privacidad y derechos del titular", "Políticas de tratamiento de datos de la institución, con su finalidad y base legal, y solicitudes de los pacientes sobre sus datos (NFR-06). Todo queda en la auditoría.", async () => {
+  return pantalla("Privacidad y derechos del titular", "Políticas de tratamiento de datos de la institución, con su finalidad y base legal, y solicitudes de los pacientes sobre sus datos. Todo queda en la auditoría.", async () => {
     const r = await api("/api/gestion/privacidad");
     const politicas = r.politicas || [];
     const estado = h("div", { role: "status", "aria-live": "polite" });
@@ -195,7 +195,7 @@ const TONOS = { ok: { texto: "Bien", tono: "ok", icono: "ok" }, degradado: { tex
 
 export async function vistaSistema(ctx) {
   if (!ctx.sesion.ver_estado_sistema) return sinPermiso("Estado del sistema", "Solo el administrador del sistema ve el estado de la plataforma.");
-  return pantalla("Estado del sistema", "Disponibilidad (NFR-02) y tiempos de respuesta por ruta de esta réplica (NFR-01: consultas < 2 s, notas < 10 s).", async () => {
+  return pantalla("Estado del sistema", "Disponibilidad y tiempos de respuesta por ruta de esta réplica (objetivo: consultas < 2 s, notas < 10 s).", async () => {
     const r = await api("/api/gestion/salud");
     return h("div", {},
       tarjeta("Verificaciones", h("p", {}, "Estado general: ", insignia(TONOS[r.estado] || TONOS.falla)),
@@ -251,9 +251,9 @@ export async function vistaNotificaciones(ctx) {
   const ext = ctx.capacidades.extensiones.notificaciones;
   if (!ext.disponible) {
     return { titulo: "Notificaciones", nodo: h("div", {}, h("h1", {}, "Notificaciones y alertas"),
-      mensaje("info", "Pendiente de integrar", "Esta pantalla se activa sola cuando el backend publique la historia CFG-02 (notificaciones y alertas). Mientras tanto, las alertas críticas de laboratorio e interacciones se ven en el resumen de cada paciente.")) };
+      mensaje("info", "Pendiente de integrar", "Esta pantalla se activa sola cuando el sistema publique las notificaciones y alertas. Mientras tanto, las alertas críticas de laboratorio e interacciones se ven en el resumen de cada paciente.")) };
   }
-  return pantalla("Notificaciones y alertas", "Resultados críticos, estudios pendientes e interacciones que no debes perderte (CFG-02).", async () => {
+  return pantalla("Notificaciones y alertas", "Resultados críticos, estudios pendientes e interacciones que no debes perderte.", async () => {
     const [lista, prefs] = await Promise.all([api("/api/notificaciones"), ext.preferencias ? api("/api/notificaciones/preferencias").catch(() => null) : null]);
     const items = Array.isArray(lista) ? lista : lista.notificaciones || lista.items || [];
     const noLeidas = items.filter((n) => !n.leida).length;

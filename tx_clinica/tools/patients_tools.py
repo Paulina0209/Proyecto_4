@@ -32,7 +32,7 @@ class ErrorPacienteNoEncontrado:
                 "mensaje": (
                     f"No existe ningún paciente con id={self.paciente_id} en el sistema. "
                     "No asumas que existe ni sigas adelante con otra tool usando este id -- "
-                    "infórmaselo al oncólogo y, si quiere, ofrécele iniciar el registro (HC-01)."
+                    "infórmaselo al oncólogo y, si quiere, ofrécele iniciar el registro."
                 ),
             },
             ensure_ascii=False,
@@ -55,7 +55,7 @@ class ErrorConsentimientoIA:
                     f"Las funciones de IA no están habilitadas para el paciente {self.paciente_id}: "
                     f"{self.motivo} No uses ni pidas sus datos con ninguna otra tool. Infórmale al "
                     "oncólogo que primero debe registrarse el consentimiento informado del paciente "
-                    "(SEC-03). Su historia clínica sigue disponible fuera del asistente."
+                    "Su historia clínica sigue disponible fuera del asistente."
                 ),
             },
             ensure_ascii=False,

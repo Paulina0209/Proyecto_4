@@ -255,7 +255,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
         with contexto(request, paciente_id, solo_oncologia=True) as ctx:
             servicio = NaturalLanguageClinicalQueryService(SQLiteClinicalRepository(ctx.conn_exp))
             respuesta = servicio.ask(str(ctx.exigir_expediente()), pregunta, clarification=aclaracion)
-            ctx.auditar(TipoAccion.VER, "IA-01: consulta en lenguaje natural")
+            ctx.auditar(TipoAccion.VER, "Consulta en lenguaje natural")
             return a_json(respuesta)
 
     # --- DX -------------------------------------------------------------------------------------
@@ -307,7 +307,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
             inicializar_esquema(ctx.conn_exp)
             registrado = registrar_juicio_clinico(ctx.conn_exp, paciente_id=ctx.exigir_expediente(), diagnostico_registrado=texto,
                                                   autor=ctx.autor, resultado_sistema=resultado)
-            ctx.auditar(TipoAccion.EDITAR, "DX-03: juicio clínico registrado")
+            ctx.auditar(TipoAccion.EDITAR, "Juicio clínico registrado")
             return a_json(registrado)
 
     # --- EST --------------------------------------------------------------------------------------
@@ -358,7 +358,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
                                                       propuesta_sistema=propuesta, justificacion=justificacion)
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail={"errores": [{"campo": "estadio", "mensaje": str(exc)}]}) from exc
-            ctx.auditar(TipoAccion.EDITAR, f"EST-02: estadio confirmado {estadio}")
+            ctx.auditar(TipoAccion.EDITAR, f"Estadio confirmado {estadio}")
             return a_json(confirmado)
 
     # --- TX ------------------------------------------------------------------------------------------
@@ -373,7 +373,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
             eid = ctx.exigir_expediente()
             recomendacion = _tool(obtener_recomendaciones_tratamiento_por_id, {"patient_id": eid}, ctx.usuario.id)
             medicacion = _tool(consultar_medicacion_actual, {"patient_id": eid}, ctx.usuario.id)
-            ctx.auditar(TipoAccion.VER, "TX-01: recomendaciones de tratamiento")
+            ctx.auditar(TipoAccion.VER, "Recomendaciones de tratamiento")
             # Los biomarcadores no se escriben como dato suelto: la interfaz los manda a HC-04.
             return {"recomendacion": recomendacion, "medicacion": medicacion, "definiciones": a_json(definiciones_variables()),
                     "biomarcadores": sorted(variables_de_biomarcadores())}
@@ -531,7 +531,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
                 raise HTTPException(status_code=400, detail={"errores": [{"campo": "consulta_id", "mensaje": str(exc)}]}) from exc
             _revisiones(ctx.conn_exp)
             revision = iniciar_revision(ctx.conn_exp, borrador)
-            ctx.auditar(TipoAccion.EDITAR, f"IA-02: borrador de nota generado ({_uso(cliente).get('proveedor')})")
+            ctx.auditar(TipoAccion.EDITAR, f"Borrador de nota generado ({_uso(cliente).get('proveedor')})")
             return {"nota": _nota_json(revision), "borrador": a_json(borrador), "uso_modelo": _uso(cliente)}
 
     @router.put("/pacientes/{paciente_id}/notas/{nota_id}/secciones/{clave}")
@@ -564,7 +564,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
                 nota = aprobar_nota(ctx.conn_exp, nota_id, aprobado_por=ctx.autor)
             except NotaYaAprobadaError as exc:
                 raise HTTPException(status_code=409, detail=str(exc)) from exc
-            ctx.auditar(TipoAccion.EDITAR, "IA-03: nota aprobada como oficial")
+            ctx.auditar(TipoAccion.EDITAR, "Nota aprobada como oficial")
             return _nota_json(nota)
 
     def _nota_del_paciente(ctx: Contexto, nota_id: str) -> None:
@@ -583,7 +583,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
             cliente = _cliente_llm(RuleBasedSummaryLLMClient())
             resumen = CaseSummaryGenerator(llm_client=cliente).generate_summary(
                 construir_contexto_resumen_caso(ctx.conn_exp, ctx.exigir_expediente()))
-            ctx.auditar(TipoAccion.VER, "IA-04: resumen para junta médica")
+            ctx.auditar(TipoAccion.VER, "Resumen para junta médica")
             return {"resumen": a_json(resumen), "texto": resumen.to_text(), "uso_modelo": _uso(cliente)}
 
     # --- EV-01 ------------------------------------------------------------------------------------------
@@ -813,7 +813,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
                 raise HTTPException(status_code=400, detail={"errores": [{"campo": "archivo", "mensaje": str(exc)}]}) from exc
             finally:
                 conn_docs.close()
-            ctx.auditar(TipoAccion.EDITAR, f"DOC-01: documento cargado ({doc.tipo_documento})")
+            ctx.auditar(TipoAccion.EDITAR, f"Documento cargado ({doc.tipo_documento})")
             respuesta = {k: v for k, v in a_json(doc).items() if k != "ruta_almacenamiento"}
             respuesta["procesamiento"] = _indexar_documento(ctx, doc, contenido)
             return respuesta
@@ -857,7 +857,7 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
                 contenido = leer_contenido_documento(doc)
             finally:
                 conn_docs.close()
-            ctx.auditar(TipoAccion.VER, f"DOC-01: documento #{documento_id} descargado")
+            ctx.auditar(TipoAccion.VER, f"Documento #{documento_id} descargado")
             nombre = Path(doc.nombre_archivo_original).name.replace('"', "")
             return Response(contenido, media_type=tipos.get(doc.extension, "application/octet-stream"), headers={
                 "Content-Disposition": f'attachment; filename="{nombre}"', "Cache-Control": "no-store"})

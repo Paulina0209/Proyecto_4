@@ -36,7 +36,7 @@ export async function secDiagnostico(ctx, p, consentimiento) {
   const vigente = r.decision_vigente;
   const juicio = ctx.sesion.puede_juicio_dx ? formulario({ campos: [
     campo({ nombre: "diagnostico", etiqueta: "Tu juicio diagnóstico", tipo: "textarea", requerido: true,
-      ayuda: "Queda registrado como la decisión vigente y se compara con lo que sugirió el sistema (AUD-02)." })],
+      ayuda: "Queda registrado como la decisión vigente y se compara con lo que sugirió el sistema." })],
   textoBoton: "Registrar juicio clínico", enviar: (v) => api(`${base(p.id)}/diagnostico/juicio`, { metodo: "POST", cuerpo: v }),
   alExito: () => { anunciar("Juicio clínico registrado."); recargar(); } }) : null;
 
@@ -47,12 +47,12 @@ export async function secDiagnostico(ctx, p, consentimiento) {
       h("div", { class: "cifra" }, h("strong", {}, String(r.hallazgos)), h("span", {}, "hallazgos trazables en el expediente")),
       h("div", { class: "cifra" }, h("strong", {}, String(dif.candidatos.length)), h("span", {}, "diagnósticos diferenciales con sustento")),
       h("div", { class: "cifra" }, h("strong", {}, inc.hay_incertidumbre ? "Sí" : "No"), h("span", {}, "hay incertidumbre"))),
-    tarjeta("Diagnóstico diferencial (DX-02)", ...candidatos),
-    tarjeta("Incertidumbre y qué más indagar (DX-03)", h("p", {}, inc.mensaje),
+    tarjeta("Diagnóstico diferencial", ...candidatos),
+    tarjeta("Incertidumbre y qué más indagar", h("p", {}, inc.mensaje),
       inc.informacion_adicional_sugerida.length ? h("ul", {}, inc.informacion_adicional_sugerida.map((s) => h("li", {}, s))) : null,
       inc.disclaimer_sugerencias ? h("p", { class: "ayuda" }, inc.disclaimer_sugerencias) : null),
-    explicaciones.length ? tarjeta("Por qué lo sugiere (IA-05)", h("ul", { class: "lista-limpia" }, explicaciones)) : null,
-    tarjeta("Estudios a solicitar ante una sospecha (DX-01)",
+    explicaciones.length ? tarjeta("Por qué lo sugiere", h("ul", { class: "lista-limpia" }, explicaciones)) : null,
+    tarjeta("Estudios a solicitar ante una sospecha",
       h("form", { class: "filtros", onsubmit: (e) => {
         e.preventDefault();
         const v = new FormData(e.target).get("sospecha");
@@ -86,17 +86,17 @@ export async function secEstadificacion(ctx, p, consentimiento) {
   return h("div", {},
     mensaje("info", null, prop.disclaimer || "Apoyo a la decisión: no reemplaza el juicio clínico."),
     h("div", { class: "rejilla-2" },
-      tarjeta("Propuesta del sistema (EST-01)", listaDatos([
+      tarjeta("Propuesta del sistema", listaDatos([
         ["Sistema", `${prop.sistema_nombre || prop.sistema_id || "—"} (v${prop.sistema_version || "—"})`],
         ["Estadio propuesto", prop.estadio_global || "No se propone: faltan datos"],
         ["Fundamento", prop.fundamento_global],
       ]), prop.componentes.length ? tabla("Componentes", ["Código", "Valor", "Fuente"], prop.componentes.map((c) => [c.codigo, c.valor, (c.fuente_ids || []).join(", ")])) : null),
-      tarjeta("Estadio vigente (EST-02)", listaDatos([
+      tarjeta("Estadio vigente", listaDatos([
         ["Estadio", vig.estadio || "Sin confirmar"],
         ["Fuente", vig.fuente === "confirmacion_medico" || vig.confirmacion ? "Confirmado por el médico" : "Propuesta del sistema"],
         ["Confirmado por", vig.confirmacion ? `${vig.confirmacion.autor} · ${fecha((vig.confirmacion.registrado_en || "").slice(0, 10))}` : "—"],
       ]), confirmar)),
-    !inc.estadificacion_completa ? tarjeta("Lo que falta para estadificar (EST-03)",
+    !inc.estadificacion_completa ? tarjeta("Lo que falta para estadificar",
       h("p", {}, inc.mensaje || "La estadificación está incompleta."),
       inc.rango_estadios_posibles && inc.rango_estadios_posibles.length ? h("p", {}, h("strong", {}, "Estadios posibles: "), inc.rango_estadios_posibles.join(", ")) : null,
       h("ul", { class: "lista-limpia" }, inc.componentes_indeterminados.map((c) => h("li", {}, h("strong", {}, `${c.codigo}: `), c.criterio_pendiente,
@@ -124,7 +124,7 @@ export async function secTratamiento(ctx, p, consentimiento) {
   const biomarcadoresFaltantes = [...faltantes].filter((v) => (r.biomarcadores || []).includes(v));
   biomarcadoresFaltantes.forEach((v) => faltantes.delete(v));
   const avisoBiomarcadores = biomarcadoresFaltantes.length ? mensaje("aviso", "Biomarcadores pendientes",
-    `La guía también necesita ${biomarcadoresFaltantes.join(", ")}. Regístralos en la sección Biomarcadores (HC-04), con su biopsia.`) : null;
+    `La guía también necesita ${biomarcadoresFaltantes.join(", ")}. Regístralos en la sección Biomarcadores y biopsias, con su biopsia.`) : null;
   const formDatos = faltantes.size && ctx.sesion.puede_registrar ? formulario({ columnas: true, textoBoton: "Guardar datos y volver a evaluar",
     campos: [...faltantes].map((v) => {
       const def = defs[v] || {};
@@ -159,7 +159,7 @@ export async function secTratamiento(ctx, p, consentimiento) {
     zonaInteracciones.replaceChildren(cargando("Revisando interacciones…"));
     try {
       const i = await api(`${base(p.id)}/tratamiento/interacciones`, { consulta: { regimen } });
-      zonaInteracciones.replaceChildren(tarjeta(`Interacciones de ${regimen} (TX-03)`,
+      zonaInteracciones.replaceChildren(tarjeta(`Interacciones de ${regimen}`,
         i.requiere_conciliacion_medicamentos ? mensaje("aviso", "Falta conciliar la medicación", "Sin la conciliación, el sistema no puede afirmar que no hay interacciones.") : null,
         i.advertencia_cobertura_incompleta ? mensaje("aviso", null, "El catálogo de interacciones no cubre todo el régimen: revisa con farmacia.") : null,
         (i.interacciones || []).length ? h("ul", { class: "lista-limpia" }, i.interacciones.map((x) => h("li", {},
@@ -186,16 +186,16 @@ export async function secTratamiento(ctx, p, consentimiento) {
     const res = await api(`${base(p.id)}/tratamiento/decision`, { metodo: "POST", cuerpo: v });
     if (!res.registrado) { const e = new Error(res.mensaje || res.motivo_rechazo || "No se registró la decisión."); e.mensajes = [e.message]; throw e; }
     return res;
-  }, alExito: (res) => { estado.replaceChildren(mensaje("ok", "Decisión registrada", `Decisión #${res.decision_id}: ${res.tipo_decision}. Queda en la trazabilidad IA frente a médico (AUD-02).`)); } }) : null;
+  }, alExito: (res) => { estado.replaceChildren(mensaje("ok", "Decisión registrada", `Decisión #${res.decision_id}: ${res.tipo_decision}. Queda en la trazabilidad de la IA frente al médico.`)); } }) : null;
 
   return h("div", {}, estado,
-    tarjeta("Opciones de tratamiento según la guía (TX-01 / TX-02)", ...cuerpoRec),
+    tarjeta("Opciones de tratamiento según la guía", ...cuerpoRec),
     zonaInteracciones,
     h("div", { class: "rejilla-2" },
       tarjeta("Medicación actual", listaDatos([["Conciliación", med.estado_conciliacion === "no_realizada" ? "No realizada" : med.estado_conciliacion],
         ["Medicamentos", (med.medicacion_activa || []).map((m) => (typeof m === "string" ? m : m.nombre || JSON.stringify(m))).join(", ") || "—"]]),
         med.estado_conciliacion === "no_realizada" ? h("p", { class: "ayuda" }, "Sin conciliar, una lista vacía significa «no se sabe», no «no toma nada».") : null, conciliacion),
-      decision ? tarjeta("Decisión del oncólogo (TX-04)", h("p", { class: "tenue" }, "La responsabilidad clínica es tuya: el sistema registra tu decisión, no la toma."), decision) : null));
+      decision ? tarjeta("Decisión del oncólogo", h("p", { class: "tenue" }, "La responsabilidad clínica es tuya: el sistema registra tu decisión, no la toma."), decision) : null));
 }
 
 /* ---------------- Evidencia ---------------- */
@@ -212,7 +212,7 @@ export async function secEvidencia(ctx, p, consentimiento) {
       insignia({ texto: `Validación clínica: ${d.validation_status || "no especificada"}`, tono: "neutra", icono: "info" }));
   });
   return h("div", {},
-    tarjeta("Evidencia científica (EV-01)",
+    tarjeta("Evidencia científica",
       h("p", { class: "tenue" }, `Solo guías versionadas incluidas en la plataforma y habilitadas por la institución (${r.organizaciones.join(", ")}). No se inventan referencias.`),
       h("form", { class: "filtros", role: "search", onsubmit: (e) => {
         e.preventDefault();

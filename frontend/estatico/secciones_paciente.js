@@ -23,7 +23,7 @@ export async function secDocumentos(ctx, p) {
   const docs = await api(`${base(p.id)}/documentos`);
   const estado = h("div", { role: "status", "aria-live": "polite" });
   const archivo = campo({ nombre: "archivo", etiqueta: "Archivo", tipo: "file", requerido: true,
-    ayuda: "PDF, imagen (JPG o PNG) o DICOM, hasta 15 MB. Se guarda cifrado (SEC-02).", atributos: { accept: ".pdf,.jpg,.jpeg,.png,.dcm" } });
+    ayuda: "PDF, imagen (JPG o PNG) o DICOM, hasta 15 MB. Se guarda cifrado.", atributos: { accept: ".pdf,.jpg,.jpeg,.png,.dcm" } });
   const carga = ctx.sesion.puede_registrar ? formulario({ campos: [archivo], textoBoton: "Cargar al expediente",
     enviar: async (v) => {
       if (!v.archivo) { const e = new Error("Elige un archivo."); e.mensajes = [e.message]; e.campos = { archivo: e.message }; throw e; }
@@ -38,7 +38,7 @@ export async function secDocumentos(ctx, p) {
       try { await descargar(`${base(p.id)}/documentos/${d.id}/contenido`); } catch (err) { estado.replaceChildren(mensaje("error", "No se pudo descargar", err.mensajes[0])); }
     } }, "Descargar")]);
   return h("div", {}, estado,
-    carga ? tarjeta("Cargar un documento clínico (DOC-01)", carga) : null,
+    carga ? tarjeta("Cargar un documento clínico", carga) : null,
     docs.length ? tabla("Documentos del expediente", ["Archivo", "Tipo", "Tamaño", "Cargado", "Contenido"], filas, { filaEncabezado: true })
       : tarjeta("Documentos del expediente", vacio("Este paciente todavía no tiene documentos cargados.")));
 }
@@ -83,7 +83,7 @@ export async function secOrdenes(ctx, p) {
     const atajos = r.decision && r.decision.farmacos.length ? h("p", { class: "acciones" }, h("span", { class: "tenue" }, "De tu decisión de tratamiento: "),
       r.decision.farmacos.map((f) => h("button", { type: "button", class: "btn sec chico", onclick: () => { medicamento.control.value = f; medicamento.control.focus(); } }, f))) : null;
     prescribir = tarjeta("Prescribir un medicamento",
-      r.decision ? mensaje("info", "Decisión de tratamiento vigente (TX-04)", `${r.decision.regimen || "Régimen sin código"}${r.decision.farmacos.length ? ` — ${r.decision.farmacos.join(" + ")}` : ""}. `,
+      r.decision ? mensaje("info", "Decisión de tratamiento vigente", `${r.decision.regimen || "Régimen sin código"}${r.decision.farmacos.length ? ` — ${r.decision.farmacos.join(" + ")}` : ""}. `,
         "Prescribe cada medicamento con su dosis, vía y horario: es lo que enfermería va a administrar.") : null,
       atajos,
       formulario({ columnas: true, textoBoton: "Prescribir", campos: [
@@ -118,7 +118,7 @@ const ESTADOS = {
   denegada: { texto: "No otorgado", tono: "crit", icono: "alerta" },
   "no exigido": { texto: "No exigido", tono: "neutra", icono: "info" },
 };
-const FINALIDADES = { asistencia_ia: "Uso de IA en la atención (SEC-03)", investigacion: "Investigación (NFR-06)", atencion_clinica: "Atención clínica" };
+const FINALIDADES = { asistencia_ia: "Uso de IA en la atención", investigacion: "Investigación", atencion_clinica: "Atención clínica" };
 
 export async function secConsentimiento(ctx, p) {
   const [c, priv] = await Promise.all([api(`/api/pacientes/${p.id}/consentimiento-ia`), api(`${base(p.id)}/privacidad`)]);
@@ -170,8 +170,8 @@ function fechaEvento(e) {
 export async function secLineaTiempo(ctx, p) {
   const ext = ctx.capacidades.extensiones.linea_tiempo;
   if (!ext.disponible) {
-    return tarjeta("Línea de tiempo del paciente (HC-06)",
-      mensaje("info", "Pendiente de integrar", "Esta vista se activa sola cuando el backend publique la historia HC-06 (línea de tiempo cronológica). No hay que cambiar nada en la interfaz."),
+    return tarjeta("Línea de tiempo del paciente",
+      mensaje("info", "Pendiente de integrar", "Esta vista se activa sola cuando el sistema publique la línea de tiempo cronológica. No hay que cambiar nada en la interfaz."),
       h("p", { class: "tenue" }, "Mientras tanto, la historia clínica, los laboratorios y las imágenes muestran los eventos por separado."));
   }
   const crudo = await api(`/api${ext.ruta.replace("{id}", p.id)}`);
@@ -195,7 +195,7 @@ export async function secLineaTiempo(ctx, p) {
     ...tipos.map(([t, etiqueta]) => [t, `${etiqueta} (${eventos.filter((e) => e.tipo === t).length})`])] });
   filtro.control.addEventListener("change", () => pintar(filtro.control.value));
   const aproximadas = eventos.filter((e) => e.aproximada).length;
-  return h("div", {}, tarjeta("Línea de tiempo del paciente (HC-06)",
+  return h("div", {}, tarjeta("Línea de tiempo del paciente",
     h("p", { class: "ayuda" }, "Del evento más antiguo al más reciente. Los laboratorios de un mismo día se agrupan en un solo evento."),
     filtro.nodo,
     aproximadas ? h("p", { class: "ayuda" }, `Borde punteado: fecha aproximada (${aproximadas} ${aproximadas === 1 ? "evento solo tiene" : "eventos solo tienen"} mes y año, o solo año).`) : null,
