@@ -8,6 +8,8 @@
     - ``informacion_faltante``: HC-05 — qué información falta para
       diagnosticar, estadificar o tratar, según un checklist configurable
       por tipo de cáncer.
+    - ``linea_tiempo``: HC-06 — eventos clínicos del paciente en orden
+      cronológico, filtrables por tipo, con las fechas aproximadas marcadas.
 
 Trabaja sobre la misma base de datos que ``expediente``
 (``db.crear_conexion`` aplica ambos esquemas), así que lo integrado aquí

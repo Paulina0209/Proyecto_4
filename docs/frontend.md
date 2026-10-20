@@ -105,6 +105,8 @@ la pantalla de imágenes lo dice y muestra lo último sincronizado y los informe
 | Expediente › Laboratorios | Alertas críticas con **Marcar como revisada** (solo oncología), tendencia por prueba (SVG con círculo/cuadrado/rombo según estado, más su tabla) y marcadores |
 | Expediente › Imágenes | Estudios del PACS con informe, **Abrir en el visor** y bitácora de consultas; si el PACS no responde, lo dice y conserva el informe |
 | Expediente › Biomarcadores / Historia | Biopsias y biomarcadores; diagnósticos, tratamientos, consultas y episodios |
+| Expediente › Línea de tiempo | HC-06: eventos en orden cronológico, filtro por tipo y fechas aproximadas dichas en texto y con borde punteado (`docs/historia_clinica_linea_tiempo.md`) |
+| Notificaciones | CFG-02: bandeja (resultados críticos, estudios pendientes, interacciones) y qué avisa por qué canal; el enlace del menú cuenta las no leídas y se actualiza solo (`docs/configuracion_notificaciones.md`) |
 | Exportar | HTML accesible (recomendado) o PDF, con traza de auditoría (`exportar_expediente_html/pdf`) |
 | Métricas de uso | El tablero ADM-02 dentro de la navegación, solo para dirección médica |
 | Sin pantallas de expediente | Explica por qué un rol no ve pacientes (ver «Límites») |
@@ -156,7 +158,7 @@ visor se abre en otra pestaña y su accesibilidad es la del visor.
 python -m pytest tests/frontend -q
 ```
 
-135 pruebas: almacén de sesiones, pasarela (autenticación, bloqueo, CSRF, identidad inyectada, roles,
-lista cerrada de rutas, HTTPS, exportación y auditoría, tablero, cabeceras), archivos estáticos y
-Chromium. Para las de navegador: `pip install playwright` y `playwright install chromium`; para axe-core,
+168 pruebas: almacén de sesiones, pasarela (autenticación, bloqueo, CSRF, identidad inyectada, roles,
+lista cerrada de rutas, HTTPS, exportación y auditoría, tablero, cabeceras, línea de tiempo y notificaciones),
+archivos estáticos y Chromium. Para las de navegador: `pip install playwright` y `playwright install chromium`; para axe-core,
 `npm install axe-core` y `AXE_CORE_JS=ruta\axe.min.js` (sin él se omite solo axe).

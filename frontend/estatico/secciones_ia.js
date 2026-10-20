@@ -3,7 +3,7 @@
 import { h, anunciar } from "./dom.js";
 import { api } from "./api.js";
 import { fecha } from "./formato.js";
-import { avisoConsentimiento, campo, cargando, formulario, insignia, insigniaIA, mensaje, tarjeta, vacio } from "./ui.js";
+import { avisoConsentimiento, campo, cargando, formulario, insignia, insigniaIA, mensaje, tabla, tarjeta, textoMarkdown, vacio } from "./ui.js";
 
 const base = (id) => `/api/clinica/pacientes/${id}`;
 const bloqueado = (consentimiento) => consentimiento && !consentimiento.ia_habilitada;
@@ -67,6 +67,28 @@ function preguntas(ctx, p) {
     chat, form);
 }
 
+/* Nombre legible de cada tool del agente de TX (si llega una nueva, se muestra su nombre técnico). */
+const HERRAMIENTAS = {
+  obtener_datos_paciente: "datos del paciente", obtener_recomendaciones_tratamiento_por_id: "recomendaciones de la guía",
+  completar_datos_paciente_y_recomendar: "recomendaciones con datos del chat", obtener_recomendaciones_tratamiento_con_datos: "recomendaciones con datos del chat",
+  listar_variables_requeridas: "datos que pide la guía", consultar_medicacion_actual: "medicación actual",
+  chequear_interacciones_tratamiento: "interacciones", registrar_decision_tratamiento: "registro de la decisión",
+  registrar_datos_clinicos_paciente: "guardar datos clínicos", registrar_conciliacion_medicamentos: "conciliación de medicamentos",
+};
+const nombreHerramienta = (n) => HERRAMIENTAS[n] || n;
+
+/* Lo que se va a guardar, como tabla (dato → valor) cuando es un objeto plano; si no, el JSON tal cual. */
+function argumentosLegibles(args) {
+  const datos = args && typeof args.datos === "object" && !Array.isArray(args.datos) ? args.datos : null;
+  const otros = args ? Object.entries(args).filter(([k]) => k !== "datos" && k !== "patient_id") : [];
+  const plano = (v) => v === null || ["string", "number", "boolean"].includes(typeof v);
+  if ((datos && Object.values(datos).every(plano) && otros.every(([, v]) => plano(v))) || (!datos && otros.length && otros.every(([, v]) => plano(v)))) {
+    const filas = [...Object.entries(datos || {}), ...otros].map(([k, v]) => [h("code", {}, k), String(v)]);
+    return tabla("Datos que se guardarán", ["Dato", "Valor"], filas, { filaEncabezado: true });
+  }
+  return h("pre", {}, JSON.stringify(args, null, 2));
+}
+
 function agente(ctx, p) {
   const disponible = ctx.capacidades.agente && ctx.capacidades.agente.disponible;
   const titulo = h("h2", {}, "Asistente de tratamiento", insignia(disponible ? { texto: ctx.capacidades.modelo_ia.descripcion, tono: "ia", icono: "info" }
@@ -82,11 +104,11 @@ function agente(ctx, p) {
 
   function pintarRespuesta(r) {
     hilo = r.hilo;
-    if (r.texto) chat.append(burbuja("asistente", r.texto, r.herramientas && r.herramientas.length ? h("span", { class: "fuente" }, `Consultó: ${r.herramientas.join(", ")}`) : null));
+    if (r.texto) chat.append(burbuja("asistente", textoMarkdown(r.texto), r.herramientas && r.herramientas.length ? h("span", { class: "fuente" }, `Consultó: ${[...new Set(r.herramientas.map(nombreHerramienta))].join(" · ")}`) : null));
     for (const pend of r.pendientes || []) {
       const tarjetaAprob = h("div", { class: "aprobacion", role: "group", "aria-label": "Acción que requiere tu aprobación" },
-        h("strong", {}, "El asistente quiere guardar esto en el expediente:"),
-        h("pre", {}, `${pend.herramienta}\n${JSON.stringify(pend.argumentos, null, 2)}`));
+        h("strong", {}, `El asistente quiere guardar esto en el expediente (${nombreHerramienta(pend.herramienta)}):`),
+        argumentosLegibles(pend.argumentos));
       const motivo = campo({ nombre: "motivo", etiqueta: "Motivo si la rechazas (opcional)" });
       const decidir = async (aprobar) => {
         tarjetaAprob.querySelectorAll("button").forEach((b) => { b.disabled = true; });

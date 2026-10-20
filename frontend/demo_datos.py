@@ -198,6 +198,12 @@ def sembrar_demo(carpeta: Path, hoy: Optional[date] = None) -> EntornoDemo:
     estudio_360(pid, 62, "RM mama", "Lesión espiculada de 2.4 cm (dato sintético)")
     estudio_360(pid, 20, "PET-CT", "Respuesta metabólica parcial (dato sintético)")
     alerta_360(pid, "estudio_pendiente", "media", "Ecocardiograma de control pendiente antes del ciclo 5.")
+    # Antecedentes traídos de otra institución con fecha incompleta: la línea de tiempo (HC-06) los marca aproximados.
+    for tipo, descripcion, cuando in (("condicion", "Hipotiroidismo en tratamiento con levotiroxina", str(hoy.year - 17)),
+                                      ("procedimiento", "Colecistectomía laparoscópica", f"{hoy.year - 6}-06")):
+        conn_exp.execute("INSERT INTO antecedentes_externos (paciente_id, tipo, descripcion, fecha, fuente) VALUES (?, ?, ?, ?, ?)",
+                         (exp, tipo, f"{descripcion} (dato sintético)", cuando, "Historia clínica externa (FHIR)"))
+    conn_exp.commit()
     pacs.agregar(doc, nombre, "1.2.826.0.1.3680043.8.498.10001", antes(62), "MR", "RM mama bilateral con contraste", 6, 312)
     pacs.agregar(doc, nombre, "1.2.826.0.1.3680043.8.498.10002", antes(20), "PT", "PET-CT cuerpo completo", 3, 740)
 
