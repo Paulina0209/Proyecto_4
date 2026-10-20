@@ -11,9 +11,7 @@ Cada oncólogo elige qué eventos le avisan y por qué canal:
     interaccion_detectada  Interacción detectada              PAC-03: ``alertas`` de tipo interaccion sin resolver
 
     Canales
-    en_aplicacion   la bandeja de «Notificaciones» de la interfaz
-    correo          se guarda la preferencia; el envío necesita el servidor de correo de la institución,
-                    que esta versión no configura (``CANALES[...]["disponible"]`` lo dice)
+    en_aplicacion   la bandeja de «Notificaciones» de la interfaz (el único por ahora)
 
 Mientras el oncólogo no configure nada, todos los eventos avisan en la aplicación.
 Solo ve notificaciones de SUS pacientes (los de su ``oncologo_id``, SEC-01). Marcar una
@@ -44,8 +42,6 @@ EVENTOS: Dict[str, Dict[str, str]] = {
 
 CANALES: Dict[str, Dict[str, object]] = {
     "en_aplicacion": {"etiqueta": "En la aplicación", "disponible": True, "nota": None},
-    "correo": {"etiqueta": "Correo electrónico", "disponible": False,
-               "nota": "La preferencia se guarda; el envío se activa cuando la institución configure su servidor de correo."},
 }
 
 CANALES_POR_DEFECTO: Tuple[str, ...] = ("en_aplicacion",)
@@ -133,6 +129,8 @@ def obtener_preferencias(conn: sqlite3.Connection, usuario_id: int) -> Configura
             preferencias.append(PreferenciaNotificacion(evento, True, CANALES_POR_DEFECTO))
         else:
             canales = tuple(c for c in fila["canales"].split(",") if c in CANALES)
+            if fila["activo"] and not canales:  # p. ej. guardada solo con el antiguo canal de correo
+                canales = CANALES_POR_DEFECTO
             preferencias.append(PreferenciaNotificacion(evento, bool(fila["activo"]), canales))
     actualizado = max((f["actualizado_en"] for f in guardadas.values()), default=None)
     return ConfiguracionNotificaciones(usuario_id, tuple(preferencias), actualizado)

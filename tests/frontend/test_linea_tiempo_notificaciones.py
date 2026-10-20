@@ -65,11 +65,10 @@ def test_sin_sesion_no_hay_nada(cliente):
     assert cliente.get(f"/api/pacientes/{LUCIA}/linea-tiempo").status_code == 401
 
 
-def test_las_preferencias_avisan_que_el_correo_aun_no_se_envia(entrar):
+def test_las_preferencias_solo_ofrecen_el_canal_de_la_aplicacion(entrar):
     prefs = entrar("dra.rios").get("/api/notificaciones/preferencias").json()
 
-    correo = next(c for c in prefs["canales"] if c["valor"] == "correo")
-    assert correo["disponible"] is False and correo["nota"]
+    assert [c["valor"] for c in prefs["canales"]] == ["en_aplicacion"]
     assert [e["evento"] for e in prefs["eventos"]] == ["resultado_critico", "estudio_pendiente", "interaccion_detectada"]
 
 
