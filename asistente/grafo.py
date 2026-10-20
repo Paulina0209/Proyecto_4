@@ -141,7 +141,7 @@ def resolver_paciente(estado: Estado, config: RunnableConfig) -> Estado:
         deps.indice.olvidar_paciente(expediente_id)
         return {"paciente": paciente, "estado": "rechazada",
                 "respuesta": f"No puedo usar la información de {nombre}: {consentimiento.motivo} Las funciones de IA requieren su consentimiento "
-                             "informado (SEC-03). Su historia clínica sigue disponible en el panel.",
+                             "informado. Su historia clínica sigue disponible en el panel.",
                 "pasos": [_paso("resolver_paciente", f"Paciente: {nombre}", "Sin consentimiento de IA vigente: no se consulta nada")]}
     return {"paciente": paciente, "pasos": [_paso("resolver_paciente", f"Paciente: {nombre}", "Consentimiento de IA vigente", paciente=paciente)]}
 
@@ -254,7 +254,7 @@ def recuperar(estado: Estado, config: RunnableConfig) -> Estado:
                 estructurado["dato"] = {"respuesta": r.answer, "fuentes": citar([r.datum.source_id])}
             elif r.needs_clarification:
                 estructurado["aclaracion"] = {"mensaje": r.answer, "opciones": [o for a in r.ambiguities for o in a.options]}
-            pasos.append(_paso("recuperar", "Busqué el dato exacto (IA-01)", "Encontrado" if estructurado.get("dato") else "Sin coincidencia exacta"))
+            pasos.append(_paso("recuperar", "Busqué el dato exacto", "Encontrado" if estructurado.get("dato") else "Sin coincidencia exacta"))
         elif intencion == "diagnostico":
             from dx_clinica.builder import construir_diagnosticos_diferenciales
             from dx_clinica.incertidumbre import analizar_incertidumbre
@@ -269,7 +269,7 @@ def recuperar(estado: Estado, config: RunnableConfig) -> Estado:
                                 "sin_sustento": list(c.criterios_sin_sustento)} for c in res.candidatos],
                 "advertencia": res.advertencia_sin_sustento, "incertidumbre": inc.mensaje,
                 "indagar": list(inc.informacion_adicional_sugerida), "disclaimer": res.disclaimer}
-            pasos.append(_paso("recuperar", "Armé el diagnóstico diferencial (DX-02)", f"{len(res.candidatos)} candidatos con sustento"))
+            pasos.append(_paso("recuperar", "Armé el diagnóstico diferencial", f"{len(res.candidatos)} candidatos con sustento"))
         elif intencion == "estadificacion":
             from estadificacion.builder import proponer_estadificacion
             from estadificacion.incompleta import analizar_estadificacion_incompleta
@@ -282,21 +282,21 @@ def recuperar(estado: Estado, config: RunnableConfig) -> Estado:
                                               "sistema": f"{prop.sistema_nombre} (v{prop.sistema_version})", "estadio": prop.estadio_global,
                                               "fundamento": prop.fundamento_global, "componentes": [{"codigo": c.codigo, "valor": c.valor} for c in prop.componentes],
                                               "faltan": [c.codigo for c in inc.componentes_indeterminados], "mensaje": inc.mensaje, "fuentes": fuentes}
-            pasos.append(_paso("recuperar", "Propuse la estadificación (EST-01/03)", prop.estadio_global or "Incompleta"))
+            pasos.append(_paso("recuperar", "Propuse la estadificación", prop.estadio_global or "Incompleta"))
         elif intencion == "tratamiento":
             from tx_clinica.tools.recommendation_tools import obtener_recomendaciones_tratamiento_por_id
 
             rec = json.loads(obtener_recomendaciones_tratamiento_por_id.invoke({"patient_id": eid}))
             datos = [fid for fid, f in por_id.items() if f.origen == "dato"]
             estructurado["tratamiento"] = {**rec, "fuentes": citar(datos[-8:])}
-            pasos.append(_paso("recuperar", "Consulté la guía computable (TX-01/02)", rec.get("module_id") or ("Faltan datos" if rec.get("requiere_mas_datos") else "Sin guía aplicable")))
+            pasos.append(_paso("recuperar", "Consulté la guía computable", rec.get("module_id") or ("Faltan datos" if rec.get("requiere_mas_datos") else "Sin guía aplicable")))
         elif intencion == "faltantes":
             from historia_clinica.informacion_faltante import evaluar_informacion_faltante
 
             ev = evaluar_informacion_faltante(deps.conn_exp, eid)
             estructurado["faltantes"] = {"estado": ev.estado.value, "faltantes": [f"{i.descripcion} ({i.motivo})" for i in ev.faltantes],
                                          "fuentes": citar([fid for fid in por_id if fid.startswith("dato-")][:6])}
-            pasos.append(_paso("recuperar", "Revisé qué falta para decidir (HC-05)", f"{len(ev.faltantes)} datos faltantes"))
+            pasos.append(_paso("recuperar", "Revisé qué falta para decidir", f"{len(ev.faltantes)} datos faltantes"))
 
     umbral = ajustes.umbral_similitud()
     aceptados = [c for c in contexto if c.get("similitud") is None or c.get("estructurado") or c["similitud"] >= umbral]
@@ -312,7 +312,7 @@ def evaluar_contexto(estado: Estado, config: RunnableConfig) -> Estado:
     contexto = estado.get("contexto") or []
     if "aclaracion" in estructurado:
         return {"suficiente": True, "motivo": "La pregunta es ambigua: se pide aclaración",
-                "pasos": [_paso("evaluar_contexto", "La pregunta es ambigua", "Se pide aclaración (IA-06)")]}
+                "pasos": [_paso("evaluar_contexto", "La pregunta es ambigua", "Se pide aclaración")]}
     utiles = [k for k in RESULTADOS if k in estructurado and (k != "resumen" or estructurado[k]["fuentes"])]
     vectoriales = [c for c in contexto if c.get("similitud") is not None and c["similitud"] >= ajustes.umbral_similitud()]
     suficiente = bool(utiles) or bool(vectoriales)

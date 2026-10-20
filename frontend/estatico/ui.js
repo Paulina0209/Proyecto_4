@@ -34,7 +34,7 @@ export function errorConReintento(err, reintentar) {
 
 export function avisoConsentimiento(texto) {
   return mensaje("aviso", "Las funciones de IA no están habilitadas para este paciente",
-    texto || "Falta el consentimiento informado (SEC-03).", " ",
+    texto || "Falta el consentimiento informado.", " ",
     h("span", {}, "Regístralo en la sección "), h("strong", {}, "Consentimiento y privacidad"), ".");
 }
 

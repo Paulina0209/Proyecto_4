@@ -487,7 +487,7 @@ def _adopcion(fuentes: FuentesMetricas, hoy_p: Tuple[date, date], ant_p: Tuple[d
         return Adopcion(False, "No hay base de usuarios.", None, None, None, None, None, (), (), ia, None), {}
     filas = _leer_uso(fuentes, desde_a, hasta)
     if filas is None:
-        return Adopcion(False, "No hay registro de accesos (AUD-01) disponible.", None, None, None, None, None, (), (), ia, None), {}
+        return Adopcion(False, "No hay registro de accesos disponible.", None, None, None, None, None, (), (), ia, None), {}
 
     clinicos = _clinicos_activos(fuentes.usuarios)
     elegibles = len(clinicos)
@@ -645,7 +645,7 @@ def _aceptacion(fuentes: FuentesMetricas, hoy_p, params: Parametros) -> Aceptaci
     )
 
     # TX-04: aceptada / modificada / rechazada.
-    etiqueta_tx = "Tratamiento (TX-04)"
+    etiqueta_tx = "Tratamiento"
     if not fuentes.con_tabla("decisiones_tratamiento"):
         dominios.append(AceptacionDominio("TX", etiqueta_tx, False, False, "No hay registro de decisiones de tratamiento.", None, (), None))
     else:
@@ -674,7 +674,7 @@ def _aceptacion(fuentes: FuentesMetricas, hoy_p, params: Parametros) -> Aceptaci
             ), _tasa(cuentas["aceptadas"], total)))
 
     # EST-02: coincide / difiere de la sugerencia (solo si había sugerencia).
-    etiqueta_est = "Estadificación (EST-02)"
+    etiqueta_est = "Estadificación"
     if not fuentes.con_tabla("confirmaciones_estadificacion"):
         dominios.append(AceptacionDominio("EST", etiqueta_est, False, False, "No hay registro de confirmaciones de estadificación.", None, (), None))
     else:
@@ -700,7 +700,7 @@ def _aceptacion(fuentes: FuentesMetricas, hoy_p, params: Parametros) -> Aceptaci
     return AceptacionIA(
         disponible, None if disponible else "No hay registros de decisiones sobre recomendaciones de IA.",
         tuple(dominios), NOTA_ACEPTACION,
-        dominios_sin_comparacion=("DX (DX-03): el sistema no compara el juicio del médico con su priorización",),
+        dominios_sin_comparacion=("Diagnóstico: el sistema no compara el juicio del médico con su priorización",),
     )
 
 

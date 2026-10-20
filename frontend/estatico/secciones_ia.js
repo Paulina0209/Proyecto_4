@@ -61,7 +61,7 @@ function preguntas(ctx, p) {
   } }, entrada.nodo, h("div", { class: "acciones" }, h("button", { type: "submit", class: "btn" }, "Preguntar")));
 
   return h("section", { class: "tarjeta" },
-    h("h2", {}, "Preguntas sobre el expediente", insignia({ texto: "IA-01 · sin inventar", tono: "ia", icono: "info" })),
+    h("h2", {}, "Preguntas sobre el expediente", insignia({ texto: "Sin inventar datos", tono: "ia", icono: "info" })),
     h("p", { class: "tenue" }, "Responde con el dato exacto y su fuente. Si la pregunta es ambigua, te pide aclararla en vez de adivinar."),
     h("div", { class: "sugerencias" }, SUGERENCIAS.map((s) => h("button", { type: "button", class: "btn sec chico", onclick: () => preguntar(s) }, s))),
     chat, form);
@@ -214,7 +214,7 @@ export async function secNotas(ctx, p, consentimiento) {
   zonaNotas.replaceChildren(...(notas.length ? notas.map((n) => pintarNota(n)) : [vacio("Todavía no hay notas generadas para este paciente.")]));
   return h("div", {},
     !ia ? avisoConsentimiento(consentimiento.motivo) : null,
-    tarjeta("Borrador de nota con IA (IA-02)",
+    tarjeta("Borrador de nota con IA",
       h("p", { class: "tenue" }, "El borrador se arma solo con lo registrado en la consulta y cita su fuente. Si el modelo no responde en 8 s, lo redacta el asistente de reglas."),
       generar || vacio(ia ? "Registra primero una consulta." : "Sin consentimiento de IA no se generan borradores.")),
     nuevaConsulta, estado, zonaNotas);
@@ -243,7 +243,7 @@ export async function secJunta(ctx, p, consentimiento) {
       zona.replaceChildren(err.campos && err.campos.consentimiento ? avisoConsentimiento(err.campos.consentimiento) : mensaje("error", "No se pudo preparar el resumen", err.mensajes[0]));
     } finally { boton.disabled = false; }
   } }, "Preparar resumen para junta médica");
-  return h("div", {}, tarjeta("Resumen para junta médica o interconsulta (IA-04)",
+  return h("div", {}, tarjeta("Resumen para junta médica o interconsulta",
     h("p", { class: "tenue" }, "Diagnóstico y estadio salen del registro estructurado; tratamientos previos y estado actual los redacta la IA citando cada fuente. Lo que falta queda marcado, nunca inventado."),
     h("div", { class: "acciones" }, boton)), zona);
 }

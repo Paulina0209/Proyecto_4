@@ -123,7 +123,7 @@ def guardar_edicion(
     if actual.es_nota_oficial():
         raise NotaYaAprobadaError(
             f"La nota '{nota_id}' ya fue aprobada; no se puede editar una "
-            "nota clínica oficial desde el flujo de borrador de IA-03."
+            "nota clínica oficial."
         )
 
     contenido_anterior = actual.contenido_actual.get(seccion_key, "")

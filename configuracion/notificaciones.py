@@ -33,7 +33,7 @@ _SCHEMA_PATH = Path(__file__).resolve().parent / "schema_notificaciones.sql"
 
 EVENTOS: Dict[str, Dict[str, str]] = {
     "resultado_critico": {"etiqueta": "Resultado crítico de laboratorio",
-                          "descripcion": "Un valor de laboratorio fuera del rango crítico (HC-02)."},
+                          "descripcion": "Un valor de laboratorio fuera del rango crítico."},
     "estudio_pendiente": {"etiqueta": "Estudio pendiente",
                           "descripcion": "Un estudio solicitado que aún no tiene resultado."},
     "interaccion_detectada": {"etiqueta": "Interacción detectada",

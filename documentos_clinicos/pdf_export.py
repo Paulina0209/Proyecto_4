@@ -314,7 +314,7 @@ def exportar_a_pdf(documento: DocumentoExportable, ruta_destino: str) -> Resulta
         pagesize=LETTER,
         title=documento.titulo,
         subject=f"Documento clínico de {documento.paciente_ref}",
-        creator="Copiloto oncológico (DOC-02)",
+        creator="Copiloto oncológico",
         lang=IDIOMA,
         displayDocTitle=1,
         leftMargin=_MARGEN,

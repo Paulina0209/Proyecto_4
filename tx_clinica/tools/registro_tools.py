@@ -82,7 +82,7 @@ def validar_datos(datos: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
         variable = str(variable).strip()
         if variable in biomarcadores:
             errores.append(
-                f"'{variable}' es un biomarcador: se registra con su biopsia en HC-04 (validación estricta y "
+                f"'{variable}' es un biomarcador: se registra con su biopsia en Biomarcadores y biopsias (validación estricta y "
                 "doble ingreso), o confirmando el biomarcador pendiente; no como dato suelto."
             )
             continue

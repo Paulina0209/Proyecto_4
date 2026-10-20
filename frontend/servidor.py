@@ -544,7 +544,7 @@ class Pasarela:
         @app.get("/favicon.ico", include_in_schema=False)
         def icono():
             return FileResponse(pasarela.carpeta_estatica / "icono.svg", media_type="image/svg+xml",
-                                headers={"Cache-Control": "max-age=86400"})
+                                headers={"Cache-Control": "no-cache"})  # sin caché larga: el ícono puede cambiar
 
         @app.get("/api/info", include_in_schema=False)
         def info():

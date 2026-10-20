@@ -180,7 +180,8 @@ def test_los_modulos_importados_existen_y_estan_todos_alcanzados():
 
 def test_index_solo_carga_archivos_que_existen():
     for ref in re.findall(r'(?:src|href)="/ui/([^"]+)"', INDEX):
-        assert (CARPETA_ESTATICA / ref).is_file(), ref
+        archivo = ref.split("?", 1)[0]          # «?v=…» solo obliga al navegador a pedir la versión nueva
+        assert (CARPETA_ESTATICA / archivo).is_file(), ref
 
 
 def test_los_textos_dinamicos_se_insertan_como_texto():

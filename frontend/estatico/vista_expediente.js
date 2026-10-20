@@ -111,7 +111,7 @@ async function secResumen(ctx, p) {
       tarjeta("Biomarcadores clave", lista(r.biomarcadores_clave || [], "Sin biomarcadores accionables registrados.", (b) =>
         h("span", {}, h("strong", {}, b.biomarcador), `: ${b.resultado}`, b.terapia ? ` · ${b.terapia}` : "", " ",
           b.confirmado ? insignia({ texto: "Confirmado", tono: "ok", icono: "ok" }) : insignia({ texto: "Por confirmar", tono: "aviso", icono: "alerta" })))),
-      faltantes ? tarjeta("¿Qué falta para decidir? (HC-05)",
+      faltantes ? tarjeta("¿Qué falta para decidir?",
         faltantes.faltantes.length ? lista(faltantes.faltantes.slice(0, 8), "", (f) => h("span", {}, h("strong", {}, f.descripcion), h("span", { class: "tenue" }, ` — ${f.motivo}`)))
           : mensaje("ok", null, "El expediente tiene la información necesaria para las fases evaluadas."),
         faltantes.faltantes.length > 8 ? h("p", { class: "tenue" }, `Y ${faltantes.faltantes.length - 8} más.`) : null) : null,
@@ -182,7 +182,7 @@ async function secLaboratorios(ctx, p) {
       h("p", {}, h("a", { href: `#/pacientes/${p.id}/laboratorios` }, "Cerrar tendencia")));
   })() : null;
 
-  const registro = ctx.sesion.puede_registrar ? h("details", { class: "tarjeta" }, h("summary", {}, "Registrar un resultado de laboratorio (HC-02)"),
+  const registro = ctx.sesion.puede_registrar ? h("details", { class: "tarjeta" }, h("summary", {}, "Registrar un resultado de laboratorio"),
     h("p", { class: "tenue" }, "Doble validación: la identificación y el nombre de la orden deben coincidir con el paciente."),
     formulario({ columnas: true, textoBoton: "Guardar resultado", campos: [
       campo({ nombre: "identificacion", etiqueta: "Identificación en la orden", requerido: true, valor: String(p.numero_identificacion).split(":").pop() }),
@@ -277,7 +277,7 @@ async function secHistoria(ctx, p) {
     dx.length ? tabla("Diagnósticos", ["Fecha", "Descripción", "Estadio"], dx.map((d) => [tiempo(d.fecha), d.descripcion, d.estadio || "—"])) : tarjeta("Diagnósticos", vacio("Sin diagnósticos registrados.")),
     tx.length ? tabla("Tratamientos", ["Inicio", "Estado", "Régimen"], tx.map((t) => [tiempo(t.fecha_inicio), ESTADOS_TRATAMIENTO[t.estado] ? insignia(ESTADOS_TRATAMIENTO[t.estado]) : t.estado, t.regimen || "—"])) : tarjeta("Tratamientos", vacio("Sin tratamientos registrados.")),
     consultas.length ? tabla("Consultas", ["Fecha", "Nota"], consultas.map((c) => [tiempo(c.fecha), c.nota || "—"])) : null,
-    externa.antecedentes.length ? tabla("Antecedentes importados de fuentes externas (HC-01)", ["Fecha", "Tipo", "Descripción", "Fuente"],
+    externa.antecedentes.length ? tabla("Antecedentes importados de fuentes externas", ["Fecha", "Tipo", "Descripción", "Fuente"],
       externa.antecedentes.map((a) => [tiempo(a.fecha), a.tipo, a.descripcion, a.fuente])) : null,
     externa.sincronizaciones.length ? tarjeta("Sincronizaciones con fuentes externas", lista(externa.sincronizaciones, "", (s) =>
       h("span", {}, tiempo((s.fecha || "").slice(0, 10)), " · ", h("strong", {}, `${s.fuente} (${s.formato})`), ` — ${s.estado}: ${s.mensaje || ""}`))) : null);
