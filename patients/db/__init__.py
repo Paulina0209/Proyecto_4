@@ -10,22 +10,31 @@ de schema.sql.
 """
 from __future__ import annotations
 
+import os
 import sqlite3
 from pathlib import Path
 
+from operacion.sqlite import preparar_concurrencia
+
 _CARPETA = Path(__file__).resolve().parent
 
-RUTA_DB = _CARPETA / "pacientes.db"
+#: ``COPILOTO_PACIENTES_DB`` la cambia (igual que ``COPILOTO_EXPEDIENTE_DB`` para el
+#: expediente): así una réplica, una prueba de carga o una demo trabajan sobre otra base.
+RUTA_DB = Path(os.environ.get("COPILOTO_PACIENTES_DB") or _CARPETA / "pacientes.db")
 _SCHEMA = _CARPETA / "schema.sql"
 
 
-def conectar(ruta: str | Path = RUTA_DB) -> sqlite3.Connection:
+def conectar(ruta: str | Path = RUTA_DB, *, check_same_thread: bool = True) -> sqlite3.Connection:
     """Filas accesibles por nombre de columna y claves foráneas activas.
-    `ruta=":memory:"` da una base en memoria, útil en pruebas."""
-    conn = sqlite3.connect(ruta)
+    `ruta=":memory:"` da una base en memoria, útil en pruebas.
+
+    NFR-01/NFR-02: en archivo usa WAL, para que leer no espere a una escritura
+    (``operacion.sqlite``). ``check_same_thread=False`` es para la API, que abre
+    la conexión de una petición en un hilo y la usa en otro."""
+    conn = sqlite3.connect(ruta, check_same_thread=check_same_thread)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    return preparar_concurrencia(conn, ruta)
 
 
 def inicializar(conn: sqlite3.Connection) -> None:

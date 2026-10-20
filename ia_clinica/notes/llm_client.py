@@ -197,6 +197,7 @@ class OpenAILLMClient(LLMClient):
         timeout: float | None = None,
         usar_formato_json: bool = True,
         client=None,
+        max_retries: int = 2,
     ) -> None:
         from core import llm_config
 
@@ -205,6 +206,8 @@ class OpenAILLMClient(LLMClient):
         self._timeout = timeout if timeout is not None else llm_config.obtener_timeout()
         self._usar_formato_json = usar_formato_json
         self._client = client
+        #: NFR-01: con un presupuesto de tiempo (operacion.presupuesto) no se reintenta.
+        self._max_retries = max_retries
 
     @property
     def model(self) -> str:
@@ -225,7 +228,7 @@ class OpenAILLMClient(LLMClient):
                 "El paquete 'openai' no está instalado. Instálalo con "
                 "'pip install -r requirements.txt' para usar OpenAILLMClient."
             ) from exc
-        self._client = openai.OpenAI(api_key=self._api_key, timeout=self._timeout, max_retries=2)
+        self._client = openai.OpenAI(api_key=self._api_key, timeout=self._timeout, max_retries=self._max_retries)
         return self._client
 
     def complete(self, system_prompt: str, user_prompt: str) -> str:

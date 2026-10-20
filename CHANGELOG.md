@@ -1,5 +1,35 @@
 # Changelog
 
+## [Sin versionar] — Rama `rendimiento-disponibilidad-escalabilidad`
+
+### Añadido
+
+- **NFR-01 — Rendimiento** (`operacion/latencia.py`, `operacion/presupuesto.py`, `operacion/carga.py`, `operacion/rendimiento.py`):
+  - `Server-Timing` en cada respuesta y p50/p95 por ruta en `/salud/metricas`;
+  - presupuesto de 8 s para GPT con respaldo por reglas: la nota y el resumen siempre llegan en menos de 10 s;
+  - `python -m operacion.carga` (prueba de carga por TLS sobre una copia de la base real) y `python -m operacion.rendimiento`.
+  - Ver `docs/rendimiento.md`.
+- **NFR-02 — Disponibilidad** (`operacion/salud.py`, `operacion/monitor.py`):
+  - sondas `/salud/vivo` y `/salud/listo` (503 si falla algo crítico; dependencias externas como `degradado`) en `patients.api` y la pasarela web;
+  - `python -m operacion.monitor vigilar|informe`: disponibilidad contra el SLA del 99,5 %, presupuesto de error e incidentes.
+  - Ver `docs/disponibilidad.md`.
+- **NFR-05 — Escalabilidad horizontal**:
+  - `python -m seguridad.servidor_tls --workers N`;
+  - `AlmacenSesionesSQLite` (`COPILOTO_SESIONES_DB`): sesiones compartidas entre réplicas.
+  - Ver `docs/escalabilidad.md`.
+- `demo_operacion.py`: las tres historias sobre una copia de la base real.
+
+### Corregido
+
+- **La API de pacientes fallaba con peticiones simultáneas** (500 en ~80 % con 10 usuarios: `sqlite3.ProgrammingError`). `patients/db.conectar` y `conectar_expediente` usan ahora `check_same_thread=False` en la API, WAL y `busy_timeout` (`operacion/sqlite.py`).
+
+### Cambiado
+
+- `frontend/servidor.py`: se retiró `_permitir_conexiones_entre_hilos`, que ya no hace falta.
+- `patients/db`: la base se puede cambiar con `COPILOTO_PACIENTES_DB`.
+- `patients/api.py`: `COPILOTO_DETALLE_BAJO_DEMANDA=0` apaga la descarga de cBioPortal al abrir un paciente.
+- `OpenAILLMClient` acepta `max_retries` (por defecto 2, como antes).
+
 ## [Sin versionar] — Rama `seguridad-consentimiento-cumplimiento`
 
 ### Añadido

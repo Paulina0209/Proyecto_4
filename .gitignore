@@ -36,6 +36,8 @@ patients/db/pacientes.db
 *.sqlite-journal
 *.sqlite-shm
 *.sqlite-wal
+*.db-wal
+*.db-shm
 
 # Logs y temporales
 *.log
