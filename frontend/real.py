@@ -37,7 +37,12 @@ def preparar_datos(aviso: Callable[[str], None] = print) -> int:
     from datos.__main__ import preparar
 
     if capas.base_existe() and capas.es_trabajo_de_escenario(capas.RutasTrabajo.por_defecto()):
-        aviso("1/3 Datos: capa base de cBioPortal y capa de trabajo listas.")
+        from datos.escenario import asegurar_equipo_y_ordenes
+
+        # Capas armadas antes del equipo de atención y las órdenes médicas: se completan sin tocar lo demás.
+        equipos, ordenes = asegurar_equipo_y_ordenes(capas.RutasTrabajo.por_defecto())
+        extra = "".join([f" Equipo de atención asignado ({equipos})." if equipos else "", f" Órdenes de demostración: {ordenes}." if ordenes else ""])
+        aviso(f"1/3 Datos: capa base de cBioPortal y capa de trabajo listas.{extra}")
         return 0
     aviso("1/3 Datos: armando las capas (la primera vez descarga de cBioPortal, toma unos minutos)...")
     return preparar(aviso=aviso)

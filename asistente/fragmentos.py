@@ -97,6 +97,14 @@ def fragmentos_del_expediente(conn: sqlite3.Connection, paciente_id: int) -> Lis
     ).fetchall():
         fragmentos.append(Fragmento(id=f"dato-{fila[0]}", texto=f"Dato clínico registrado: {fila[1]} = {fila[2]}",
                                     tipo="expediente", origen="dato", paciente_id=paciente_id, fecha=fila[3]))
+    try:  # órdenes médicas (lo que el oncólogo prescribió y enfermería suministra)
+        from historia_clinica.ordenes_medicas import ordenes_de
+
+        for orden in ordenes_de(conn, paciente_id):
+            fragmentos.append(Fragmento(id=f"orden-{orden.id}", texto=orden.texto(), tipo="expediente", origen="orden",
+                                        paciente_id=paciente_id, fecha=orden.fecha_inicio))
+    except sqlite3.Error:
+        pass
     if paciente is not None:
         nombre, identificacion = paciente[0], paciente[1]
         fragmentos = [Fragmento(f.id, seudonimizar_texto(f.texto, nombre=nombre, identificaciones=[identificacion] if identificacion else []),

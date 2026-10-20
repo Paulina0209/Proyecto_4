@@ -1,16 +1,16 @@
-/* Secciones del paciente: documentos (DOC-01), consentimiento y privacidad (SEC-03 / NFR-06) y línea de tiempo (HC-06).
+/* Secciones del paciente: documentos (DOC-01), órdenes médicas, consentimiento y privacidad (SEC-03 / NFR-06) y línea de tiempo (HC-06).
    La línea de tiempo se activa sola cuando el backend publica su ruta (ver frontend/extensiones.py). */
 import { h, anunciar } from "./dom.js";
 import { api, descargar } from "./api.js";
 import { fecha } from "./formato.js";
-import { campo, formulario, insignia, listaDatos, mensaje, tabla, tarjeta, vacio } from "./ui.js";
+import { campo, casilla, formulario, insignia, listaDatos, mensaje, tabla, tarjeta, vacio } from "./ui.js";
 
 const base = (id) => `/api/clinica/pacientes/${id}`;
 const recargar = () => window.dispatchEvent(new HashChangeEvent("hashchange"));
 
 /* ---------------- Documentos ---------------- */
 
-function leerComoBase64(archivo) {
+export function leerComoBase64(archivo) {
   return new Promise((resolver, rechazar) => {
     const lector = new FileReader();
     lector.onload = () => resolver(String(lector.result).split(",")[1] || "");
@@ -41,6 +41,72 @@ export async function secDocumentos(ctx, p) {
     carga ? tarjeta("Cargar un documento clínico (DOC-01)", carga) : null,
     docs.length ? tabla("Documentos del expediente", ["Archivo", "Tipo", "Tamaño", "Cargado", "Contenido"], filas, { filaEncabezado: true })
       : tarjeta("Documentos del expediente", vacio("Este paciente todavía no tiene documentos cargados.")));
+}
+
+/* ---------------- Órdenes médicas: el oncólogo prescribe, enfermería suministra ---------------- */
+
+export const horaDe = (iso) => String(iso || "").slice(11, 16);
+
+export function tablaHorario(titulo, dosis, vias, conPaciente = false) {
+  if (!dosis.length) return tarjeta(titulo, vacio("No hay administraciones programadas en este periodo."));
+  const columnas = ["Fecha", "Hora", ...(conPaciente ? ["Paciente"] : []), "Medicamento", "Dosis", "Vía"];
+  return tabla(titulo, columnas, dosis.map((d) => [fecha(d.momento.slice(0, 10)), horaDe(d.momento),
+    ...(conPaciente ? [h("a", { href: `#/pacientes/${d.paciente.id}/ordenes` }, d.paciente.nombre)] : []),
+    h("strong", {}, d.medicamento), d.dosis, vias[d.via] || d.via]), { filaEncabezado: false });
+}
+
+export async function secOrdenes(ctx, p) {
+  const r = await api(`${base(p.id)}/ordenes`);
+  const estado = h("div", { role: "status", "aria-live": "polite" });
+  const activas = r.ordenes.filter((o) => o.activa);
+  const historial = r.ordenes.filter((o) => !o.activa);
+
+  const suspender = (o) => h("button", { type: "button", class: "btn sec chico", onclick: async () => {
+    const motivo = window.prompt(`Motivo para suspender ${o.medicamento} ${o.dosis}`);
+    if (!motivo) return;
+    try {
+      await api(`${base(p.id)}/ordenes/${o.id}/suspender`, { metodo: "POST", cuerpo: { motivo } });
+      anunciar("Orden suspendida."); recargar();
+    } catch (err) { estado.replaceChildren(mensaje("error", "No se pudo suspender", err.mensajes[0])); }
+  } }, "Suspender");
+
+  const filasActivas = activas.map((o) => [h("strong", {}, o.medicamento), o.dosis, o.via_etiqueta, o.frecuencia,
+    `${fecha(o.fecha_inicio)} · ${o.hora_inicio}${o.fecha_fin ? ` → ${fecha(o.fecha_fin)}` : ""}`, o.indicaciones || "—", o.ordenado_por,
+    ...(r.puede_prescribir ? [suspender(o)] : [])]);
+  const filasHistorial = historial.map((o) => [o.medicamento, o.dosis, o.via_etiqueta, o.frecuencia, `${fecha(o.fecha_inicio)}${o.fecha_fin ? ` → ${fecha(o.fecha_fin)}` : ""}`,
+    o.suspendida_en ? `Suspendida el ${fecha(o.suspendida_en.slice(0, 10))}: ${o.motivo_suspension}` : "Terminada", o.ordenado_por]);
+
+  let prescribir = null;
+  if (r.puede_prescribir) {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const medicamento = campo({ nombre: "medicamento", etiqueta: "Medicamento", requerido: true });
+    const atajos = r.decision && r.decision.farmacos.length ? h("p", { class: "acciones" }, h("span", { class: "tenue" }, "De tu decisión de tratamiento: "),
+      r.decision.farmacos.map((f) => h("button", { type: "button", class: "btn sec chico", onclick: () => { medicamento.control.value = f; medicamento.control.focus(); } }, f))) : null;
+    prescribir = tarjeta("Prescribir un medicamento",
+      r.decision ? mensaje("info", "Decisión de tratamiento vigente (TX-04)", `${r.decision.regimen || "Régimen sin código"}${r.decision.farmacos.length ? ` — ${r.decision.farmacos.join(" + ")}` : ""}. `,
+        "Prescribe cada medicamento con su dosis, vía y horario: es lo que enfermería va a administrar.") : null,
+      atajos,
+      formulario({ columnas: true, textoBoton: "Prescribir", campos: [
+        medicamento,
+        campo({ nombre: "dosis", etiqueta: "Dosis", requerido: true, ayuda: "Cantidad y unidad, por ejemplo 200 mg o 500 mg/m²." }),
+        campo({ nombre: "via", etiqueta: "Vía", tipo: "select", opciones: Object.entries(r.vias) }),
+        campo({ nombre: "intervalo_horas", etiqueta: "Frecuencia", tipo: "select", opciones: Object.entries(r.frecuencias).sort((a, b) => Number(a[0]) - Number(b[0])) }),
+        campo({ nombre: "fecha_inicio", etiqueta: "Fecha de inicio", tipo: "date", requerido: true, valor: hoy }),
+        campo({ nombre: "hora_inicio", etiqueta: "Hora de la primera dosis", tipo: "time", requerido: true, valor: "08:00" }),
+        campo({ nombre: "fecha_fin", etiqueta: "Fecha de fin (opcional)", tipo: "date" }),
+        campo({ nombre: "indicaciones", etiqueta: "Indicaciones para enfermería", tipo: "textarea", ayuda: "Por ejemplo: diluir en 100 ml de SSN, pasar en 30 minutos." }),
+        ...(r.decision ? [casilla({ nombre: "desde_decision", etiqueta: "Vincular a la decisión de tratamiento vigente" })] : []),
+      ], enviar: (v) => api(`${base(p.id)}/ordenes`, { metodo: "POST", cuerpo: { ...v, intervalo_horas: Number(v.intervalo_horas), fecha_fin: v.fecha_fin || null } }),
+      alExito: (o) => { anunciar(`Orden de ${o.medicamento} registrada.`); recargar(); } }));
+  }
+
+  return h("div", {}, estado,
+    ctx.sesion.solo_lectura ? mensaje("info", null, "Consulta de enfermería: las órdenes las prescribe y suspende el oncólogo tratante.") : null,
+    tablaHorario("Horario de administración (próximas 48 horas)", r.horario, r.vias),
+    activas.length ? tabla("Órdenes vigentes", ["Medicamento", "Dosis", "Vía", "Frecuencia", "Desde", "Indicaciones", "Ordenada por", ...(r.puede_prescribir ? ["Acciones"] : [])], filasActivas, { filaEncabezado: true })
+      : tarjeta("Órdenes vigentes", vacio("Este paciente no tiene órdenes médicas vigentes.")),
+    prescribir,
+    filasHistorial.length ? tabla("Suspendidas o terminadas", ["Medicamento", "Dosis", "Vía", "Frecuencia", "Periodo", "Estado", "Ordenada por"], filasHistorial, { filaEncabezado: true }) : null);
 }
 
 /* ---------------- Consentimiento y privacidad ---------------- */

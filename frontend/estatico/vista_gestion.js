@@ -48,8 +48,9 @@ export async function vistaAuditoria(ctx) {
 
 export async function vistaUsuarios(ctx) {
   if (!ctx.sesion.gestionar_usuarios) return sinPermiso("Usuarios", "Solo el administrador del sistema gestiona usuarios.");
-  return pantalla("Usuarios y roles", "Alta, cambio de rol y baja lógica (ADM-01). Nadie se borra: el historial se conserva.", async () => {
-    const r = await api("/api/gestion/usuarios");
+  return pantalla("Usuarios y roles", "Alta, cambio de rol y baja lógica (ADM-01). Nadie se borra: el historial se conserva. Enfermería y admisiones ven los pacientes de los oncólogos de su equipo.", async () => {
+    const [r, eq] = await Promise.all([api("/api/gestion/usuarios"), api("/api/gestion/equipos")]);
+    const nombreOncologo = Object.fromEntries(eq.oncologos.map((o) => [o.id, o.nombre]));
     const estado = h("div", { role: "status", "aria-live": "polite" });
     const opcionesRol = r.roles.map((x) => [x.valor, x.etiqueta]);
     const filas = r.usuarios.map((u) => {
@@ -60,7 +61,24 @@ export async function vistaUsuarios(ctx) {
           anunciar(texto); recargar();
         } catch (err) { estado.replaceChildren(mensaje("error", `No se pudo actualizar a ${u.nombre_usuario}`, err.mensajes[0])); }
       };
-      return [u.nombre_usuario, u.nombre_completo || "—", selectorRol,
+      const asignados = eq.asignaciones[String(u.id)];
+      let columnaEquipo = h("span", { class: "tenue" }, "—");
+      if (asignados) {
+        const equipo = async (oncologo_id, retirar) => {
+          try {
+            await api(`/api/gestion/equipos/${u.id}`, { metodo: "POST", cuerpo: { oncologo_id, retirar } });
+            anunciar(retirar ? "Oncólogo retirado del equipo." : "Oncólogo agregado al equipo."); recargar();
+          } catch (err) { estado.replaceChildren(mensaje("error", `No se pudo actualizar el equipo de ${u.nombre_usuario}`, err.mensajes[0])); }
+        };
+        const libres = eq.oncologos.filter((o) => !asignados.includes(o.id));
+        const selector = h("select", { "aria-label": `Agregar oncólogo al equipo de ${u.nombre_usuario}` }, libres.map((o) => h("option", { value: String(o.id) }, o.nombre)));
+        columnaEquipo = h("div", { class: "equipo" },
+          asignados.length ? h("ul", { class: "lista-limpia" }, asignados.map((id) => h("li", {}, nombreOncologo[id] || `Oncólogo ${id}`, " ",
+            h("button", { type: "button", class: "btn sec chico", "aria-label": `Retirar a ${nombreOncologo[id]} del equipo de ${u.nombre_usuario}`, onclick: () => equipo(id, true) }, "Retirar"))))
+            : insignia({ texto: "Sin equipo: no ve pacientes", tono: "aviso", icono: "alerta" }),
+          libres.length ? h("span", { class: "acciones" }, selector, h("button", { type: "button", class: "btn sec chico", onclick: () => equipo(Number(selector.value), false) }, "Agregar")) : null);
+      }
+      return [u.nombre_usuario, u.nombre_completo || "—", selectorRol, columnaEquipo,
         u.activo ? insignia({ texto: "Activo", tono: "ok", icono: "ok" }) : insignia({ texto: "Inactivo", tono: "neutra", icono: "pausa" }),
         h("span", { class: "acciones" },
           h("button", { type: "button", class: "btn sec chico", onclick: () => operar("rol", { rol: selectorRol.value, motivo: "Cambio desde la interfaz de administración" }, "Rol actualizado.") }, "Guardar rol"),
@@ -75,7 +93,7 @@ export async function vistaUsuarios(ctx) {
       campo({ nombre: "contrasena", etiqueta: "Contraseña inicial", tipo: "password", requerido: true, ayuda: "Mínimo 10 caracteres, con letras y números." }),
     ], enviar: (v) => api("/api/gestion/usuarios", { metodo: "POST", cuerpo: v }), alExito: () => { anunciar("Usuario creado."); recargar(); } });
     return h("div", {}, estado,
-      tabla(`${r.usuarios.length} usuarios`, ["Usuario", "Nombre", "Rol", "Estado", "Acciones"], filas, { filaEncabezado: true }),
+      tabla(`${r.usuarios.length} usuarios`, ["Usuario", "Nombre", "Rol", "Equipo de atención", "Estado", "Acciones"], filas, { filaEncabezado: true }),
       h("details", { class: "tarjeta" }, h("summary", {}, "Crear un usuario"), alta));
   });
 }

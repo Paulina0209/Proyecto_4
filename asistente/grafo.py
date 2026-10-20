@@ -40,7 +40,8 @@ SUGERENCIA_DOCUMENTOS = ("Si la información existe en otro documento, cárgalo 
 _CITA = re.compile(r"\[([a-z]+(?:-[\w.]+)+)\]", re.IGNORECASE)
 
 SECCION_HC = {"consulta": "consultas", "laboratorio": "laboratorios", "imagenologia": "imagenes", "biomarcador": "biomarcadores",
-              "antecedente": "antecedentes", "dato": "datos", "ficha": "ficha", "documento": "documentos", "guia": "guias"}
+              "antecedente": "antecedentes", "dato": "datos", "ficha": "ficha", "documento": "documentos", "guia": "guias",
+              "orden": "ordenes"}
 
 
 @dataclass
@@ -55,6 +56,14 @@ class Dependencias:
     #: paciente_id (base de pacientes) -> (expediente_id o None, nombre)
     expediente_de: Callable[[int], Tuple[Optional[int], str]]
     guardar: Optional[Callable[[Dict[str, Any]], None]] = None
+    #: "oncologia" o "enfermeria": enfermería conversa sobre las órdenes médicas (lo que suministra) y los datos.
+    perfil: str = "oncologia"
+
+
+#: Lo que enfermería puede pedirle al asistente; el apoyo a la decisión es del oncólogo tratante.
+INTENCIONES_ENFERMERIA = ("medicacion", "dato", "saludo")
+MENSAJE_FUERA_DE_ROL = ("Como enfermería, te ayudo con las órdenes médicas de tus pacientes (medicamentos, dosis, vías y horarios) y con los "
+                        "datos de su expediente. El diagnóstico, la estadificación y las decisiones de tratamiento son del oncólogo tratante.")
 
 
 class Estado(TypedDict, total=False):
@@ -90,13 +99,19 @@ def _deps(config_: RunnableConfig) -> Dependencias:
 
 def validar_intencion(estado: Estado, config: RunnableConfig) -> Estado:
     intencion = detectar_intencion(estado["pregunta"])
-    return {"intencion": intencion, "pasos": [_paso("validar_intencion", "Entendí la pregunta", ETIQUETAS[intencion], intencion=intencion)]}
+    pasos = [_paso("validar_intencion", "Entendí la pregunta", ETIQUETAS[intencion], intencion=intencion)]
+    if _deps(config).perfil == "enfermeria" and intencion not in INTENCIONES_ENFERMERIA:
+        return {"intencion": intencion, "estado": "fuera_de_rol", "respuesta": MENSAJE_FUERA_DE_ROL,
+                "pasos": pasos + [_paso("validar_intencion", "Fuera del alcance de enfermería", "Es del oncólogo tratante")]}
+    return {"intencion": intencion, "pasos": pasos}
 
 
 def resolver_paciente(estado: Estado, config: RunnableConfig) -> Estado:
     from privacidad.consentimiento_ia import estado_consentimiento_ia
 
     deps = _deps(config)
+    if estado.get("estado") == "fuera_de_rol":
+        return {}
     if not necesita_paciente(estado["intencion"]):
         return {"paciente": None, "pasos": [_paso("resolver_paciente", "No necesita un paciente", "Se busca en las guías clínicas")]}
     mencion = mencion_de_paciente(estado["pregunta"]).texto
@@ -132,9 +147,10 @@ def resolver_paciente(estado: Estado, config: RunnableConfig) -> Estado:
 
 
 #: Resultados estructurados del sistema (no dependen de la similitud).
-RESULTADOS = ("resumen", "dato", "diagnostico", "estadificacion", "tratamiento", "faltantes")
+RESULTADOS = ("resumen", "dato", "diagnostico", "estadificacion", "tratamiento", "faltantes", "medicacion")
 ETIQUETA_SECCION = {"ficha": "Ficha", "biomarcador": "Biomarcador", "consulta": "Consulta", "imagenologia": "Imagen",
-                    "laboratorio": "Laboratorio", "antecedente": "Antecedente", "dato": "Dato clínico", "documento": "Documento"}
+                    "laboratorio": "Laboratorio", "antecedente": "Antecedente", "dato": "Dato clínico", "documento": "Documento",
+                    "orden": "Orden médica"}
 #: Cuántos registros de cada sección entran al panorama de un resumen (los más recientes).
 PANORAMA = (("ficha", 1), ("biomarcador", 6), ("consulta", 3), ("imagenologia", 3), ("laboratorio", 5), ("antecedente", 3), ("dato", 6))
 
@@ -209,6 +225,25 @@ def recuperar(estado: Estado, config: RunnableConfig) -> Estado:
             # Un resumen no se busca por parecido («resume el caso» no se parece a ningún registro): se arma el panorama.
             estructurado["resumen"] = {"fuentes": citar(_panorama(por_id))}
             pasos.append(_paso("recuperar", "Armé el panorama del caso", f"{len(estructurado['resumen']['fuentes'])} registros clave del expediente"))
+        elif intencion == "medicacion":
+            # Solo lo ORDENADO por el oncólogo: nada de dosis sugeridas por el modelo ni por las guías.
+            from datetime import datetime, timedelta
+
+            from historia_clinica.ordenes_medicas import dosis_programadas, ordenes_de
+
+            todas = ordenes_de(deps.conn_exp, eid)
+            activas = [o for o in todas if o.activa]
+            ahora = datetime.now().replace(second=0, microsecond=0)
+            proximas = dosis_programadas(activas, ahora - timedelta(hours=2), ahora + timedelta(hours=24))
+            suspendidas = [o for o in todas if o.suspendida_en][:3]
+            estructurado["medicacion"] = {
+                "activas": [{"id": f"orden-{o.id}", "texto": o.texto()} for o in activas],
+                "proximas": [{"orden": f"orden-{d.orden_id}", "momento": d.momento, "medicamento": d.medicamento, "dosis": d.dosis, "via": d.via}
+                             for d in proximas[:12]],
+                "suspendidas": [{"id": f"orden-{o.id}", "texto": o.texto()} for o in suspendidas],
+                "fuentes": citar([f"orden-{o.id}" for o in activas + suspendidas] or [f"paciente-{eid}"]),
+                "ahora": ahora.isoformat(timespec="minutes")}
+            pasos.append(_paso("recuperar", "Consulté las órdenes médicas", f"{len(activas)} activas · {len(proximas)} dosis en las próximas 24 h"))
         elif intencion == "dato":
             from clinical_query import NaturalLanguageClinicalQueryService, SQLiteClinicalRepository
             from clinical_query.service import Clarification
@@ -309,6 +344,19 @@ def _extractiva(estado: Estado) -> Tuple[str, List[str]]:
         if d["indagar"]:
             lineas.append("Para reducir la incertidumbre, indagar: " + "; ".join(d["indagar"]) + ".")
         lineas.append(d["disclaimer"])
+    if "medicacion" in e:
+        m = e["medicacion"]
+        if not m["activas"]:
+            lineas.append("No hay órdenes médicas activas para este paciente. " + " ".join(f"[{f}]" for f in m["fuentes"]))
+        else:
+            lineas.append("Órdenes médicas activas:")
+            lineas += [f"- {o['texto'].removeprefix('Orden médica: ')} [{o['id']}]" for o in m["activas"]]
+            if m["proximas"]:
+                lineas.append("Próximas administraciones:")
+                lineas += [f"- {d['momento'].replace('T', ' ')} · {d['medicamento']} {d['dosis']} ({d['via']}) [{d['orden']}]" for d in m["proximas"]]
+        if m["suspendidas"]:
+            lineas.append("Suspendidas recientemente: " + "; ".join(f"{o['texto']} [{o['id']}]" for o in m["suspendidas"]))
+        citas += m["fuentes"]
     if "resumen" in e:
         for fid in e["resumen"]["fuentes"]:
             c = next((x for x in estado.get("contexto") or [] if x["id"] == fid), None)
@@ -371,7 +419,9 @@ SISTEMA = (
     "6. Lo registrado en el expediente (por ejemplo el estadio de la ficha [paciente-N]) es un dato válido: infórmalo aunque el "
     "sistema no pueda recalcularlo, y aclara que no se pudo verificar.\n"
     "7. En un resumen, organiza por: diagnóstico y estadio, biomarcadores, consultas y tratamiento, imágenes, laboratorios.\n"
-    "8. La CONVERSACIÓN PREVIA solo sirve para entender a qué se refiere la pregunta; no es fuente ni se cita."
+    "8. La CONVERSACIÓN PREVIA solo sirve para entender a qué se refiere la pregunta; no es fuente ni se cita.\n"
+    "9. Sobre medicamentos responde SOLO con las órdenes médicas [orden-N] y su horario: nunca sugieras dosis, vías ni horarios "
+    "que no estén ordenados; si algo no está en la orden, di que hay que consultarlo con el oncólogo tratante."
 )
 
 
@@ -444,7 +494,7 @@ def guardar_historial(estado: Estado, config: RunnableConfig) -> Estado:
 
 
 def _tras_paciente(estado: Estado) -> str:
-    if estado.get("estado") in ("aclaracion", "rechazada"):
+    if estado.get("estado") in ("aclaracion", "rechazada", "fuera_de_rol"):
         return "guardar_historial"
     if estado["intencion"] == "saludo":
         return "responder_saludo"

@@ -2,6 +2,7 @@ import { h, anunciar, idUnico } from "./dom.js";
 import { api } from "./api.js";
 import { edad, fecha, ESTADOS_TRATAMIENTO } from "./formato.js";
 import { cargando, errorConReintento, insignia, mensaje, tabla } from "./ui.js";
+import { selectorEquipo } from "./vista_equipo.js";
 
 const TAMANO = 10;
 const CAMPOS = ["nombre", "diagnostico", "estado_tratamiento", "ultima_consulta_desde", "ultima_consulta_hasta"];
@@ -50,7 +51,8 @@ export async function vistaPacientes(ctx) {
   async function cargar() {
     resultados.replaceChildren(cargando("Buscando pacientes…"));
     try {
-      const r = await api("/api/pacientes/buscar", { consulta: { ...Object.fromEntries(CAMPOS.map((c) => [c, filtros[c]])), pagina, tamano_pagina: TAMANO } });
+      const r = await api("/api/pacientes/buscar", { consulta: { ...Object.fromEntries(CAMPOS.map((c) => [c, filtros[c]])), pagina, tamano_pagina: TAMANO,
+        equipo: ctx.consulta.get("equipo") || "" } });
       resultados.replaceChildren(...pintar(r));
       anunciar(r.total === 0 ? "No se encontraron pacientes." : `${r.total} ${r.total === 1 ? "paciente encontrado" : "pacientes encontrados"}. Página ${r.pagina} de ${r.total_paginas}.`);
     } catch (err) {
@@ -93,7 +95,8 @@ export async function vistaPacientes(ctx) {
   contenedor.append(
     h("div", { class: "ficha-cabecera" },
       h("div", {}, h("h1", {}, "Pacientes"), h("p", { class: "sub" }, "Solo ves a los pacientes que atiendes tú.")),
-      ctx.sesion.puede_registrar ? h("div", { class: "acciones" }, h("a", { class: "btn", href: "#/pacientes/nuevo" }, "Registrar paciente")) : null),
+      ctx.sesion.puede_registrar ? h("div", { class: "acciones" }, h("a", { class: "btn", href: "#/pacientes/nuevo" }, "Registrar paciente")) : null,
+      selectorEquipo(ctx, "#/pacientes", { todos: false })),
     formulario, resultados);
   const nodo = contenedor;
   return { titulo: "Pacientes", nodo, alMostrar: cargar };
