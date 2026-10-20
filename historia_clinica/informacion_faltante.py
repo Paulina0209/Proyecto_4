@@ -117,7 +117,7 @@ def cargar_checklists(ruta: Union[str, Path] = RUTA_CHECKLIST_POR_DEFECTO) -> Di
                     f"({sorted(fases_invalidas) or 'ninguna'}); válidas: {', '.join(FASES)}."
                 )
             for evidencia in item["evidencias"]:
-                if len(evidencia) != 1 or next(iter(evidencia)) not in {"variable", "biomarcador", "imagen", "laboratorio"}:
+                if len(evidencia) != 1 or next(iter(evidencia)) not in {"variable", "biomarcador", "imagen", "laboratorio", "biopsia"}:
                     raise ValueError(f"Checklist '{codigo}', ítem '{item['id']}': evidencia no reconocida {evidencia!r}.")
     return contenido
 
@@ -250,6 +250,12 @@ class _Expediente:
         self.biomarcadores = biomarcadores_de_paciente(conn, paciente_id)
         self.imagenes = imagenologia_de_paciente(conn, paciente_id)
         self.laboratorios = laboratorios_de_paciente(conn, paciente_id)
+        try:  # HC-04: la biopsia con su diagnóstico histológico (p. ej. la muestra secuenciada de cBioPortal)
+            self.biopsias = conn.execute(
+                "SELECT id, diagnostico_histologico, procedimiento FROM biopsias WHERE paciente_id = ? ORDER BY fecha DESC, id DESC",
+                (paciente_id,)).fetchall()
+        except sqlite3.OperationalError:  # expediente sin el esquema de HC-04
+            self.biopsias = []
 
     def buscar(self, evidencias: List[Dict[str, Any]]) -> Tuple[Optional[str], Optional[Tuple[str, str]]]:
         """Devuelve (fuente_presente, (valor, fuente)_no_concluyente)."""
@@ -274,6 +280,8 @@ class _Expediente:
                 (i.hallazgos, f"imagen-{i.id}") for i in self.imagenes
                 if not criterio or _coincide(i.region, criterio)
             ]
+        if tipo == "biopsia":
+            return [(f[1] or f[2], f"biopsia-{f[0]}") for f in self.biopsias]
         if tipo == "laboratorio":
             return [(lab.valor, f"lab-{lab.id}") for lab in self.laboratorios if _coincide(lab.prueba, criterio)]
         return []

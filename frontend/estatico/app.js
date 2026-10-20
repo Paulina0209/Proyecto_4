@@ -9,7 +9,7 @@ import { vistaPacientes } from "./vista_pacientes.js";
 import { vistaRegistroPaciente } from "./vista_registro.js";
 import { vistaExpediente } from "./vista_expediente.js";
 import { vistaMetricas } from "./vista_metricas.js";
-import { vistaAuditoria, vistaGuias, vistaNotificaciones, vistaSistema, vistaUsuarios } from "./vista_gestion.js";
+import { vistaAuditoria, vistaGuias, vistaNotificaciones, vistaPrivacidad, vistaSistema, vistaUsuarios } from "./vista_gestion.js";
 
 const NOMBRE_APP = "Copiloto oncológico";
 const principal = document.getElementById("contenido");
@@ -22,6 +22,7 @@ const MENU = [
   ["nav-pacientes", (s) => s.acceso_clinico],
   ["nav-notificaciones", (s, c) => s.acceso_clinico && c.extensiones.notificaciones.disponible],
   ["nav-guias", (s) => s.acceso_clinico || s.configurar_guias],
+  ["nav-privacidad", (s) => s.configurar_privacidad],
   ["nav-metricas", (s) => s.ver_metricas],
   ["nav-auditoria", (s) => s.ver_auditoria],
   ["nav-usuarios", (s) => s.gestionar_usuarios],
@@ -107,6 +108,7 @@ const RUTAS = [
   { patron: /^\/pacientes\/(\d+)(?:\/([a-z-]+))?$/, vista: clinica(vistaExpediente), parametros: ["id", "seccion"] },
   { patron: /^\/notificaciones$/, vista: clinica(vistaNotificaciones) },
   { patron: /^\/guias$/, vista: vistaGuias },
+  { patron: /^\/privacidad$/, vista: vistaPrivacidad },
   { patron: /^\/metricas$/, vista: vistaMetricas },
   { patron: /^\/auditoria$/, vista: vistaAuditoria },
   { patron: /^\/usuarios$/, vista: vistaUsuarios },

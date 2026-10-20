@@ -217,8 +217,9 @@ def _labs_del_expediente(conn_exp: sqlite3.Connection, expediente_id: int) -> tu
 
 
 def _biomarcadores_clave(conn_exp: sqlite3.Connection, expediente_id: int) -> tuple[BiomarcadorClave, ...]:
-    from historia_clinica.biopsias_biomarcadores import ACCIONABLE_CONFIRMADO, biomarcadores_clave
+    from historia_clinica.biopsias_biomarcadores import ACCIONABLE_CONFIRMADO, asegurar_resaltado, biomarcadores_clave
 
+    asegurar_resaltado(conn_exp, expediente_id)
     return tuple(
         BiomarcadorClave(
             biomarcador=b.biomarcador,

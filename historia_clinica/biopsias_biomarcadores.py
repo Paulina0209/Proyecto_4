@@ -777,9 +777,32 @@ def obtener_biomarcador(conn: sqlite3.Connection, paciente_id: int, biomarcador_
     return BiomarcadorRegistrado(**dict(fila)) if fila else None
 
 
+#: Los importados (p. ej. de cBioPortal) que el catálogo no considera accionables no tienen detalle: también
+#: son parte del expediente y se muestran, como informativos, con su resultado tal cual llegó.
+_SQL_SIN_DETALLE = (
+    "SELECT b.id AS biomarcador_id, b.paciente_id, NULL AS biopsia_id, NULL AS episodio_id, b.fecha, b.biomarcador, "
+    "b.resultado, b.biomarcador AS codigo, 'importado' AS estado, NULL AS valor_numerico, NULL AS unidad, NULL AS metodo, "
+    "NULL AS variante, '" + INFORMATIVO + "' AS relevancia, NULL AS terapia_asociada, NULL AS variable_tx, NULL AS valor_tx, "
+    "NULL AS confirmado_por, NULL AS fecha_confirmacion, 'importado' AS origen "
+    "FROM biomarcadores b LEFT JOIN detalle_biomarcador d ON d.biomarcador_id = b.id "
+    "WHERE b.paciente_id = ? AND d.biomarcador_id IS NULL"
+)
+
+
 def biomarcadores_registrados(conn: sqlite3.Connection, paciente_id: int) -> List[BiomarcadorRegistrado]:
-    filas = conn.execute(_SQL_REGISTRADOS + " ORDER BY b.fecha DESC, b.id DESC", (paciente_id,)).fetchall()
+    filas = conn.execute(f"SELECT * FROM ({_SQL_REGISTRADOS} UNION ALL {_SQL_SIN_DETALLE}) ORDER BY fecha DESC, biomarcador_id DESC",
+                         (paciente_id, paciente_id)).fetchall()
     return [BiomarcadorRegistrado(**dict(f)) for f in filas]
+
+
+def asegurar_resaltado(conn: sqlite3.Connection, paciente_id: int) -> List[int]:
+    """Marca como pendientes de confirmación los importados accionables que aún no se revisaron (AC2).
+    Idempotente: se llama antes de mostrar los biomarcadores, así los que llegan de cBioPortal
+    (capa de trabajo, detalle bajo demanda) quedan destacados sin un paso aparte."""
+    try:
+        return marcar_potencialmente_accionables(conn, paciente_id)
+    except sqlite3.OperationalError:  # base de solo lectura o sin el esquema de HC-04: se muestra lo que hay
+        return []
 
 
 def biomarcadores_clave(conn: sqlite3.Connection, paciente_id: int) -> List[BiomarcadorRegistrado]:
@@ -803,6 +826,7 @@ __all__ = [
     "INFORMATIVO",
     "PENDIENTE_CONFIRMACION",
     "biomarcadores_clave",
+    "asegurar_resaltado",
     "biomarcadores_registrados",
     "biopsias_de_paciente",
     "buscar_definicion",

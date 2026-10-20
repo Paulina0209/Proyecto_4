@@ -363,14 +363,16 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
     def tratamiento(paciente_id: int, request: Request):
         from tx_clinica.tools.interaction_tools import consultar_medicacion_actual
         from tx_clinica.tools.recommendation_tools import obtener_recomendaciones_tratamiento_por_id
-        from tx_clinica.tools.registro_tools import definiciones_variables
+        from tx_clinica.tools.registro_tools import definiciones_variables, variables_de_biomarcadores
 
         with contexto(request, paciente_id) as ctx:
             eid = ctx.exigir_expediente()
             recomendacion = _tool(obtener_recomendaciones_tratamiento_por_id, {"patient_id": eid}, ctx.usuario.id)
             medicacion = _tool(consultar_medicacion_actual, {"patient_id": eid}, ctx.usuario.id)
             ctx.auditar(TipoAccion.VER, "TX-01: recomendaciones de tratamiento")
-            return {"recomendacion": recomendacion, "medicacion": medicacion, "definiciones": a_json(definiciones_variables())}
+            # Los biomarcadores no se escriben como dato suelto: la interfaz los manda a HC-04.
+            return {"recomendacion": recomendacion, "medicacion": medicacion, "definiciones": a_json(definiciones_variables()),
+                    "biomarcadores": sorted(variables_de_biomarcadores())}
 
     @router.post("/pacientes/{paciente_id}/tratamiento/datos")
     async def tratamiento_datos(paciente_id: int, request: Request):
@@ -383,7 +385,9 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
         with contexto(request, paciente_id, Accion.EDITAR_EXPEDIENTE) as ctx:
             r = _tool(registrar_datos_clinicos_paciente, {"patient_id": ctx.exigir_expediente(), "datos": valores}, ctx.usuario.id)
             if r.get("error"):
-                raise HTTPException(status_code=400, detail={"errores": [{"campo": "valores", "mensaje": r.get("mensaje") or r["error"]}]})
+                errores = [{"campo": str(e).split("'")[1] if str(e).startswith("'") else "valores", "mensaje": str(e)}
+                           for e in (r.get("errores") or [])]
+                raise HTTPException(status_code=400, detail={"errores": errores or [{"campo": "valores", "mensaje": r.get("mensaje") or r["error"]}]})
             return r
 
     @router.post("/pacientes/{paciente_id}/tratamiento/conciliacion")
@@ -507,6 +511,14 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
             fila = ctx.conn_exp.execute("SELECT paciente_id FROM consultas WHERE id = ?", (consulta_id,)).fetchone()
             if fila is None or fila[0] != eid:
                 raise HTTPException(status_code=404, detail="Esa consulta no es de este paciente.")
+            _revisiones(ctx.conn_exp)
+            previa = ctx.conn_exp.execute("SELECT estado FROM revision_notas WHERE nota_id = ?", (f"consulta-{consulta_id}",)).fetchone()
+            if previa is not None:
+                # Una consulta tiene una sola nota: se edita (o ya se aprobó), no se vuelve a generar encima.
+                aprobada = str(previa[0]).upper() == "APPROVED"
+                raise HTTPException(status_code=409, detail={"errores": [{"campo": "consulta_id", "mensaje":
+                    "Esa consulta ya tiene una nota aprobada como oficial." if aprobada else
+                    "Esa consulta ya tiene un borrador: edítalo o apruébalo en la lista de notas."}]})
             cliente = _cliente_llm(RuleBasedLLMClient())
             try:
                 borrador = ClinicalNoteGenerator(llm_client=cliente).generate_draft(

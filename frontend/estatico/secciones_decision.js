@@ -106,7 +106,10 @@ export async function secEstadificacion(ctx, p, consentimiento) {
 
 /* ---------------- Tratamiento ---------------- */
 
-const valoresPermitidos = (def) => [...String(def.valores || "").matchAll(/'([^']+)'/g)].map((m) => m[1]).sort();
+// El backend manda los valores como lista; se acepta también el formato antiguo "'a','b'".
+const valoresPermitidos = (def) => (Array.isArray(def.valores) ? [...def.valores]
+  : [...String(def.valores || "").matchAll(/'([^']+)'/g)].map((m) => m[1])).sort();
+const esNumerica = (def) => ["numeric", "number", "integer", "float"].includes(def && def.tipo);
 
 export async function secTratamiento(ctx, p, consentimiento) {
   if (bloqueado(consentimiento)) return avisoConsentimiento(consentimiento.motivo);
@@ -117,20 +120,26 @@ export async function secTratamiento(ctx, p, consentimiento) {
   const faltantes = new Set();
   Object.values(rec.variables_faltantes_por_modulo || {}).forEach((vs) => vs.forEach((v) => faltantes.add(v)));
   (rec.variables_faltantes_para_candidatos || []).forEach((v) => faltantes.add(v));
+  // Los biomarcadores (PD-L1, EGFR, HER2…) no son datos sueltos: se registran con su biopsia en HC-04.
+  const biomarcadoresFaltantes = [...faltantes].filter((v) => (r.biomarcadores || []).includes(v));
+  biomarcadoresFaltantes.forEach((v) => faltantes.delete(v));
+  const avisoBiomarcadores = biomarcadoresFaltantes.length ? mensaje("aviso", "Biomarcadores pendientes",
+    `La guía también necesita ${biomarcadoresFaltantes.join(", ")}. Regístralos en la sección Biomarcadores (HC-04), con su biopsia.`) : null;
   const formDatos = faltantes.size && ctx.sesion.puede_registrar ? formulario({ columnas: true, textoBoton: "Guardar datos y volver a evaluar",
     campos: [...faltantes].map((v) => {
       const def = defs[v] || {};
       const opciones = valoresPermitidos(def);
       return opciones.length ? campo({ nombre: v, etiqueta: v, tipo: "select", opciones: [["", "Elegir…"], ...opciones.map((o) => [o, o])] })
-        : campo({ nombre: v, etiqueta: v, tipo: def.tipo === "numeric" ? "number" : "text" });
+        : campo({ nombre: v, etiqueta: v, tipo: esNumerica(def) ? "number" : "text",
+          ayuda: esNumerica(def) && (def.minimo != null || def.maximo != null) ? `Entre ${def.minimo ?? "—"} y ${def.maximo ?? "—"}` : null });
     }),
     enviar: (v) => {
-      const valores = Object.fromEntries(Object.entries(v).filter(([, x]) => x !== "").map(([k, x]) => [k, defs[k] && defs[k].tipo === "numeric" ? Number(x) : x]));
+      const valores = Object.fromEntries(Object.entries(v).filter(([, x]) => x !== "").map(([k, x]) => [k, esNumerica(defs[k]) ? Number(x) : x]));
       return api(`${base(p.id)}/tratamiento/datos`, { metodo: "POST", cuerpo: { valores } });
     }, alExito: () => { anunciar("Datos guardados."); recargar(); } }) : null;
 
   let cuerpoRec;
-  if (rec.requiere_mas_datos) cuerpoRec = [mensaje("aviso", "Faltan datos clínicos para elegir la guía", rec.mensaje), formDatos];
+  if (rec.requiere_mas_datos) cuerpoRec = [mensaje("aviso", "Faltan datos clínicos para elegir la guía", rec.mensaje), avisoBiomarcadores, formDatos];
   else if (rec.sin_guia_aplicable) cuerpoRec = [mensaje("info", "Sin guía computable para este caso", rec.mensaje)];
   else {
     cuerpoRec = [h("p", {}, h("strong", {}, "Guía aplicada: "), rec.module_id),
@@ -142,7 +151,7 @@ export async function secTratamiento(ctx, p, consentimiento) {
         c.advertencia_comorbilidad ? mensaje("aviso", null, c.advertencia_comorbilidad) : null,
         h("div", { class: "acciones" }, h("button", { type: "button", class: "btn sec chico", onclick: () => revisarInteracciones(c.regimen_id) }, "Revisar interacciones")))))
         : vacio("La guía no tiene candidatos para los datos actuales."),
-      formDatos];
+      avisoBiomarcadores, formDatos];
   }
 
   const zonaInteracciones = h("div", {});
