@@ -89,7 +89,7 @@ def test_la_bandeja_trae_estudios_pendientes_e_interacciones_de_mis_pacientes(cl
 
 def test_las_preferencias_se_leen_se_guardan_y_cambian_la_bandeja(client_con_datos):
     inicial = client_con_datos.get("/notificaciones/preferencias", params=ONC).json()
-    assert inicial["es_por_defecto"] and [c["valor"] for c in inicial["canales"]] == ["en_aplicacion", "correo"]
+    assert inicial["es_por_defecto"] and [c["valor"] for c in inicial["canales"]] == ["en_aplicacion"]
 
     r = client_con_datos.put("/notificaciones/preferencias", params=ONC, json={"preferencias": [
         {"evento": "estudio_pendiente", "activo": False, "canales": []}]})

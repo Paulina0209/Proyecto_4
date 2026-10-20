@@ -17,8 +17,7 @@ Interfaz: **Notificaciones** en el menú de oncología.
 
 | Canal | Estado |
 |---|---|
-| `en_aplicacion` | la bandeja de «Notificaciones» |
-| `correo` | la preferencia se guarda, pero **esta versión no envía correos**: falta el servidor de correo de la institución. La API lo dice (`disponible: false`) y la pantalla también |
+| `en_aplicacion` | la bandeja de «Notificaciones» (único canal; no hay envío por correo) |
 
 Sin configuración, todos los eventos avisan en la aplicación.
 
