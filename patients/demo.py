@@ -34,7 +34,7 @@ VERIFICAR_TLS = os.environ.get("COPILOTO_TLS_CA") or (str(_CERT_LOCAL) if _CERT_
 
 # TODO(SEC-01): mientras no haya autenticación real, la demo actúa como
 # este oncólogo. La API solo le devuelve SUS pacientes.
-ONCOLOGO_DEMO = 1
+from datos.escenario import ONCOLOGO_DEMO_ID as ONCOLOGO_DEMO  # noqa: E402  (dra. Gómez, ver docs/datos.md)
 
 ETIQUETAS_ESTADO = {
     "en_tratamiento": "En tratamiento",

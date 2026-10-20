@@ -1,5 +1,19 @@
 # Changelog
 
+## [Sin versionar] — Rama `datos-capas`
+
+### Añadido
+
+- **Capas de datos** (`datos/`, ver `docs/datos.md`):
+  - capa base de cBioPortal en `data/cbioportal/`, que nadie modifica: índice de 13.159 pacientes y detalle completo de una cohorte de 60;
+  - capa de trabajo armada desde la base más un escenario: usuarios por rol, pacientes repartidos entre oncólogos, consentimientos de IA en todos sus estados, autorizaciones de investigación y consultas de revisión;
+  - `python -m datos preparar | reiniciar --confirmar | estado | base`. La primera vez respalda las bases anteriores en `data/respaldo_<fecha>/`.
+
+### Cambiado
+
+- `demo.py`, `patients/demo.py` y `demo_laboratorios_biomarcadores.py` usan `datos.escenario.ONCOLOGO_DEMO_ID` en vez del oncólogo 1. `demo.py` prepara las capas si faltan.
+- Con la capa de trabajo nueva, `demo_laboratorios_biomarcadores.py` pasa sus 16 verificaciones de HC-02/HC-04; con la base anterior fallaba porque no había episodios ni biopsias.
+
 ## [Sin versionar] — Rama `rendimiento-disponibilidad-escalabilidad`
 
 ### Añadido

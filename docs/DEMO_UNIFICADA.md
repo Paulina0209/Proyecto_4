@@ -14,10 +14,9 @@ python demo.py --sin-red        # sin OpenAI ni cBioPortal (la base ya debe esta
 
 ## Qué hace
 
-1. **Prepara la base real si falta.** Trae de cBioPortal el índice de
-   MSK-CHORD (13.159 pacientes de mama y pulmón) a `data/copiloto.db` y
-   `patients/db/pacientes.db`, y el detalle de los tres pacientes de la
-   demo. Necesita internet solo la primera vez.
+1. **Prepara las capas de datos si faltan** (`python -m datos preparar`, ver `docs/datos.md`): la base de
+   cBioPortal en `data/cbioportal/` (13.159 pacientes y detalle de una cohorte de 60) y la capa de
+   trabajo con usuarios, pacientes por oncólogo y consentimientos. Necesita internet solo la primera vez.
 2. **Trabaja sobre una copia** en `%TEMP%\copiloto_demo\bd`: lo que la demo
    registra (un paciente nuevo, una nota, decisiones) no queda en la base real.
 3. **Consentimiento de IA (SEC-03).** Activa la exigencia en la copia y

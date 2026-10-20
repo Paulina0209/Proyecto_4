@@ -40,7 +40,9 @@ from patients.demo import negrita, resaltar_error, resaltar_ok
 
 RAIZ = Path(__file__).resolve().parent
 SALIDA = Path(tempfile.gettempdir()) / "copiloto_demo_hc02_hc04"
-ONCOLOGO = {"oncologo_id": 1}
+from datos.escenario import ONCOLOGO_DEMO_ID  # noqa: E402  (dra. Gómez, ver docs/datos.md)
+
+ONCOLOGO = {"oncologo_id": ONCOLOGO_DEMO_ID}
 PACIENTE_EGFR = "P-0016350"   # pulmón metastásico, EGFR L858R importado (pendiente)
 PACIENTE_CEA = "P-0008538"    # mama IV, series largas de CEA y CA 15-3
 
@@ -401,7 +403,7 @@ def pregunta_al_agente(sin_ia: bool) -> None:
     print(f"  Oncólogo > {pregunta}")
     inicio = time.monotonic()
     try:
-        respuesta = enviar_mensaje(construir_agente(), pregunta, f"demo-hc04-{int(time.time())}", oncologo_id=1)
+        respuesta = enviar_mensaje(construir_agente(), pregunta, f"demo-hc04-{int(time.time())}", oncologo_id=ONCOLOGO_DEMO_ID)
         print(f"  Agente ({llm_config.obtener_modelo()}, {time.monotonic() - inicio:.0f} s) > {respuesta.texto}")
         verificar("TX-01 recibe el biomarcador confirmado", "confirm" in (respuesta.texto or "").lower(),
                   "el agente lo reporta como confirmado")
