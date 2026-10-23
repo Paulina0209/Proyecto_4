@@ -305,19 +305,16 @@ def test_la_linea_de_tiempo_filtra_por_tipo_y_dice_en_texto_que_una_fecha_es_apr
         page.wait_for_function(f"() => document.querySelectorAll('ol.linea-tiempo > li').length === {total}")
 
 
-def test_las_preferencias_de_notificacion_explican_el_error_junto_al_evento(nav, sitio):
+def test_las_preferencias_de_notificacion_sin_eleccion_de_canal_cuando_hay_uno_solo(nav, sitio):
+    """Con un único canal (la aplicación) no hay nada que elegir: solo «Avisarme» por evento.
+    Que guardar siga funcionando lo cubre test_guardar_preferencias_y_marcar_leida_cambian_la_bandeja_en_pantalla."""
     with abierta(nav, sitio, "dra.rios") as (page, _):
         _ir(page, "#/notificaciones")
         page.wait_for_selector("button:has-text('Guardar preferencias')")
         assert page.locator("text=Resultado crítico de laboratorio").count() >= 1
-        grupo = page.locator("fieldset:has(legend:text-is('Estudio pendiente'))")
-        grupo.get_by_label("En la aplicación").uncheck()           # sigue activo, pero sin canal: no se guarda
-        page.click("button:has-text('Guardar preferencias')")
-        error = grupo.locator(".error-campo")
-        error.wait_for(state="visible")
-        assert "Elige al menos un canal" in error.inner_text()
-        assert page.locator("[role=alert]:has-text('No se guardaron las preferencias')").count() == 1
-        assert page.evaluate("() => document.activeElement.type") == "checkbox"   # el foco va al grupo con el problema
+        assert page.locator("fieldset:has(legend:text-is('Estudio pendiente'))").get_by_label("Avisarme").count() == 1
+        assert page.locator("legend:text-is('Por qué canal')").count() == 0
+        assert page.get_by_label("En la aplicación").count() == 0
 
 
 def test_cerrar_sesion_vuelve_al_acceso_con_aviso_y_el_boton_atras_no_muestra_datos(nav, sitio):

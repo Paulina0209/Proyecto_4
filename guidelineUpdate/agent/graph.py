@@ -10,6 +10,8 @@ import yaml
 from langgraph.graph import StateGraph, END
 from langgraph.types import Send
 
+from ..observability import llamar_claude
+
 
 def _build_anthropic_client(api_key: str):
     """Cliente de Anthropic con mas reintentos que el default (2) sobre
@@ -243,7 +245,9 @@ def _call_detect_batch(
             }
         )
 
-    response = client.messages.create(
+    response = llamar_claude(
+        client,
+        f"detectar_cambios tanda {batch_index}/{total_batches}",
         model=state["detection_model"],
         max_tokens=16000,
         # System tambien con cache_control: se repite identico en cada
@@ -402,7 +406,9 @@ def generate_file_proposal_node(state: FileProposalState) -> dict:
 
     last_error = None
     for attempt in range(1, 3):  # hasta 2 intentos
-        response = client.messages.create(
+        response = llamar_claude(
+            client,
+            f"generar {state['target_file']} intento {attempt}",
             model=state["model"],
             max_tokens=8000,
             system=[

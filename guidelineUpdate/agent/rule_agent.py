@@ -223,15 +223,23 @@ class LangGraphLLMClient(LLMClient):
             from .graph import build_graph
             self._app = build_graph()
 
-        result = self._app.invoke({
-            "module_id": module_id,
-            "api_key": self.api_key,
-            "model": self.model,
-            "detection_model": self.detection_model,
-            "current_rules_text": current_rules_text,
-            "new_document_text": new_document_text,
-            "new_document_images": new_document_images or [],
-        })
+        from ..observability import traza_modulo
+
+        with traza_modulo(module_id) as span:
+            result = self._app.invoke({
+                "module_id": module_id,
+                "api_key": self.api_key,
+                "model": self.model,
+                "detection_model": self.detection_model,
+                "current_rules_text": current_rules_text,
+                "new_document_text": new_document_text,
+                "new_document_images": new_document_images or [],
+            })
+            span.update(output={
+                "cambios": len(result.get("changes", [])),
+                "archivos_propuestos": sorted(result.get("proposals", {})),
+                "errores_validacion": result.get("validation_errors", {}),
+            })
 
         notes = "Generado por LangGraphLLMClient -- no aplicar sin revision."
         if result.get("validation_errors"):

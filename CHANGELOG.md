@@ -1,5 +1,25 @@
 # Changelog
 
+## [Sin versionar] — guidelineUpdate con Langfuse
+
+### Corregido
+
+- `guidelineUpdate.main` no leía el `.env`, así que la llave nunca llegaba y siempre corría con `RuleBasedLLMClient`
+  (sin propuestas). Ahora carga el `.env` y acepta `ANTHROPIC_API_KEY` (o `LLM_API_KEY`). El modelo se elige con
+  `GUIDELINE_UPDATE_MODEL` (por defecto `claude-sonnet-5`).
+
+### Añadido
+
+- `guidelineUpdate.observability`: una traza de Langfuse por módulo procesado (sesión por día de corrida) y cada llamada
+  a Claude como generación con modelo, tokens (incluido prompt caching) y `stop_reason`. Las imágenes de los slides no
+  se envían a Langfuse y no se usa el `CallbackHandler` de LangChain porque registraría el estado del grafo, que lleva
+  la llave de Anthropic.
+
+### Cambiado
+
+- Notificaciones: con un solo canal («En la aplicación») ya no aparece «Por qué canal» en el formulario de
+  preferencias ni la columna «Canales» en la tabla.
+
 ## [Sin versionar] — Rama `timeline`
 
 ### Añadido
