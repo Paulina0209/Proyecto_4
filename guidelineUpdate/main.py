@@ -1,20 +1,33 @@
 import datetime
 import os
 
+from core import llm_config
+
 from .scraper.search_update import ESMOScraper
 from .scraper import download_content
 from .agent import rule_agent
 from .state import state_manager
+from .observability import vaciar_langfuse
+
+#: Modelo de Claude por defecto; se cambia con GUIDELINE_UPDATE_MODEL en el .env.
+MODELO_POR_DEFECTO = "claude-sonnet-5"
 
 
 def _build_llm_client():
-    api_key = os.environ.get("LLM_API_KEY")
+    # El .env de la raiz trae la llave y las LANGFUSE_*; sin esto solo se
+    # veian las variables exportadas en la terminal.
+    llm_config.cargar_env()
+    api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("LLM_API_KEY")
 
     if not api_key:
-        print("LLM_API_KEY no configurada -- usando RuleBasedLLMClient (no genera propuestas).")
+        print("ANTHROPIC_API_KEY no configurada -- usando RuleBasedLLMClient (no genera propuestas).")
         return rule_agent.RuleBasedLLMClient()
 
-    return rule_agent.LangGraphLLMClient(api_key=api_key)
+    return rule_agent.LangGraphLLMClient(
+        api_key=api_key,
+        model=os.environ.get("GUIDELINE_UPDATE_MODEL") or MODELO_POR_DEFECTO,
+        detection_model=os.environ.get("GUIDELINE_UPDATE_DETECTION_MODEL") or None,
+    )
 
 
 def _append_history_entry(module_id, *, previous_version, new_version, previous_date,
@@ -40,6 +53,13 @@ def _append_history_entry(module_id, *, previous_version, new_version, previous_
 
 
 def run():
+    try:
+        _run()
+    finally:
+        vaciar_langfuse()  # sin esto se pierden las ultimas trazas al salir
+
+
+def _run():
     scraper = ESMOScraper()
     updates = scraper.check_updates()
 

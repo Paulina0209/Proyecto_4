@@ -210,8 +210,10 @@ export async function vistaSistema(ctx) {
 
 /* ---------------- Notificaciones (CFG-02, se conecta sola) ---------------- */
 
-/* Qué eventos avisan y por qué canal: un grupo por evento, con su error junto al grupo y un resumen arriba (WCAG 3.3.1). */
+/* Qué eventos avisan y por qué canal: un grupo por evento, con su error junto al grupo y un resumen arriba (WCAG 3.3.1).
+   Con un solo canal no hay nada que elegir: se oculta «Por qué canal» y se guarda ese canal. */
 function formularioPreferencias(prefs) {
+  const unSoloCanal = prefs.canales.length === 1;
   const grupos = prefs.eventos.map((ev) => {
     const activo = casilla({ nombre: `${ev.evento}-activo`, etiqueta: "Avisarme", marcada: ev.activo });
     const canales = prefs.canales.map((c) => ({ valor: c.valor, ...casilla({ nombre: `${ev.evento}-${c.valor}`,
@@ -219,7 +221,7 @@ function formularioPreferencias(prefs) {
     const error = h("p", { class: "error-campo", id: idUnico(`error-${ev.evento}`), hidden: true });
     const grupoCanales = h("fieldset", { "aria-describedby": error.id }, h("legend", {}, "Por qué canal"), canales.map((c) => c.nodo));
     return { ev, activo, canales, error, grupoCanales,
-      nodo: h("fieldset", {}, h("legend", {}, ev.etiqueta), h("p", { class: "ayuda" }, ev.descripcion), activo.nodo, grupoCanales, error) };
+      nodo: h("fieldset", {}, h("legend", {}, ev.etiqueta), h("p", { class: "ayuda" }, ev.descripcion), activo.nodo, unSoloCanal ? null : grupoCanales, error) };
   });
   const resumen = h("div", { tabindex: "-1" });
   const boton = h("button", { type: "submit", class: "btn" }, "Guardar preferencias");
@@ -231,13 +233,14 @@ function formularioPreferencias(prefs) {
     boton.disabled = true; boton.setAttribute("aria-busy", "true");
     try {
       await api("/api/notificaciones/preferencias", { metodo: "PUT", cuerpo: { preferencias: grupos.map((g) => ({
-        evento: g.ev.evento, activo: g.activo.control.checked, canales: g.canales.filter((c) => c.control.checked).map((c) => c.valor) })) } });
+        evento: g.ev.evento, activo: g.activo.control.checked,
+        canales: unSoloCanal ? [prefs.canales[0].valor] : g.canales.filter((c) => c.control.checked).map((c) => c.valor) })) } });
       anunciar("Preferencias guardadas."); recargar();
     } catch (err) {
       let primero = null;
       for (const g of grupos) {
         const texto = err.campos && err.campos[`canales.${g.ev.evento}`];
-        if (texto) { g.error.textContent = texto; g.error.hidden = false; g.grupoCanales.setAttribute("aria-invalid", "true"); primero = primero || g.canales[0].control; }
+        if (texto) { g.error.textContent = texto; g.error.hidden = false; g.grupoCanales.setAttribute("aria-invalid", "true"); primero = primero || (unSoloCanal ? g.activo.control : g.canales[0].control); }
       }
       resumen.replaceChildren(mensaje("error", "No se guardaron las preferencias", ...(err.mensajes.length > 1 ? [h("ul", {}, err.mensajes.map((m) => h("li", {}, m)))] : [err.mensajes[0]])));
       (primero || resumen).focus();
@@ -268,7 +271,9 @@ export async function vistaNotificaciones(ctx) {
     const nodoPrefs = prefs && Array.isArray(prefs.eventos) ? tarjeta("Qué me avisa y por dónde",
       prefs.es_por_defecto ? h("p", { class: "ayuda" }, "Aún no has cambiado nada: todos los eventos te avisan en la aplicación.") : null,
       ext.guardar_preferencias ? formularioPreferencias(prefs)
-        : tabla("Preferencias", ["Evento", "Avisa", "Canales"], prefs.eventos.map((ev) => [ev.etiqueta, ev.activo ? "Sí" : "No", ev.canales.join(", ") || "—"]), { filaEncabezado: true }))
+        : prefs.canales.length === 1
+          ? tabla("Preferencias", ["Evento", "Avisa"], prefs.eventos.map((ev) => [ev.etiqueta, ev.activo ? "Sí" : "No"]), { filaEncabezado: true })
+          : tabla("Preferencias", ["Evento", "Avisa", "Canales"], prefs.eventos.map((ev) => [ev.etiqueta, ev.activo ? "Sí" : "No", ev.canales.join(", ") || "—"]), { filaEncabezado: true }))
       : null;
     return h("div", {}, items.length ? tarjeta(`${items.length} notificaciones${noLeidas ? ` (${noLeidas} sin leer)` : ""}`, h("ul", { class: "lista-limpia" }, items.map(pintar)))
       : tarjeta("Notificaciones", vacio("No tienes notificaciones.")), nodoPrefs);
