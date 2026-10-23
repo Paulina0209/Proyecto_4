@@ -1,5 +1,32 @@
 # Changelog
 
+## [Sin versionar] — Rama `NatiMejia`
+
+### Añadido
+
+- **Skill `ruta-recomendacion-guias`** (`skills/ruta-recomendacion-guias/SKILL.md` + `references/registro-de-decision.md`, formato
+  [agentskills.io](https://agentskills.io/specification)): el procedimiento para trazar una recomendación de tratamiento a
+  partir de las guías (paciente registrado o caso del chat, módulo, variables obligatorias, lectura de cada resultado,
+  interacciones, registro de la decisión). Pasa el validador de referencia `skills-ref`. Ver `docs/skills.md`.
+- `tx_clinica/skills.py`: descubre y valida las skills contra la especificación y las carga por divulgación progresiva
+  (catálogo en el prompt → cuerpo al activar → archivos de apoyo bajo demanda; sin salir de la carpeta de la skill).
+- Tool `activar_skill` (solo lectura, sin aprobación humana) y `tx_clinica/middleware/exigir_skill.py`: las tools de la ruta
+  (`listar_variables_requeridas`, las tres de recomendación y `chequear_interacciones_tratamiento`) no se ejecutan hasta que la
+  skill esté activada en la conversación; el modelo recibe el motivo y reintenta.
+- La pantalla del chat del expediente muestra «procedimiento de recomendación por guías (skill)» en «Consultó:».
+- Pruebas: `tests/tx_clinica/test_skills.py` y `test_skill_agente.py` (validación, recursos, que no se perdió ninguna
+  instrucción del prompt original, control de activación con un agente de LangGraph y un modelo guionado).
+
+### Cambiado
+
+- `tx_clinica/prompts/system_prompt.py`: de ~10 000 a ~4 000 caracteres. Se queda con las reglas de seguridad (decisión del
+  oncólogo, no inventar valores, recomendar solo con la tool, comorbilidad e interacciones, aprobación humana); el
+  procedimiento pasó a la skill. Las reglas ahora son una lista unida con saltos de línea, lo que evita el bug de M6 (barra
+  invertida que fundía dos viñetas).
+- `construir_agente` agrega el catálogo de skills al prompt y falla al construirse si falta la skill requerida o está mal formada.
+- `tests/tx_clinica/test_system_prompt.py`: las comprobaciones de M6 se adaptaron al nuevo reparto (la regla accept-vs-modify
+  se comprueba ahora en la skill); `test_tools_wiring.py` espera 11 tools (`activar_skill` es de solo lectura).
+
 ## [Sin versionar] — Rama `timeline`
 
 ### Añadido

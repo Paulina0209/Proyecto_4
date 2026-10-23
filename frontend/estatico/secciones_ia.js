@@ -69,6 +69,7 @@ function preguntas(ctx, p) {
 
 /* Nombre legible de cada tool del agente de TX (si llega una nueva, se muestra su nombre técnico). */
 const HERRAMIENTAS = {
+  activar_skill: "procedimiento de recomendación por guías (skill)",
   obtener_datos_paciente: "datos del paciente", obtener_recomendaciones_tratamiento_por_id: "recomendaciones de la guía",
   completar_datos_paciente_y_recomendar: "recomendaciones con datos del chat", obtener_recomendaciones_tratamiento_con_datos: "recomendaciones con datos del chat",
   listar_variables_requeridas: "datos que pide la guía", consultar_medicacion_actual: "medicación actual",
