@@ -194,6 +194,7 @@ def registrar_decision_tratamiento(
         )
 
     d = resultado.decision
+    historia = _llevar_a_historia_clinica(conn, patient_id, oncologo_id, d, snapshot)
     return json.dumps(
         {
             "registrado": True,
@@ -203,6 +204,30 @@ def registrar_decision_tratamiento(
             "regimen_final_id": d.regimen_final_id,
             "motivo_rechazo": d.motivo_rechazo,
             "justificaciones_ids": d.justificaciones_ids,
+            "historia_clinica": historia,
         },
         ensure_ascii=False,
     )
+
+
+def _llevar_a_historia_clinica(conn, patient_id: int, oncologo_id: int, decision, snapshot: dict) -> dict:
+    """La decisión del oncólogo también queda en la historia clínica (consulta del día y tratamiento en curso).
+    Si esto fallara, la decisión ya quedó registrada y trazable: se informa sin deshacerla."""
+    from historia_clinica.decisiones_hc import farmacos_de, incorporar_decision, nombre_de_usuario
+
+    def con_farmacos(regimen):
+        farmacos = farmacos_de(snapshot, regimen)
+        return f"{regimen} ({' + '.join(farmacos)})" if farmacos else regimen
+
+    sugerido = con_farmacos(decision.regimen_sugerido_id) if decision.regimen_sugerido_id else None
+    try:
+        with conn_lock:
+            if decision.tipo_decision == "reject":
+                inc = incorporar_decision(conn, patient_id, tipo="tratamiento", valor="rechazado", sugerencia=sugerido,
+                                          detalle=decision.motivo_rechazo, autor=nombre_de_usuario(oncologo_id))
+            else:
+                inc = incorporar_decision(conn, patient_id, tipo="tratamiento", valor=con_farmacos(decision.regimen_final_id),
+                                          sugerencia=sugerido, autor=nombre_de_usuario(oncologo_id))
+        return inc.a_dict()
+    except Exception as exc:  # noqa: BLE001 - la decisión ya está registrada; solo no se pudo reflejar en la HC
+        return {"error": f"La decisión quedó registrada, pero no se pudo agregar a la historia clínica ({type(exc).__name__})."}
