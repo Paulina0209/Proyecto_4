@@ -7,13 +7,13 @@
         <mxCell id="c1" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontColor=#111827;" value="&lt;b style=&quot;font-size:22px&quot;&gt;Agent 3 · Guideline update agent&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px&quot; color=&quot;#4B5563&quot;&gt;guidelineUpdate/agent/graph.py · LangGraph StateGraph · runs offline&lt;/font&gt;" vertex="1">
           <mxGeometry height="56" width="700" x="7" y="15" as="geometry" />
         </mxCell>
-        <mxCell id="c2" parent="1" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#9CA3AF;strokeWidth=1.2;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;Scraper ESMO&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot; face=&quot;Helvetica&quot; color=&quot;#4B5563&quot;&gt;search_update&lt;/font&gt;" vertex="1">
+        <mxCell id="c2" parent="1" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#4B5563;strokeWidth=1.5;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;Scraper ESMO&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot; face=&quot;Helvetica&quot; color=&quot;#4B5563&quot;&gt;search_update&lt;/font&gt;" vertex="1">
           <mxGeometry height="52" width="180" x="40" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="c3" parent="1" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#9CA3AF;strokeWidth=1.2;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;Download&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot; face=&quot;Helvetica&quot; color=&quot;#4B5563&quot;&gt;download_content&lt;/font&gt;" vertex="1">
+        <mxCell id="c3" parent="1" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#4B5563;strokeWidth=1.5;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;Download&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot; face=&quot;Helvetica&quot; color=&quot;#4B5563&quot;&gt;download_content&lt;/font&gt;" vertex="1">
           <mxGeometry height="52" width="180" x="250" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="c4" parent="1" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#9CA3AF;strokeWidth=1.2;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;Current rules&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot; face=&quot;Helvetica&quot; color=&quot;#4B5563&quot;&gt;rule_agent&lt;/font&gt;" vertex="1">
+        <mxCell id="c4" parent="1" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#4B5563;strokeWidth=1.5;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;Current rules&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot; face=&quot;Helvetica&quot; color=&quot;#4B5563&quot;&gt;rule_agent&lt;/font&gt;" vertex="1">
           <mxGeometry height="52" width="180" x="460" y="90" as="geometry" />
         </mxCell>
         <mxCell id="e5" edge="1" parent="1" source="c2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5563;strokeWidth=1.5;endArrow=block;endFill=1;endSize=7;fontSize=12;fontColor=#4B5563;labelBackgroundColor=#FFFFFF;" target="c3" value="">
@@ -22,37 +22,37 @@
         <mxCell id="e6" edge="1" parent="1" source="c3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5563;strokeWidth=1.5;endArrow=block;endFill=1;endSize=7;fontSize=12;fontColor=#4B5563;labelBackgroundColor=#FFFFFF;" target="c4" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="c7" parent="1" style="ellipse;shape=ellipse;perimeter=ellipsePerimeter;html=1;fillColor=#111827;strokeColor=none;fontColor=#FFFFFF;fontSize=12;fontFamily=Courier New;" value="&lt;b&gt;start&lt;/b&gt;" vertex="1">
+        <mxCell id="c7" parent="1" style="ellipse;shape=ellipse;perimeter=ellipsePerimeter;html=1;fillColor=#FFFFFF;strokeColor=#4B5563;fontColor=#111827;fontSize=12;fontFamily=Courier New;;strokeWidth=1.5" value="&lt;b&gt;start&lt;/b&gt;" vertex="1">
           <mxGeometry height="34" width="104" x="298" y="190" as="geometry" />
         </mxCell>
         <mxCell id="e8" edge="1" parent="1" source="c4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5563;strokeWidth=1.5;endArrow=block;endFill=1;endSize=7;fontSize=12;fontColor=#4B5563;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=1;entryY=0.5;" target="c7" value="invoke">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="c9" parent="1" style="rounded=1;arcSize=50;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=1.5;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;parse_context&lt;/b&gt;" vertex="1">
+        <mxCell id="c9" parent="1" style="rounded=1;arcSize=50;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#4B5563;strokeWidth=1.5;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;parse_context&lt;/b&gt;" vertex="1">
           <mxGeometry height="40" width="300" x="200" y="255" as="geometry" />
         </mxCell>
-        <mxCell id="c10" parent="1" style="rounded=1;arcSize=50;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=1.5;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;gap_analysis&lt;/b&gt;" vertex="1">
+        <mxCell id="c10" parent="1" style="rounded=1;arcSize=50;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#4B5563;strokeWidth=1.5;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;gap_analysis&lt;/b&gt;" vertex="1">
           <mxGeometry height="40" width="300" x="200" y="330" as="geometry" />
         </mxCell>
-        <mxCell id="c11" parent="1" style="rounded=1;arcSize=50;html=1;whiteSpace=wrap;fillColor=#F3F4F6;strokeColor=#111827;strokeWidth=2.6;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;detect_and_classify_changes&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot; face=&quot;Helvetica&quot; color=&quot;#4B5563&quot;&gt;Claude (Anthropic) · text and images&lt;/font&gt;" vertex="1">
+        <mxCell id="c11" parent="1" style="rounded=1;arcSize=50;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#4B5563;strokeWidth=1.5;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;detect_and_classify_changes&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot; face=&quot;Helvetica&quot; color=&quot;#4B5563&quot;&gt;Claude (Anthropic) · text and images&lt;/font&gt;" vertex="1">
           <mxGeometry height="52" width="300" x="200" y="405" as="geometry" />
         </mxCell>
-        <mxCell id="c14" parent="1" style="rounded=1;arcSize=50;html=1;whiteSpace=wrap;fillColor=#F3F4F6;strokeColor=#111827;strokeWidth=2.6;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;generate_file_proposal&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot; face=&quot;Helvetica&quot; color=&quot;#4B5563&quot;&gt;one per file · in parallel · 2 attempts&lt;/font&gt;" vertex="1">
+        <mxCell id="c14" parent="1" style="rounded=1;arcSize=50;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#4B5563;strokeWidth=1.5;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;generate_file_proposal&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot; face=&quot;Helvetica&quot; color=&quot;#4B5563&quot;&gt;one per file · in parallel · 2 attempts&lt;/font&gt;" vertex="1">
           <mxGeometry height="52" width="300" x="200" y="510" as="geometry" />
         </mxCell>
-        <mxCell id="c15" parent="1" style="rounded=1;arcSize=50;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=1.5;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;validate_proposals&lt;/b&gt;" vertex="1">
+        <mxCell id="c15" parent="1" style="rounded=1;arcSize=50;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#4B5563;strokeWidth=1.5;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;validate_proposals&lt;/b&gt;" vertex="1">
           <mxGeometry height="40" width="300" x="200" y="625" as="geometry" />
         </mxCell>
-        <mxCell id="c16" parent="1" style="rounded=1;arcSize=50;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=1.5;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;generate_draft&lt;/b&gt;" vertex="1">
+        <mxCell id="c16" parent="1" style="rounded=1;arcSize=50;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#4B5563;strokeWidth=1.5;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;generate_draft&lt;/b&gt;" vertex="1">
           <mxGeometry height="40" width="300" x="200" y="700" as="geometry" />
         </mxCell>
-        <mxCell id="c17" parent="1" style="ellipse;shape=ellipse;perimeter=ellipsePerimeter;html=1;fillColor=#111827;strokeColor=none;fontColor=#FFFFFF;fontSize=12;fontFamily=Courier New;" value="&lt;b&gt;end&lt;/b&gt;" vertex="1">
+        <mxCell id="c17" parent="1" style="ellipse;shape=ellipse;perimeter=ellipsePerimeter;html=1;fillColor=#FFFFFF;strokeColor=#4B5563;fontColor=#111827;fontSize=12;fontFamily=Courier New;;strokeWidth=1.5" value="&lt;b&gt;end&lt;/b&gt;" vertex="1">
           <mxGeometry height="34" width="104" x="298" y="775" as="geometry" />
         </mxCell>
-        <mxCell id="c18" parent="1" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#4B5563;strokeWidth=1.2;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;proposed_rules/&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot; face=&quot;Helvetica&quot; color=&quot;#4B5563&quot;&gt;YAML + PROPOSED_CHANGES.md&lt;/font&gt;" vertex="1">
+        <mxCell id="c18" parent="1" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#4B5563;strokeWidth=1.5;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;proposed_rules/&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot; face=&quot;Helvetica&quot; color=&quot;#4B5563&quot;&gt;YAML + PROPOSED_CHANGES.md&lt;/font&gt;" vertex="1">
           <mxGeometry height="52" width="220" x="120" y="850" as="geometry" />
         </mxCell>
-        <mxCell id="c19" parent="1" style="rounded=1;arcSize=50;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#111827;strokeWidth=1.5;dashed=1;dashPattern=4 3;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;Clinical review&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot; face=&quot;Helvetica&quot; color=&quot;#4B5563&quot;&gt;pending_clinical_review&lt;/font&gt;" vertex="1">
+        <mxCell id="c19" parent="1" style="rounded=1;arcSize=50;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#4B5563;strokeWidth=1.5;dashed=1;dashPattern=4 3;fontSize=13;fontColor=#111827;fontFamily=Courier New;" value="&lt;b&gt;Clinical review&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot; face=&quot;Helvetica&quot; color=&quot;#4B5563&quot;&gt;pending_clinical_review&lt;/font&gt;" vertex="1">
           <mxGeometry height="52" width="200" x="380" y="850" as="geometry" />
         </mxCell>
         <mxCell id="e20" edge="1" parent="1" source="c7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4B5563;strokeWidth=1.5;endArrow=block;endFill=1;endSize=7;fontSize=12;fontColor=#4B5563;labelBackgroundColor=#FFFFFF;" target="c9" value="">
