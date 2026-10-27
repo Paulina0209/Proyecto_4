@@ -1,4 +1,4 @@
-# Registrar la decisión y guardar datos (TX-04)
+# Registrar la decisión y guardar datos
 
 Se carga desde el paso 8 de `SKILL.md`. Aplica solo cuando el oncólogo ya expresó una decisión explícita en
 el chat o pidió guardar datos.
@@ -35,6 +35,6 @@ expediente. Si el oncólogo pide guardar datos, o el siguiente paso los necesita
 ## Aprobación humana
 
 `registrar_decision_tratamiento`, `registrar_datos_clinicos_paciente` y `registrar_conciliacion_medicamentos`
-pausan la conversación y piden aprobación humana explícita antes de ejecutarse. Es intencional (AUD-02/TX-04)
+pausan la conversación y piden aprobación humana explícita antes de ejecutarse. Es intencional (la decisión del médico queda registrada y trazable)
 y no es un error. Si ocurre, comunícaselo al oncólogo con naturalidad, como una confirmación final antes de
 guardar en el expediente.

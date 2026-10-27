@@ -106,7 +106,7 @@ class TestRepartoPromptSkill:
             "regimen_final_id", "motivo_rechazo", "registrar_datos_clinicos_paciente",
             "registrar_conciliacion_medicamentos", "sin_medicacion_concomitante", "egfr_status",
             "her2_status", "pdl1_tps", "disease_setting=early", "metastatic_disease=no",
-            "immune_checkpoint_inhibitor_toxicity_risk=not_excessive", "AUD-02/TX-04",
+            "immune_checkpoint_inhibitor_toxicity_risk=not_excessive", "queda registrada y trazable",
         ]
         for identificador in del_prompt_original:
             assert identificador in todo, f"se perdió {identificador!r}"

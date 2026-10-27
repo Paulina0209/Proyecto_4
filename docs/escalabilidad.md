@@ -14,6 +14,18 @@ AC2  La capacidad crece al agregar procesos, sin errores y dentro de los objetiv
 AC3  Las réplicas no guardan estado propio: cualquier réplica atiende a cualquier usuario
 ```
 
+## Con Docker: réplicas detrás de un balanceador
+
+`docker compose up -d --scale app=N` (ver `docs/docker.md`): N contenedores iguales, cada uno con
+`COPILOTO_WORKERS` procesos, detrás de un nginx que reparte las conexiones TLS sin abrirlas. Datos y sesiones
+viven en un volumen compartido (`COPILOTO_SESIONES_DB`), así que ninguna réplica guarda estado propio (AC3).
+
+Verificado levantando todo desde cero, sin datos, con 3 réplicas de 2 procesos cada una:
+
+- 30 conexiones nuevas se repartieron entre los 3 contenedores (AC1);
+- una sesión iniciada una vez fue reconocida en 12 de 12 conexiones nuevas atendidas por réplicas distintas (AC3);
+- las réplicas nuevas entran solas al reparto (el balanceador vuelve a consultar cada 10 s).
+
 ## Cómo se escala
 
 ```powershell

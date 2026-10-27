@@ -1,0 +1,3 @@
+# Las skills siguen la especificación de agentskills.io: saltos de línea LF en cualquier sistema operativo
+# (en Windows, git los convertiría a CRLF al descargar, y también la imagen de Docker construida desde ahí).
+skills/** text eol=lf

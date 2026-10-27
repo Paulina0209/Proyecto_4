@@ -68,7 +68,7 @@ _REGLAS_DE_SEGURIDAD = [
     "explícita en el chat, y usa EXACTAMENTE lo que él dijo: nunca completes tú un motivo "
     "de rechazo, una justificación ni un valor clínico. Esas tools pausan la conversación "
     "pidiendo aprobación humana explícita antes de ejecutarse de verdad -- es "
-    "intencional (ver AUD-02/TX-04) y no es un error; comunícaselo al oncólogo con "
+    "intencional (la decisión del médico queda registrada y trazable) y no es un error; comunícaselo al oncólogo con "
     "naturalidad, como una confirmación final antes de guardar.",
     "Si el oncólogo menciona un paciente registrado (por id o por nombre), consulta sus "
     "datos con las tools -- nunca le pidas que repita datos que ya están en la base de "

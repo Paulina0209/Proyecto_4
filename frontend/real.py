@@ -4,6 +4,12 @@
     python -m frontend.real --puerto 9443
     python -m frontend.real --sin-indexar      # no espera a la base vectorial (se llena sola al preguntar)
     python -m frontend.real --workers 4        # varios procesos (NFR-05)
+    python -m frontend.real --solo-preparar    # pasos 1 a 3 y termina (el servicio «preparar» de Docker)
+    python -m frontend.real --sin-preparar     # solo sirve: las réplicas de Docker, con los datos ya listos
+
+Variables (las usa Docker, ver docs/docker.md): ``COPILOTO_HOST``, ``COPILOTO_PUERTO``, ``COPILOTO_WORKERS``,
+``COPILOTO_CERTS_DIR`` (dónde va el certificado autofirmado) y ``COPILOTO_TLS_CERT`` / ``COPILOTO_TLS_KEY``
+(un certificado propio de la institución: si están, se usa ese y no se genera ninguno).
 
 A diferencia de ``python -m frontend.demo`` (pacientes y usuarios inventados), aquí:
 
@@ -21,13 +27,14 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Optional, Sequence, Tuple
 
 RAIZ = Path(__file__).resolve().parent.parent
-CARPETA_CERTS = RAIZ / "certs"
+CARPETA_CERTS = Path(os.environ.get("COPILOTO_CERTS_DIR") or RAIZ / "certs")
 #: Si al certificado le queda menos que esto, se renueva antes de arrancar.
 MARGEN_CERTIFICADO = timedelta(days=2)
 
@@ -60,8 +67,14 @@ def _vigente(cert: Path, ahora: datetime) -> bool:
 
 def asegurar_certificado(carpeta: Path = CARPETA_CERTS, ahora: Optional[datetime] = None,
                          aviso: Callable[[str], None] = print) -> Tuple[Path, Path]:
-    """Reutiliza el certificado local si sigue vigente; si falta o está por vencer, crea uno nuevo."""
-    from seguridad.servidor_tls import generar_certificado_local
+    """Reutiliza el certificado local si sigue vigente; si falta o está por vencer, crea uno nuevo.
+    Con ``COPILOTO_TLS_CERT`` y ``COPILOTO_TLS_KEY`` se usa el certificado de la institución tal cual."""
+    from seguridad.servidor_tls import ENV_CERT, ENV_KEY, generar_certificado_local
+
+    propio, propia = os.environ.get(ENV_CERT), os.environ.get(ENV_KEY)
+    if propio and propia:
+        aviso(f"2/3 Certificado: el de la institución ({propio}).")
+        return Path(propio), Path(propia)
 
     cert, clave = carpeta / "localhost.pem", carpeta / "localhost-clave.pem"
     if clave.is_file() and _vigente(cert, ahora or datetime.now(timezone.utc)):
@@ -121,20 +134,34 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         with contextlib.suppress(AttributeError):
             flujo.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser(prog="python -m frontend.real", description=__doc__.split("\n\n")[0])
-    p.add_argument("--puerto", type=int, default=8443)
-    p.add_argument("--host", default="127.0.0.1")
-    p.add_argument("--workers", type=int, default=1, help="Procesos que atienden en paralelo (NFR-05).")
+    p.add_argument("--puerto", type=int, default=int(os.environ.get("COPILOTO_PUERTO") or 8443))
+    p.add_argument("--host", default=os.environ.get("COPILOTO_HOST") or "127.0.0.1")
+    p.add_argument("--workers", type=int, default=int(os.environ.get("COPILOTO_WORKERS") or 1),
+                   help="Procesos que atienden en paralelo (NFR-05).")
     p.add_argument("--sin-indexar", action="store_true", help="Arranca sin actualizar la base vectorial.")
+    modo = p.add_mutually_exclusive_group()
+    modo.add_argument("--solo-preparar", action="store_true", help="Prepara datos, certificado e índice y termina.")
+    modo.add_argument("--sin-preparar", action="store_true", help="Solo sirve (los datos ya los preparó otro proceso).")
     args = p.parse_args(argv)
 
-    if preparar_datos() != 0:
-        return 1
-    cert, clave = asegurar_certificado()
-    if args.sin_indexar:
-        print("3/3 Asistente: sin indexar ahora (cada paciente se indexa al abrirlo o preguntar por él).")
+    if args.sin_preparar:
+        cert, clave = asegurar_certificado()
     else:
-        indexar()
-    mostrar_accesos(args.puerto)
+        if preparar_datos() != 0:
+            return 1
+        cert, clave = asegurar_certificado()
+        if args.sin_indexar:
+            print("3/3 Asistente: sin indexar ahora (cada paciente se indexa al abrirlo o preguntar por él).")
+        else:
+            indexar()
+        if args.solo_preparar:
+            from seguridad.cifrado import cifrador_configurado
+
+            cifrador_configurado()  # la clave de cifrado en reposo existe antes de que arranquen las réplicas
+            mostrar_accesos(args.puerto)
+            print("Listo: datos, certificado y clave de cifrado preparados.")
+            return 0
+        mostrar_accesos(args.puerto)
 
     from seguridad.servidor_tls import main as servidor_main
 
