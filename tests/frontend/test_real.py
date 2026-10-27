@@ -79,3 +79,36 @@ def test_si_los_datos_no_se_pueden_preparar_no_arranca(monkeypatch):
     monkeypatch.setattr(real, "preparar_datos", lambda: 1)
     monkeypatch.setattr(real, "asegurar_certificado", lambda: (_ for _ in ()).throw(AssertionError("no debía seguir")))
     assert real.main([]) == 1
+
+
+def test_solo_preparar_no_sirve_y_deja_la_clave_lista(monkeypatch, tmp_path):
+    pasos = []
+    monkeypatch.delenv("COPILOTO_CLAVE_CIFRADO", raising=False)          # sin clave inyectada: se crea el archivo
+    monkeypatch.setenv("COPILOTO_ARCHIVO_CLAVE", str(tmp_path / "clave"))
+    monkeypatch.setattr(real, "preparar_datos", lambda: pasos.append("datos") or 0)
+    monkeypatch.setattr(real, "asegurar_certificado", lambda: pasos.append("cert") or (tmp_path / "c", tmp_path / "k"))
+    monkeypatch.setattr(real, "indexar", lambda: pasos.append("indice"))
+    monkeypatch.setattr(real, "mostrar_accesos", lambda _p: None)
+    import seguridad.servidor_tls as tls
+    monkeypatch.setattr(tls, "main", lambda argv: pasos.append("servidor") or 0)
+    assert real.main(["--solo-preparar"]) == 0
+    assert pasos == ["datos", "cert", "indice"] and (tmp_path / "clave").is_file()
+
+
+def test_sin_preparar_solo_sirve(monkeypatch, tmp_path):
+    pasos = []
+    monkeypatch.setattr(real, "preparar_datos", lambda: pasos.append("datos") or 0)
+    monkeypatch.setattr(real, "asegurar_certificado", lambda: pasos.append("cert") or (tmp_path / "c", tmp_path / "k"))
+    monkeypatch.setattr(real, "indexar", lambda: pasos.append("indice"))
+    import seguridad.servidor_tls as tls
+    monkeypatch.setattr(tls, "main", lambda argv: pasos.append(("servidor", argv[argv.index("--host") + 1])) or 0)
+    monkeypatch.setenv("COPILOTO_HOST", "0.0.0.0")
+    assert real.main(["--sin-preparar"]) == 0
+    assert pasos == ["cert", ("servidor", "0.0.0.0")]
+
+
+def test_con_certificado_de_la_institucion_no_se_genera_ninguno(monkeypatch, tmp_path):
+    monkeypatch.setenv("COPILOTO_TLS_CERT", str(tmp_path / "inst.pem"))
+    monkeypatch.setenv("COPILOTO_TLS_KEY", str(tmp_path / "inst-clave.pem"))
+    cert, clave = real.asegurar_certificado(tmp_path / "otra", aviso=lambda _m: None)
+    assert (cert.name, clave.name) == ("inst.pem", "inst-clave.pem") and not (tmp_path / "otra").exists()

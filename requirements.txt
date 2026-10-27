@@ -1,47 +1,47 @@
-# Núcleo: necesario para ejecutar la suite de tests (pytest) y los módulos
-# clínicos principales.
-pytest>=9.1
-PyYAML>=6.0
-requests>=2.31
-
-# tests/patients/test_api.py (fastapi.testclient) y tests/tx_clinica/*
-# (tx_clinica/tools/*.py, tx_clinica/middleware/human_in_the_loop.py) ya
-# importan estos paquetes de forma directa, no perezosa -- sin ellos
-# `pytest` falla en la fase de colección, no solo al correr esos tests.
-fastapi>=0.115
-httpx>=0.27
-langchain>=0.3
-langchain-core>=0.3
-langchain-openai>=1.0
-openai>=2.0
-python-dotenv>=1.0
-langgraph>=0.2
-
-# documentos_clinicos/pdf_export.py (DOC-02) y tx_clinica/observability.py
-# importan estos paquetes de forma directa: sin ellos falla la colección
-# de tests/documentos_clinicos y tests/tx_clinica.
-reportlab>=4.0
-langfuse>=3.0
-
-# SEC-02: cifrado en reposo (AES-256-GCM), certificados de prueba y el
-# servidor con TLS (seguridad/servidor_tls.py, tests/seguridad/test_tls.py).
-cryptography>=42.0
-uvicorn>=0.30
-
-# --- Opcionales ---------------------------------------------------------------
-# Solo se necesitan para los agentes LLM / scraper de actualización de guías.
-# No los usan los tests. Instalar bajo demanda:
+# Dependencias del copiloto, TODAS juntas y con versión fija: así la instalación (pip o Docker) se comporta igual
+# en cualquier máquina. Son las versiones con las que pasa la suite completa (python -m pytest).
+# tests/test_dependencias.py comprueba que todo paquete que el código importa esté aquí.
 #
-#   pydicom>=2.4             # historia_clinica/demo_orthanc.py (genera el DICOM sintético de la demo)
-#   anthropic>=0.40          # ia_clinica/notes/llm_client.py, guidelineUpdate/agent/graph.py (import perezoso)
-#   pdfplumber>=0.11         # guidelineUpdate/agent/rule_agent.py (import perezoso)
-#   python-pptx>=0.6         # guidelineUpdate/agent/pptx_text.py
-#   Pillow>=10.0             # guidelineUpdate/agent/pptx_text.py
-#   playwright>=1.40         # guidelineUpdate/scraper/download_content.py (import perezoso)
-#   pypdf>=4.0               # accesibilidad/pdf.py (NFR-03): auditar un PDF; sin él esas pruebas se omiten
-#                            # Para las pruebas de navegador de NFR-03 (se omiten si faltan): pip install playwright
-#                            # && playwright install chromium; axe-core opcional: npm install axe-core y AXE_CORE_JS
+#   pip install -r requirements.txt
+#   python -m playwright install chromium      # navegador para EV-02 (scraper de guías) y las pruebas de NFR-03
+#
+# Con Docker no hace falta nada de esto: ver docs/docker.md.
 
-# Asistente conversacional (asistente/): base vectorial y lectura de PDF
-chromadb>=1.0
-pypdf>=4.0
+# --- Servidor web, API y seguridad (SEC-02: TLS y cifrado en reposo) ---------------------------------
+fastapi==0.133.0
+starlette==0.52.1
+pydantic==2.14.1
+uvicorn==0.52.2
+httpx==0.28.1
+cryptography==50.0.0
+python-dotenv==1.2.2
+
+# --- Datos, integración con cBioPortal y PACS ----------------------------------------------------------
+requests==2.32.5
+urllib3==2.8.0
+PyYAML==6.0.3
+pydicom==3.0.2               # historia_clinica/demo_orthanc.py (estudio DICOM de prueba)
+
+# --- IA: modelos, agentes y asistente (RAG) -------------------------------------------------------------
+openai==3.35.1
+langchain==1.4.3
+langchain-core==1.6.12
+langchain-openai==1.7.2
+langchain-ollama==1.1.0      # COPILOTO_LLM_PROVEEDOR=ollama (modelo local)
+langgraph==1.2.12
+langfuse==4.15.6
+chromadb==1.5.9
+pypdf==6.19.0
+
+# --- Documentos (DOC-02) ---------------------------------------------------------------------------------
+reportlab==5.0.1
+
+# --- Actualización periódica de guías (EV-02, guidelineUpdate) ------------------------------------------
+anthropic>=0.40
+pdfplumber>=0.11
+python-pptx>=1.0
+Pillow==12.1.1
+playwright==1.64.0           # también para las pruebas de navegador de NFR-03
+
+# --- Pruebas ----------------------------------------------------------------------------------------------
+pytest==9.1.1

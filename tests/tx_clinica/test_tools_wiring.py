@@ -18,6 +18,7 @@ from tx_clinica.tools import TOOLS
 
 
 TOOLS_DE_LECTURA = {
+    "activar_skill",
     "obtener_datos_paciente",
     "obtener_recomendaciones_tratamiento_por_id",
     "completar_datos_paciente_y_recomendar",
@@ -33,7 +34,7 @@ TOOLS_QUE_ESCRIBEN = {
 }
 
 
-def test_tools_trae_las_10_tools_esperadas():
+def test_tools_trae_las_11_tools_esperadas():
     assert {t.name for t in TOOLS} == TOOLS_DE_LECTURA | TOOLS_QUE_ESCRIBEN
 
 

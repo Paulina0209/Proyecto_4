@@ -318,7 +318,7 @@ de pantalla ni con personas usuarias: protocolo y declaración de conformidad en
 `docs/accesibilidad.md`.
 
 ### tx_clinica
-Contiene las capacidades de la épica Tratamientos (TX-01, TX-02...). Implementa TX-01 — recomendación de tratamiento: evalúa cada régimen conocido de guidelines/<módulo>/regimens.yaml de forma hipotética contra las reglas del módulo aplicable, para generar sugerencias desde estadio/biomarcadores en vez de solo auditar concordancia (que es para lo que esas reglas fueron escritas originalmente). Implementa también TX-02 — nivel de evidencia por recomendación, leyendo evidence.native.* y source/module_version directamente de la regla y el módulo reales. No reescribe ninguna regla existente. 
+Contiene las capacidades de la épica Tratamientos (TX-01, TX-02...). Implementa TX-01 — recomendación de tratamiento: evalúa cada régimen conocido de guidelines/<módulo>/regimens.yaml de forma hipotética contra las reglas del módulo aplicable, para generar sugerencias desde estadio/biomarcadores en vez de solo auditar concordancia (que es para lo que esas reglas fueron escritas originalmente). Implementa también TX-02 — nivel de evidencia por recomendación, leyendo evidence.native.* y source/module_version directamente de la regla y el módulo reales. No reescribe ninguna regla existente. El procedimiento «cómo trazar la ruta de una recomendación a partir de las guías» es una skill en formato agentskills.io (`skills/ruta-recomendacion-guias/`, cargada con `tx_clinica/skills.py` y la tool `activar_skill`); las reglas de seguridad se quedan en el prompt y en los middlewares (aprobación humana y exigencia de activar la skill). Ver `docs/skills.md`.
 
 ### docs
 

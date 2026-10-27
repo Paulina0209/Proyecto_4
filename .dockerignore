@@ -1,0 +1,30 @@
+# Lo que NO entra a la imagen: entornos, secretos, datos locales y basura de compilación.
+.git
+.gitignore
+.venv
+venv
+env
+.claude
+.idea
+.vscode
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.coverage
+htmlcov
+
+# Secretos: la llave de OpenAI llega en tiempo de ejecución (env_file), nunca dentro de la imagen.
+.env
+.env.*
+!.env.example
+certs
+*.pem
+
+# Datos: viven en el volumen «datos» (los prepara el servicio «preparar»).
+data
+patients/db/*.db
+*.db
+*.db-wal
+*.db-shm
+salida_demo*
+_lock_cleanup_borrar
