@@ -62,6 +62,7 @@ from fastapi.responses import Response
 
 from auditoria.models import TipoAccion
 from auditoria.registro_acceso import registrar_acceso
+from historia_clinica.decisiones_hc import incorporar_decision
 from privacidad.consentimiento_ia import ConsentimientoIARequerido
 from seguridad.autorizacion import Accion, verificar_permiso
 from seguridad.models import Rol, Usuario
@@ -307,8 +308,12 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
             inicializar_esquema(ctx.conn_exp)
             registrado = registrar_juicio_clinico(ctx.conn_exp, paciente_id=ctx.exigir_expediente(), diagnostico_registrado=texto,
                                                   autor=ctx.autor, resultado_sistema=resultado)
-            ctx.auditar(TipoAccion.EDITAR, "Juicio clínico registrado")
-            return a_json(registrado)
+            # La decisión del médico pasa a la historia clínica: ficha y consulta de hoy (la IA sugirió el primero de la lista).
+            sugerido = resultado.candidatos[0].nombre if getattr(resultado, "candidatos", None) else None
+            historia = incorporar_decision(ctx.conn_exp, ctx.expediente_id, tipo="diagnostico", valor=texto, sugerencia=sugerido,
+                                           autor=ctx.autor, conn_pacientes=ctx.conn)
+            ctx.auditar(TipoAccion.EDITAR, "Juicio clínico registrado y llevado a la historia clínica")
+            return {**a_json(registrado), "historia_clinica": historia.a_dict()}
 
     # --- EST --------------------------------------------------------------------------------------
 
@@ -358,8 +363,11 @@ def crear_router(pasarela) -> APIRouter:  # noqa: C901 - un router por historia 
                                                       propuesta_sistema=propuesta, justificacion=justificacion)
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail={"errores": [{"campo": "estadio", "mensaje": str(exc)}]}) from exc
-            ctx.auditar(TipoAccion.EDITAR, f"Estadio confirmado {estadio}")
-            return a_json(confirmado)
+            historia = incorporar_decision(ctx.conn_exp, ctx.expediente_id, tipo="estadio", valor=estadio,
+                                           sugerencia=getattr(propuesta, "estadio_global", None), autor=ctx.autor,
+                                           detalle=f"Justificación: {justificacion}" if justificacion else None, conn_pacientes=ctx.conn)
+            ctx.auditar(TipoAccion.EDITAR, f"Estadio confirmado {estadio} y llevado a la historia clínica")
+            return {**a_json(confirmado), "historia_clinica": historia.a_dict()}
 
     # --- TX ------------------------------------------------------------------------------------------
 

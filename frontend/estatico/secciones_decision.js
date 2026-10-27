@@ -34,11 +34,21 @@ export async function secDiagnostico(ctx, p, consentimiento) {
     (e.limitations || []).length ? h("p", { class: "ayuda" }, `Limitaciones: ${e.limitations.join("; ")}`) : null));
 
   const vigente = r.decision_vigente;
+  const sugerido = dif.candidatos.length ? dif.candidatos[0].nombre : null;
+  const estadoJuicio = h("div", { role: "status", "aria-live": "polite" });
+  // Confirmar lo que sugiere la IA es un clic; corregirlo, escribir el diagnóstico propio. Los dos van a la historia clínica.
+  const confirmar = ctx.sesion.puede_juicio_dx && sugerido ? h("p", { class: "acciones" },
+    h("button", { type: "button", class: "btn", onclick: async () => {
+      try {
+        await api(`${base(p.id)}/diagnostico/juicio`, { metodo: "POST", cuerpo: { diagnostico: sugerido } });
+        anunciar("Diagnóstico confirmado: quedó en la ficha y en la consulta de hoy."); recargar();
+      } catch (err) { estadoJuicio.replaceChildren(mensaje("error", "No se pudo confirmar", err.mensajes[0])); }
+    } }, `Confirmar: ${sugerido}`), h("span", { class: "tenue" }, "o corrígelo abajo")) : null;
   const juicio = ctx.sesion.puede_juicio_dx ? formulario({ campos: [
-    campo({ nombre: "diagnostico", etiqueta: "Tu juicio diagnóstico", tipo: "textarea", requerido: true,
-      ayuda: "Queda registrado como la decisión vigente y se compara con lo que sugirió el sistema." })],
+    campo({ nombre: "diagnostico", etiqueta: sugerido ? "Corregir: tu diagnóstico" : "Tu juicio diagnóstico", tipo: "textarea", requerido: true,
+      ayuda: "Reemplaza el diagnóstico de la ficha y se agrega a la consulta de hoy; queda la comparación con lo que sugirió el sistema." })],
   textoBoton: "Registrar juicio clínico", enviar: (v) => api(`${base(p.id)}/diagnostico/juicio`, { metodo: "POST", cuerpo: v }),
-  alExito: () => { anunciar("Juicio clínico registrado."); recargar(); } }) : null;
+  alExito: () => { anunciar("Juicio clínico registrado: quedó como diagnóstico en la ficha y en la consulta de hoy."); recargar(); } }) : null;
 
   const estudios = r.estudios;
   return h("div", {},
@@ -66,7 +76,7 @@ export async function secDiagnostico(ctx, p, consentimiento) {
         `No se repiten (hay uno reciente): ${estudios.estudios_omitidos_por_redundantes.map((o) => o.nombre).join(", ")}.`) : null),
     tarjeta("Decisión diagnóstica vigente",
       listaDatos([["Fuente", vigente.fuente === "apoyo_sistema" ? "Apoyo del sistema (sin juicio registrado)" : "Juicio del médico"], ["Contenido", vigente.contenido]]),
-      juicio));
+      estadoJuicio, confirmar, juicio));
 }
 
 /* ---------------- Estadificación ---------------- */
@@ -82,7 +92,7 @@ export async function secEstadificacion(ctx, p, consentimiento) {
     campo({ nombre: "estadio", etiqueta: "Estadio confirmado", requerido: true, valor: prop.estadio_global || "", ayuda: "Ej.: IIIA, IV" }),
     campo({ nombre: "justificacion", etiqueta: "Justificación (si difiere de la propuesta)", tipo: "textarea" })],
   textoBoton: "Confirmar estadificación", enviar: (v) => api(`${base(p.id)}/estadificacion/confirmar`, { metodo: "POST", cuerpo: v }),
-  alExito: () => { anunciar("Estadificación confirmada."); recargar(); } }) : null;
+  alExito: () => { anunciar("Estadificación confirmada: quedó en la ficha y en la consulta de hoy."); recargar(); } }) : null;
   return h("div", {},
     mensaje("info", null, prop.disclaimer || "Apoyo a la decisión: no reemplaza el juicio clínico."),
     h("div", { class: "rejilla-2" },
@@ -186,7 +196,7 @@ export async function secTratamiento(ctx, p, consentimiento) {
     const res = await api(`${base(p.id)}/tratamiento/decision`, { metodo: "POST", cuerpo: v });
     if (!res.registrado) { const e = new Error(res.mensaje || res.motivo_rechazo || "No se registró la decisión."); e.mensajes = [e.message]; throw e; }
     return res;
-  }, alExito: (res) => { estado.replaceChildren(mensaje("ok", "Decisión registrada", `Decisión #${res.decision_id}: ${res.tipo_decision}. Queda en la trazabilidad de la IA frente al médico.`)); } }) : null;
+  }, alExito: (res) => { estado.replaceChildren(mensaje("ok", "Decisión registrada", `Decisión #${res.decision_id}: ${res.tipo_decision}. Queda en la trazabilidad de la IA frente al médico${res.historia_clinica && res.historia_clinica.linea ? ` y en la historia clínica (consulta de hoy): «${res.historia_clinica.linea}»` : "."}`)); } }) : null;
 
   return h("div", {}, estado,
     tarjeta("Opciones de tratamiento según la guía", ...cuerpoRec),

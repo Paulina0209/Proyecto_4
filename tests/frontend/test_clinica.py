@@ -61,3 +61,21 @@ def test_un_dato_de_tratamiento_invalido_dice_cual_y_por_que(medica):
     campos = {e["campo"] for e in errores}
     assert {"pdl1_tps", "treatment_line"} <= campos
     assert any("Biomarcadores y biopsias" in e["mensaje"] for e in errores)
+
+
+def test_el_diagnostico_corregido_por_el_medico_queda_en_la_historia_clinica(medica):
+    r = medica.post(f"{BASE}/diagnostico/juicio", json={"diagnostico": "Carcinoma lobulillar infiltrante"}, headers=H)
+    assert r.status_code == 200, r.text
+    assert "consulta de hoy" in r.json()["historia_clinica"]["mensaje"]
+    assert medica.get(f"/api/pacientes/{LUCIA}/resumen-360").json()["diagnostico_principal"] == "Carcinoma lobulillar infiltrante"
+    hc = medica.get(f"/api/chat/pacientes/{LUCIA}/hc").json()
+    assert "Carcinoma lobulillar infiltrante" in hc["secciones"]["ficha"][0]["texto"]                       # lo lee el asistente
+    consulta = " ".join(c["texto"] for c in hc["secciones"]["consultas"])                                  # el panel la parte en oraciones
+    assert "Diagnóstico actualizado: Carcinoma lobulillar infiltrante" in consulta and "Carcinoma lobulillar infiltrante" in consulta   # sin sugerencia de la IA
+
+
+def test_el_estadio_confirmado_queda_en_la_ficha(medica):
+    r = medica.post(f"{BASE}/estadificacion/confirmar", json={"estadio": "IIIA", "justificacion": "N2 en PET"}, headers=H)
+    assert r.status_code == 200, r.text
+    assert medica.get(f"/api/pacientes/{LUCIA}/resumen-360").json()["estadio"] == "IIIA"
+    assert "Estadio: IIIA" in medica.get(f"/api/chat/pacientes/{LUCIA}/hc").json()["secciones"]["ficha"][0]["texto"]
