@@ -17,6 +17,8 @@ from .interaction_tools import (
 
 from .patients_tools import obtener_datos_paciente
 
+from .skill_tools import activar_skill
+
 from .registro_tools import (
     registrar_conciliacion_medicamentos,
     registrar_datos_clinicos_paciente,
@@ -24,6 +26,7 @@ from .registro_tools import (
 
 
 TOOLS = [
+    activar_skill,
     obtener_datos_paciente,
     obtener_recomendaciones_tratamiento_por_id,
     completar_datos_paciente_y_recomendar,
