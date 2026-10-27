@@ -57,3 +57,9 @@ dist/
 
 # Datos sinteticos de la demo de la interfaz web (python -m frontend.demo)
 salida_demo_frontend/
+
+# Configuración local de Claude Code
+.claude/
+
+# Restos de operaciones de git (no son del proyecto)
+_lock_cleanup_borrar/
